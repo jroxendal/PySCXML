@@ -1,19 +1,4 @@
 import Queue, threading, time
-
-""" Strategy:
-- states, etc. represented as objects (NOT dictionaries)
-- sets of objects might work 
-
-<scxml initial="red" xmlns="http://www.w3.org/2005/07/scxml">
-    <state id="red">
-        <transition event="e1" target="green"/>
-    </state>
-    <state id="green">
-        <transition event="e2" target="red"/>
-    </state>
-</scxml> 
-
-"""
 from scxml.node import *
 
 dm = {}
@@ -23,30 +8,20 @@ transition = None
 onentry = None
 onexit = None
 targets = {}
-targets['root'] = State()
-targets["root"].parent = None
-targets['root'].id = 'root'
-targets['main'] = State()
-targets['main'].id = 'main'
-targets['main'].n = 0
-targets['main'].parent = targets['root']
+targets['root'] = State("root", None)
+targets['main'] = State("main", targets["root"])
+#targets['main'].n = 0
 x = 0
-targets['green'] = State()
-targets['green'].id = 'green'
-targets['green'].n = 2
-targets['green'].parent = targets['main']
+targets['green'] = State("green", targets["main"])
+#targets['green'].n = 2
 targets['main'].state.append(targets['green'])
-transition = Transition()
-transition.source = targets['green']
+transition = Transition(targets["green"])
 transition.target = ['red']
 targets['green'].transition.append(transition)
-targets['red'] = State()
-targets['red'].id = 'red'
-targets['red'].n = 4
-targets['red'].parent = targets['main']
+targets['red'] = State("red", targets["main"])
+#targets['red'].n = 4
 targets['main'].state.append(targets['red'])
-transition = Transition()
-transition.source = targets['red']
+transition = Transition(targets["red"])
 transition.cond = lambda dm: x < 10
 targets['red'].transition.append(transition)
 def f():
@@ -63,36 +38,6 @@ del(onexit)
 
 # end of example
 
-g_continue = True
-
-configuration = set([])
-
-externalQueue = Queue.Queue()
-internalQueue = Queue.Queue()
-
-historyValue = {}
-
-"""
-def interpret(doc):
-   expandScxmlSource(doc)
-   if (!valid(doc)) {fail with error}
-   configuration = new Set()
-   datamodel = new Datamodel(doc)
-   executeGlobalScriptElements(doc)
-   internalQueue = new Queue()
-   externalQueue = new BlockingQueue()
-   continue = true
-   macrostep([doc.initial.transition])
-   threading.Thread(target=startEventLoop).start()
-"""
-
-
-def interpret():
-    transition = Transition()
-    transition.source = None
-    transition.target = ['green']
-    macrostep(set([transition]))
-    threading.Thread(target=startEventLoop).start()
 
 
 def startEventLoop():
@@ -154,6 +99,7 @@ def exitStates(enabledTransitions):
             for s in configuration:
                 if isDescendant(s,LCA):
                     statesToExit.add(s)
+    statesToExit = list(statesToExit)
     statesToExit.sort(exitOrder)
     for s in statesToExit:
         for h in s.history:
@@ -348,48 +294,48 @@ def send(name,data={},delay=0):
         externalQueue.put({"name":name,"data":data})
     threading.Thread(target=run,args=(name,data,delay)).start()
     
+
+def interpret():
+    g_continue = True
     
+    configuration = set([])
+    
+    externalQueue = Queue.Queue()
+    internalQueue = Queue.Queue()
+    
+    historyValue = {}
+    
+    threading.Thread(target=startEventLoop).start()
 
-interpret()
+
+if __name__ == "__main__":
+    transition = Transition(None)
+    transition.target = ['green']
+    macrostep(set([transition]))
+    interpret()
+
+""" 
+<scxml initial="red" xmlns="http://www.w3.org/2005/07/scxml">
+    <state id="red">
+        <transition event="e1" target="green"/>
+    </state>
+    <state id="green">
+        <transition event="e2" target="red"/>
+    </state>
+</scxml> 
 
 
-""" Perhaps a method for cancelling?
-
-class MyThread(threading.Thread):
-    def __init__(self, num):
-        threading.Thread.__init__(self)
-        self.running = True
-        self.num = num
-        
-    def stop(self):
-        self.running = False
-        
-    def run(self):
-        while self.running:
-            print 'hello from thread %d' % self.num
-            time.sleep(1)
-"""
-
-""" Another interesting pattern
-
-STOP = object()
-
-def consumer(q):
-    while True:
-        x = q.get()
-        if x is STOP:
-            return
-        consume(x)
-
-def main()
-    q = Queue()
-    c=threading.Thread(target=consumer,args=[q])
-
-    try:
-        run_producer(q)
-    except KeybordInterrupt:
-        q.enqueue(STOP)
-    c.join()
+def interpret(doc):
+   expandScxmlSource(doc)
+   if (!valid(doc)) {fail with error}
+   configuration = new Set()
+   datamodel = new Datamodel(doc)
+   executeGlobalScriptElements(doc)
+   internalQueue = new Queue()
+   externalQueue = new BlockingQueue()
+   continue = true
+   macrostep([doc.initial.transition])
+   threading.Thread(target=startEventLoop).start()
 """
 
 

@@ -23,7 +23,7 @@ class SCXMLNode(object):
         self.state.append(child)
         
     def addParallel(self, child):
-        # TODO: this might not be nessecary, we might instead treat Parallel and State equally.
+        # TODO: this might not be necessary, we might instead treat Parallel and State equally.
         assert type(child) == Parallel
         self.parallel.append(child)
         
@@ -44,8 +44,7 @@ class History(object):
         self.type = type
 
 class Transition(object): 
-    def __init__(self, id, source):
-        self.id = id
+    def __init__(self, source):
         self.source = source
         self.target = None
         self.event = None
