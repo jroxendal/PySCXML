@@ -1,39 +1,41 @@
-import Queue, threading, time
 from scxml.node import *
+import Queue
+import threading
+import time
 
 dm = {}
 
-f = None
-transition = None
-onentry = None
-onexit = None
-targets = {}
-targets['root'] = State("root", None)
-targets['main'] = State("main", targets["root"])
-#targets['main'].n = 0
-x = 0
-targets['green'] = State("green", targets["main"])
-#targets['green'].n = 2
-targets['main'].state.append(targets['green'])
-transition = Transition(targets["green"])
-transition.target = ['red']
-targets['green'].transition.append(transition)
-targets['red'] = State("red", targets["main"])
-#targets['red'].n = 4
-targets['main'].state.append(targets['red'])
-transition = Transition(targets["red"])
-transition.cond = lambda dm: x < 10
-targets['red'].transition.append(transition)
-def f():
-	global x
-	x=x+1
-	print 'Log: ' + str(x)
-transition.exe = f
-targets['root'].state.append(targets['main'])
-del(f)
-del(transition)
-del(onentry)
-del(onexit)
+#f = None
+#transition = None
+#onentry = None
+#onexit = None
+#targets = {}
+#targets['root'] = State("root", None)
+#targets['main'] = State("main", targets["root"])
+##targets['main'].n = 0
+#x = 0
+#targets['green'] = State("green", targets["main"])
+##targets['green'].n = 2
+#targets['main'].state.append(targets['green'])
+#transition = Transition(targets["green"])
+#transition.target = ['red']
+#targets['green'].transition.append(transition)
+#targets['red'] = State("red", targets["main"])
+##targets['red'].n = 4
+#targets['main'].state.append(targets['red'])
+#transition = Transition(targets["red"])
+#transition.cond = lambda dm: x < 10
+#targets['red'].transition.append(transition)
+#def f():
+#	global x
+#	x=x+1
+#	print 'Log: ' + str(x)
+#transition.exe = f
+#targets['root'].state.append(targets['main'])
+#del(f)
+#del(transition)
+#del(onentry)
+#del(onexit)
 
 
 # end of example
@@ -114,7 +116,7 @@ def exitStates(enabledTransitions):
 
 def executeContent(elements):
     for e in elements:
-        if hasattr(e,'exe'):
+        if hasattr(e,'exe') and callable(e.exe):
 	        e.exe()
 
 
@@ -155,7 +157,7 @@ def enterStates(enabledTransitions):
                     internalQueue.put(grandparent.attribute('id') + ".Done")
     for s in configuration:
         if (isFinalState(s) and isScxmlState(s.parent)):
-            g_continue = false
+            g_continue = False
 
 
 def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
@@ -164,8 +166,12 @@ def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
         for child in getChildStates(s):
             addStatesToEnter(child,s,statesToEnter,statesForDefaultEntry)
     elif isCompoundState(s):
-        statesForDefaultEntry.add(s)
-        addStatesToEnter(getDefaultInitialState(s),s,statesToEnter,statesForDefaultEntry)
+    	for tState in getTargetStates(s.initial):
+            statesForDefaultEntry.add(tState)
+            addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
+#    elif isCompoundState(s):
+#        statesForDefaultEntry.add(s)
+#        addStatesToEnter(getDefaultInitialState(s),s,statesToEnter,statesForDefaultEntry)
     for anc in getProperAncestors(s,root):
         statesToEnter.add(anc)
         if isParallelState(anc):
@@ -192,7 +198,7 @@ def findLCA(stateList):
 def getTargetStates(targetIDs):
     states = []
     for id in targetIDs:
-        states.append(targets[id])
+        states.append(doc.getState(id))
     return states
 
             
@@ -295,9 +301,12 @@ def send(name,data={},delay=0):
     threading.Thread(target=run,args=(name,data,delay)).start()
     
 
-def interpret():
-    g_continue = True
     
+if __name__ == "__main__":
+    import compiler
+    doc = compiler.parseXML(open("../resources/colors.xml").read())
+    
+    g_continue = True
     configuration = set([])
     
     externalQueue = Queue.Queue()
@@ -305,14 +314,14 @@ def interpret():
     
     historyValue = {}
     
-    threading.Thread(target=startEventLoop).start()
-
-
-if __name__ == "__main__":
-    transition = Transition(None)
-    transition.target = ['green']
+    transition = Transition(doc.rootState);
+    transition.target = doc.rootState.initial;
+    
     macrostep(set([transition]))
-    interpret()
+    
+    threading.Thread(target=startEventLoop).start()
+    
+    send("quit")
 
 """ 
 <scxml initial="red" xmlns="http://www.w3.org/2005/07/scxml">

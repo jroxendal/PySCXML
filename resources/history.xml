@@ -1,0 +1,26 @@
+<scxml initial="process">
+
+	<state id="process" initial="s1">
+		<history id="h">
+			<transition target="process" />
+		</history>
+		<state id="s1">
+			<transition event="e1" target="s2" />
+		</state>
+		<state id="s2">
+			<transition event="e2" target="s1" />
+		</state>
+		<transition event="pause" target="interrupted" />
+		<transition event="terminate" target="terminated" />
+	</state>
+
+	<state id="interrupted">
+
+		<transition event="resume" target="h" />
+		<transition event="terminate" target="terminated" />
+	</state>
+
+	<final id="terminated" />
+
+</scxml>
+

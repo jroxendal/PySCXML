@@ -1,0 +1,38 @@
+<scxml initial="red">
+     <transition event="quit" target="f1" />
+     
+     <final id="f1">
+     	<onentry>
+     		<log expr="program exit"></log>
+     	</onentry>
+     </final>
+     <state id="red" >
+	     <onentry>
+	     	<log expr="hello pyscxml!" />
+	     </onentry>
+         <transition event="e1" target="green" />
+     </state>
+     
+     <state id="green">
+         <transition event="e1" target="red"/>
+     </state>
+     
+     <state id="blue" initial="subblue1">
+         <onentry>
+             <log label="blue" expr="entered" />
+         </onentry>
+         
+         <state id="subblue1">
+             <onentry>
+                 <log label="subblue1" expr="entered" />
+             </onentry>    
+                <transition target="subblue2" />
+         </state>
+         <final id="subblue2">
+             <onentry>
+                 <log label="subblue2" expr="entered" />
+             </onentry>    
+             
+         </final>
+     </state>
+ </scxml> 

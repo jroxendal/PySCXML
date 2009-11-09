@@ -1,0 +1,17 @@
+<scxml initial="init">
+  <parallel id="init" initial="Pinger">
+    <state id="Pinger">
+      <onentry>
+        <raise event="ping"/>
+      </onentry>
+      <transition event="pong">
+        <raise event="ping" delay="1"/>
+      </transition>
+    </state>
+    <state id="Ponger">
+      <transition event="ping">
+        <raise event="pong" delay="1"/>
+      </transition>
+    </state>
+  </parallel>
+</scxml>
