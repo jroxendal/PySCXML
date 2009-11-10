@@ -1,12 +1,11 @@
-from collections import deque
 '''
 Created on Nov 7, 2009
 
-@author: johan
+@author: Johan Roxendal
 '''
 
 class SCXMLNode(object):
-    def __init__(self, id, parent):
+    def __init__(self, id, parent, n):
         self.transition = []
         self.state = []
         self.parallel = []
@@ -17,6 +16,7 @@ class SCXMLNode(object):
         self.invoke = []
         self.id = id
         self.parent = parent
+        self.n = n
         self.initial = []
         
     def addChild(self, child):
@@ -57,7 +57,6 @@ class SCXMLNode(object):
 class executable(object):
     def __init__(self):
         self.exe = None
-        
 
 class State(SCXMLNode):
     def __str__(self):
@@ -75,14 +74,12 @@ class History(object):
         
     def __str__(self):
         return '<History id="%s" type="%s">' % (self.id, self.type)
-
-    
     
 
 class Transition(executable): 
     def __init__(self, source):
         self.source = source
-        self.target = None
+        self.target = []
         self.event = None
         self.anchor = None
         
@@ -97,11 +94,12 @@ class Transition(executable):
         return "<Transition " + attrs 
  
 class Final(object):
-    def __init__(self, id, parent):
+    def __init__(self, id, parent, n):
         self.onentry = []
         self.onexit = []
         self.id = id
         self.parent = parent
+        self.n = n
         
     def addOnentry(self, entry):
         self.onentry.append(entry)

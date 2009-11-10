@@ -3,44 +3,6 @@ import Queue
 import threading
 import time
 
-dm = {}
-
-#f = None
-#transition = None
-#onentry = None
-#onexit = None
-#targets = {}
-#targets['root'] = State("root", None)
-#targets['main'] = State("main", targets["root"])
-##targets['main'].n = 0
-#x = 0
-#targets['green'] = State("green", targets["main"])
-##targets['green'].n = 2
-#targets['main'].state.append(targets['green'])
-#transition = Transition(targets["green"])
-#transition.target = ['red']
-#targets['green'].transition.append(transition)
-#targets['red'] = State("red", targets["main"])
-##targets['red'].n = 4
-#targets['main'].state.append(targets['red'])
-#transition = Transition(targets["red"])
-#transition.cond = lambda dm: x < 10
-#targets['red'].transition.append(transition)
-#def f():
-#	global x
-#	x=x+1
-#	print 'Log: ' + str(x)
-#transition.exe = f
-#targets['root'].state.append(targets['main'])
-#del(f)
-#del(transition)
-#del(onentry)
-#del(onexit)
-
-
-# end of example
-
-
 
 def startEventLoop():
     while g_continue:
@@ -146,8 +108,9 @@ def enterStates(enabledTransitions):
 #         sessionid = executeInvoke(inv)
 #         datamodel.assignValue(inv.attribute('id'),sessionid)
         executeContent(s.onentry)
-        if s in statesForDefaultEntry:
-            executeContent(s.initial.transition.children())
+        # transition exec content for initial tag not supported
+#        if s in statesForDefaultEntry:
+#            executeContent(s.initial.transition.children())
         if isFinalState(s):
             parent = s.parent
             grandparent = parent.parent
@@ -303,8 +266,12 @@ def send(name,data={},delay=0):
 
     
 if __name__ == "__main__":
-    import compiler
-    doc = compiler.parseXML(open("../resources/colors.xml").read())
+    from compiler import Compiler
+    compiler = Compiler()
+    compiler.registerSend(send)
+    doc = compiler.parseXML(open("../resources/parallel.xml").read())
+    
+    
     
     g_continue = True
     configuration = set([])
@@ -313,6 +280,7 @@ if __name__ == "__main__":
     internalQueue = Queue.Queue()
     
     historyValue = {}
+    dm = {}
     
     transition = Transition(doc.rootState);
     transition.target = doc.rootState.initial;
@@ -321,38 +289,7 @@ if __name__ == "__main__":
     
     threading.Thread(target=startEventLoop).start()
     
-    send("quit")
-
-""" 
-<scxml initial="red" xmlns="http://www.w3.org/2005/07/scxml">
-    <state id="red">
-        <transition event="e1" target="green"/>
-    </state>
-    <state id="green">
-        <transition event="e2" target="red"/>
-    </state>
-</scxml> 
-
-
-def interpret(doc):
-   expandScxmlSource(doc)
-   if (!valid(doc)) {fail with error}
-   configuration = new Set()
-   datamodel = new Datamodel(doc)
-   executeGlobalScriptElements(doc)
-   internalQueue = new Queue()
-   externalQueue = new BlockingQueue()
-   continue = true
-   macrostep([doc.initial.transition])
-   threading.Thread(target=startEventLoop).start()
-"""
-
-
-
-
-
-
-
+#    send("quit")
 
 
 

@@ -33,18 +33,6 @@ def getLogFunction(toPrint):
         print "Log: " + toPrint
     return f
     
-def getExecContent(node):
-    f = None
-    for node in node.getchildren():
-        if node.tag == "log":
-            f = getLogFunction(node.get("expr"))
-#        we'll probably need to cram all these into the same function, somehow.        
-#        elif node.tag == "script:
-#        elif node.tag == "raise:
-#        elif node.tag == "assign:
-#        elif node.tag == "send:
-    return f
-
 
 def decorateWithParent(tree):
     for node in tree.getiterator():
@@ -56,70 +44,94 @@ def decorateWithParent(tree):
 #    for key in node.keys():
 #        obj[key] = node.get(key)
 
-def parseXML(xmlStr):
-    doc = SCXMLDocument()
-    tree = etree.fromstring(xmlStr)
-    decorateWithParent(tree)
-    for node in (x for x in tree.getiterator() if x.tag not in ["log", "script"]):
-        if hasattr(node, "parent"):
-            parentState = doc.getState(node.parent.get("id"))
-            
-        
-        if node.tag == "scxml":
-            node.set("id", "__main__")
-            s = State("__main__", None)
-            if node.get("initial"):
-                s.initial = node.get("initial").split(" ")
-            doc.rootState = s    
-            
-            
-        elif node.tag == "state":
-            sid = get_sid(node)
-            s = State(sid, parentState)
-            if node.get("inital"):
-                s.initial = node.get("initial").split(" ")
-            doc.addNode(s)
-            parentState.addChild(s)
-            
-        elif node.tag == "parallel":
-            sid = get_sid(node)
-            s = Parallel(sid, parentState)
-            if node.get("inital"):
-                s.initial = node.get("initial").split(" ")
-            doc.addNode(s)
-            parentState.addChild(s)
-            
-        elif node.tag == "final":
-            sid = get_sid(node)
-            s = Final(sid, parentState)
-            doc.addNode(s)
-            parentState.addFinal(s)
-            
-        elif node.tag == "transition":
-            
-            t = Transition(parentState)
-            if node.get("target"):
-                t.target = node.get("target").split(" ")
-            if node.get("event"):
-                t.event = node.get("event")
-            
-            t.exe = getExecContent(node)
-                
-            parentState.addTransition(t)
-            
-        elif node.tag == "onentry":
-            s = Onentry()
-            s.exe = getExecContent(node)
-            parentState.addOnentry(s)
-        
-        elif node.tag == "onexit":
-            s = Onexit()
-            s.exe = getExecContent(node)
-            parentState.addOnexit(s)
-        elif node.tag == "data":
-            doc.dm[node.get("id")] = node.get("expr")
 
-    return doc
+class Compiler(object):
+    def __init__(self):
+        self.doc = SCXMLDocument()
+        self.sendFunction = None
+        
+    def registerSend(self, sendFunction):
+        self.sendFunction = sendFunction
+        
+    def getExecContent(self, node):
+        f = None
+        for node in node.getchildren():
+            if node.tag == "log":
+                f = getLogFunction(node.get("expr"))
+            elif node.tag == "raise": 
+            # i think the functools module has a partial application function...
+                delay = int(node.get("delay")) if node.get("delay") else 0
+                
+                f = lambda: self.sendFunction(node.get("event"), {}, delay)
+    #        we'll probably need to cram all these into the same function, somehow.        
+    #        elif node.tag == "script:
+    #        elif node.tag == "assign:
+    #        elif node.tag == "send:
+        return f
+    
+    def parseXML(self, xmlStr):
+        tree = etree.fromstring(xmlStr)
+        decorateWithParent(tree)
+        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in ["log", "script", "raise", "assign", "send"]):
+            if hasattr(node, "parent"):
+                parentState = self.doc.getState(node.parent.get("id"))
+                
+            
+            if node.tag == "scxml":
+                node.set("id", "__main__")
+                s = State("__main__", None, n)
+                if node.get("initial"):
+                    s.initial = node.get("initial").split(" ")
+                self.doc.rootState = s    
+                
+                
+            elif node.tag == "state":
+                sid = get_sid(node)
+                s = State(sid, parentState, n)
+                if node.get("initial"):
+                    s.initial = node.get("initial").split(" ")
+                self.doc.addNode(s)
+                parentState.addChild(s)
+                
+            elif node.tag == "parallel":
+                sid = get_sid(node)
+                s = Parallel(sid, parentState, n)
+                if node.get("initial"):
+                    s.initial = node.get("initial").split(" ")
+                self.doc.addNode(s)
+                parentState.addChild(s)
+                
+            elif node.tag == "final":
+                sid = get_sid(node)
+                s = Final(sid, parentState, n)
+                self.doc.addNode(s)
+                parentState.addFinal(s)
+                
+            elif node.tag == "transition":
+                
+                t = Transition(parentState)
+                if node.get("target"):
+                    t.target = node.get("target").split(" ")
+                if node.get("event"):
+                    t.event = node.get("event")
+                
+                t.exe = self.getExecContent(node)
+                    
+                parentState.addTransition(t)
+                
+            elif node.tag == "onentry":
+                s = Onentry()
+                s.exe = self.getExecContent(node)
+                parentState.addOnentry(s)
+            
+            elif node.tag == "onexit":
+                s = Onexit()
+                s.exe = self.getExecContent(node)
+                parentState.addOnexit(s)
+            elif node.tag == "data":
+                self.doc.dm[node.get("id")] = node.get("expr")
+    
+        return self.doc
     
     
 
