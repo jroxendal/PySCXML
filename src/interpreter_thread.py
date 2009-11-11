@@ -36,8 +36,9 @@ def selectTransitions(event):
     done = False
     for state in atomicStates:
         for s in [state] + getProperAncestors(state,None):
-            if done:
-                break
+            #commenting out these fixes issue # 5
+#            if done:
+#                break
             for t in s.transition:
                 if ((event == None and not hasattr(t,'event') and conditionMatch(t)) or 
                     (event != None and nameMatch(event,t) and conditionMatch(t))):
@@ -67,7 +68,11 @@ def exitStates(enabledTransitions):
     statesToExit.sort(exitOrder)
     for s in statesToExit:
         for h in s.history:
-            f = lambda (s0): isAtomicState(s0) and isDescendant(s0,s) if (h.type == "deep") else lambda (s0): s0.parent == s
+            if h.type == "deep":
+                f = lambda s0: isAtomicState(s0) and isDescendant(s0,s) 
+            else:
+                f = lambda s0: s0.parent == s
+            
             historyValue[h.id] = filter(f,configuration)
     for s in statesToExit:
         executeContent(s.onexit)
@@ -132,6 +137,7 @@ def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
     	for tState in getTargetStates(s.initial):
             statesForDefaultEntry.add(tState)
             addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
+            # switched out the lines under for those over.
 #    elif isCompoundState(s):
 #        statesForDefaultEntry.add(s)
 #        addStatesToEnter(getDefaultInitialState(s),s,statesToEnter,statesForDefaultEntry)
@@ -220,11 +226,11 @@ def isScxmlState(s):
 
 
 def isAtomicState(s):
-    return isinstance(s,State) and s.state == [] and s.parallel == [] and s.final == []
+    return isinstance(s,SCXMLNode) and s.state == [] and s.parallel == [] and s.final == []
 
 
 def isCompoundState(s):
-    return isinstance(s,State) and (s.state != [] or s.parallel != [] or s.final != [])
+    return isinstance(s,SCXMLNode) and (s.state != [] or s.parallel != [] or s.final != [])
 
 
 ##
@@ -258,10 +264,8 @@ def exitOrder(s1,s2):
 
 def send(name,data={},delay=0):
     """Spawns a new thread that sends an event e after t seconds"""
-    def run(name,data,delay):
-        time.sleep(delay)
-        externalQueue.put({"name":name,"data":data})
-    threading.Thread(target=run,args=(name,data,delay)).start()
+    time.sleep(delay)
+    externalQueue.put({"name":name,"data":data})
     
 
     
@@ -269,7 +273,7 @@ if __name__ == "__main__":
     from compiler import Compiler
     compiler = Compiler()
     compiler.registerSend(send)
-    doc = compiler.parseXML(open("../resources/parallel.xml").read())
+    doc = compiler.parseXML(open("../resources/history.xml").read())
     
     
     
@@ -289,7 +293,9 @@ if __name__ == "__main__":
     
     threading.Thread(target=startEventLoop).start()
     
-#    send("quit")
+    
+    send("pause", delay=1)
+    send("resume", delay=1)
 
 
 

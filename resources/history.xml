@@ -1,7 +1,7 @@
 <scxml initial="process">
 
 	<state id="process" initial="s1">
-		<history id="h">
+		<history id="h" type="shallow">
 			<transition target="process" />
 		</history>
 		<state id="s1">

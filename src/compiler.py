@@ -13,19 +13,19 @@ def get_sid(node):
         node.set('id',id)
         return id
 
-def gen_cond(node):
-    if node.get('cond') != '':
-        return "transition.cond = lambda dm: " + node.get('cond') +"\n"
-    else:
-        return ""
+#def gen_cond(node):
+#    if node.get('cond') != '':
+#        return "transition.cond = lambda dm: " + node.get('cond') +"\n"
+#    else:
+#        return ""
           
-def gen_target(node):
-    if node.get('target') != '':
-        ss = node.get('target').split(" ")
-        ss = [str(s) for s in ss if s != ''] 
-        return "transition.target = " + str(ss) + "\n"
-    else:
-        return ""
+#def gen_target(node):
+#    if node.get('target') != '':
+#        ss = node.get('target').split(" ")
+#        ss = [str(s) for s in ss if s != ''] 
+#        return "transition.target = " + str(ss) + "\n"
+#    else:
+#        return ""
     
     
 def getLogFunction(toPrint):
@@ -84,7 +84,6 @@ class Compiler(object):
                     s.initial = node.get("initial").split(" ")
                 self.doc.rootState = s    
                 
-                
             elif node.tag == "state":
                 sid = get_sid(node)
                 s = State(sid, parentState, n)
@@ -106,6 +105,13 @@ class Compiler(object):
                 s = Final(sid, parentState, n)
                 self.doc.addNode(s)
                 parentState.addFinal(s)
+                
+            elif node.tag == "history":
+                sid = get_sid(node)
+                h = History(sid, parentState, node.get("type"), n)
+                self.doc.addNode(h)
+                parentState.addHistory(h)
+                
                 
             elif node.tag == "transition":
                 
@@ -136,5 +142,9 @@ class Compiler(object):
     
 
 if __name__ == '__main__':
-    doc = parseXML(open("../resources/colors.xml").read())
+    
+    compiler = Compiler()
+    compiler.registerSend(lambda: "dummy send")
+    doc = compiler.parseXML(open("../resources/parallel.xml").read())
+    print [doc.rootState]
     

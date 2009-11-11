@@ -1,5 +1,7 @@
 <scxml initial="red">
-     <transition event="quit" target="f1" />
+     <transition event="quit" target="f1" >
+     	<log expr="going to final state" />
+     </transition>
      
      <final id="f1">
      	<onentry>
@@ -8,7 +10,7 @@
      </final>
      <state id="red" >
 	     <onentry>
-	     	<log expr="hello pyscxml!" />
+	     	<raise event="quit" />
 	     </onentry>
          <transition event="e1" target="green" />
      </state>

@@ -8,7 +8,7 @@ class SCXMLNode(object):
     def __init__(self, id, parent, n):
         self.transition = []
         self.state = []
-        self.parallel = []
+        self.parallel = [] # we can probably delete this.
         self.final = []
         self.history = []
         self.onentry = []
@@ -40,7 +40,10 @@ class SCXMLNode(object):
         
     def getChildren(self):
         return self.transition +self.state + self.parallel + self.history + self.final 
-        
+    
+    def __repr__(self):
+        return str(self)
+    
     def __iter__(self):
         stack = [self]
         
@@ -61,16 +64,24 @@ class executable(object):
 class State(SCXMLNode):
     def __str__(self):
         return '<State id="%s">' % self.id
+        
 
 class Parallel(SCXMLNode):
     def __str__(self):
         return '<Parallel id="%s">' % self.id
 
 class History(object): 
-    def __init__(self, id, type):
+    def __init__(self, id, parent, type, n):
         self.id = id
+        self.parent = parent
         assert type in ["deep", "shallow"]
         self.type = type
+        self.n = n
+        
+        self.transition = []
+        
+    def addTransition(self, t):
+        self.transition.append(t)
         
     def __str__(self):
         return '<History id="%s" type="%s">' % (self.id, self.type)
@@ -92,6 +103,9 @@ class Transition(executable):
         if self.event:
             attrs += 'event="%s">' % self.event
         return "<Transition " + attrs 
+    
+    def __repr__(self):
+        return str(self)
  
 class Final(object):
     def __init__(self, id, parent, n):
