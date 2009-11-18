@@ -23,6 +23,7 @@ class StateMachine(object):
         
         c = compiler.Compiler()
         c.registerSend(interpreter.send)
+        c.registerIn(interpreter.isIn)
         
         self.doc = c.parseXML(xml)
         
@@ -39,4 +40,7 @@ if __name__ == "__main__":
     sm = StateMachine(xml)
     sm.start()
     
+    sm.send("pause", 1)
+    sm.send("resume", 2)
     
+    sm.send("terminate", 3)

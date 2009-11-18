@@ -16,7 +16,7 @@ This file is part of pyscxml.
 '''
 
 
-from scxml.node import *
+from node import *
 import re
 import xml.etree.ElementTree as etree
 from pprint import pprint
@@ -31,20 +31,6 @@ def get_sid(node):
         node.set('id',id)
         return id
 
-#def gen_cond(node):
-#    if node.get('cond') != '':
-#        return "transition.cond = lambda dm: " + node.get('cond') +"\n"
-#    else:
-#        return ""
-          
-#def gen_target(node):
-#    if node.get('target') != '':
-#        ss = node.get('target').split(" ")
-#        ss = [str(s) for s in ss if s != ''] 
-#        return "transition.target = " + str(ss) + "\n"
-#    else:
-#        return ""
-    
     
 def getLogFunction(toPrint):
     def f():
@@ -67,9 +53,14 @@ class Compiler(object):
     def __init__(self):
         self.doc = SCXMLDocument()
         self.sendFunction = None
+        self.In = None
         
-    def registerSend(self, sendFunction):
-        self.sendFunction = sendFunction
+        
+    def registerSend(self, f):
+        self.sendFunction = f
+        
+    def registerIn(self, f):
+        self.In = f
         
     def getExecContent(self, node):
         f = None
@@ -87,6 +78,12 @@ class Compiler(object):
     #        elif node.tag == "send:
         return f
     
+    def getCondFunction(self, node):
+        execStr = "f = lambda dm: %s" % node.get("cond")
+        exec(execStr)
+        return f
+
+
     def parseXML(self, xmlStr):
         tree = etree.fromstring(xmlStr)
         decorateWithParent(tree)
@@ -138,6 +135,9 @@ class Compiler(object):
                     t.target = node.get("target").split(" ")
                 if node.get("event"):
                     t.event = node.get("event")
+                if node.get("cond"):
+                    t.cond = self.getCondFunction(node)    
+                
                 
                 t.exe = self.getExecContent(node)
                     

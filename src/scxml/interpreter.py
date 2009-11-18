@@ -16,7 +16,7 @@ This file is part of pyscxml.
 '''
 
 
-from scxml.node import *
+from node import *
 import Queue
 import threading
 import time
@@ -25,12 +25,11 @@ import time
 g_continue = True
 configuration = set([])
 
-externalQueue = Queue.Queue()
 internalQueue = Queue.Queue()
+externalQueue = Queue.Queue()
 
 historyValue = {}
 dm = {}
-
 
 
 def startEventLoop():
@@ -69,7 +68,7 @@ def selectTransitions(event):
 #            if done:
 #                break
             for t in s.transition:
-                if ((event == None and not hasattr(t,'event') and conditionMatch(t)) or 
+                if ((event == None and not t.event and conditionMatch(t)) or 
                     (event != None and nameMatch(event,t) and conditionMatch(t))):
                    enabledTransitions.add(t)
                    done = True
@@ -82,13 +81,13 @@ def microstep(enabledTransitions):
     executeContent(enabledTransitions)
     enterStates(enabledTransitions)
     # Logging
-    print "{" + ", ".join([s.id for s in configuration]) + "}"
+    print "{" + ", ".join([s.id for s in configuration if s.id != "__main__"]) + "}"
 
 
 def exitStates(enabledTransitions):
     statesToExit = set()
     for t in enabledTransitions:
-        if hasattr(t,'target'):
+        if t.target:
             LCA = findLCA([t.source] + getTargetStates(t.target))
             for s in configuration:
                 if isDescendant(s,LCA):
@@ -112,7 +111,7 @@ def exitStates(enabledTransitions):
 
 def executeContent(elements):
     for e in elements:
-        if hasattr(e,'exe') and callable(e.exe):
+        if callable(e.exe):
 	        e.exe()
 
 
@@ -120,7 +119,7 @@ def enterStates(enabledTransitions):
     statesToEnter = set()
     statesForDefaultEntry = set()
     for t in enabledTransitions:
-        if hasattr(t,'target'):
+        if t.target:
             LCA = findLCA([t.source] + getTargetStates(t.target))
             for s in getTargetStates(t.target):
                 if isHistoryState(s):
@@ -151,7 +150,7 @@ def enterStates(enabledTransitions):
             internalQueue.put(parent.id + ".Done")
             if isParallelState(grandparent):
                 if all(isInFinalState(s) for s in getChildStates(grandparent)):
-                    internalQueue.put(grandparent.attribute('id') + ".Done")
+                    internalQueue.put(grandparent.get('id') + ".Done")
     for s in configuration:
         if (isFinalState(s) and isScxmlState(s.parent)):
             g_continue = False
@@ -221,14 +220,14 @@ def getChildStates(state):
 
 
 def nameMatch(event,t):
-    if not hasattr(t,'event'):
+    if not t.event:
         return False
     else:
         return t.event == event["name"]
     
 
 def conditionMatch(t):
-    if not hasattr(t,'cond'):
+    if not t.cond:
         return True
     else:
         return t.cond(dm)
@@ -267,7 +266,7 @@ def isCompoundState(s):
 ##
 
 def documentOrder(s1,s2):
-    if s1.n < s2.n:
+    if s1.n - s2.n:
         return 1
     else:
         return -1
@@ -291,33 +290,55 @@ def exitOrder(s1,s2):
         return documentOrder(s2,s1)
 
 
+def In(name):
+    return name in map(lambda x: x.id, configuration)
+
 def send(name,data={},delay=0):
-    """Spawns a new thread that sends an event e after t seconds"""
+    """Spawns a new thread that sends an event after a specified time, in seconds"""
+    threading.Thread(target=sendFunction, args=(name, data, delay)).start()
+    
+def sendFunction(name,data={},delay=0):
     time.sleep(delay)
     externalQueue.put({"name":name,"data":data})
+    
     
 
 def interpret(document):
     '''Initializes the interpreter given an SCXMLDocument instance'''
-    transition = Transition(doc.rootState);
-    transition.target = doc.rootState.initial;
+    
+    # why does this need to be declared globally?
+    global doc
+    doc = document
+    
+    transition = Transition(document.rootState);
+    transition.target = document.rootState.initial;
     
     macrostep(set([transition]))
     
-    threading.Thread(target=startEventLoop).start()
+    loop = threading.Thread(target=startEventLoop)
+    loop.start()
+    
     
 
     
 if __name__ == "__main__":
-    from compiler import Compiler
-    compiler = Compiler()
+    import compiler as comp
+    compiler = comp.Compiler()
     compiler.registerSend(send)
-    doc = compiler.parseXML(open("../resources/history.xml").read())
+    compiler.registerIn(In)
     
-    interpret(doc)
+    comp.In = In
     
-    send("pause", delay=1)
-    send("resume", delay=1)
-
-
+    xml = open("../../resources/history.xml").read()
+    
+    interpret(compiler.parseXML(xml))
+    
+    
+    
+    send("e1", delay=1)
+#    send("resume", delay=2)
+#    send("terminate", delay=3)
+    
+    
+    
 

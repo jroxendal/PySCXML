@@ -72,7 +72,7 @@ class SCXMLNode(object):
             yield item
             
         
-class executable(object):
+class Executable(object):
     def __init__(self):
         self.exe = None
 
@@ -102,14 +102,16 @@ class History(object):
         return '<History id="%s" type="%s">' % (self.id, self.type)
     
 
-class Transition(executable): 
+class Transition(Executable): 
     def __init__(self, source):
+        Executable.__init__(self)
         self.source = source
         self.target = []
         self.event = None
+        self.cond = None
         self.anchor = None
         
-        self.optionalAttrs = ["target", "event", "anchor"]
+        
         
     def __str__(self):
         attrs = 'source="%s" ' % self.source.id
@@ -141,12 +143,12 @@ class Final(object):
     def __str__(self):
         return '<Final id="%s">' % self.id
 
-class Onentry(executable): 
+class Onentry(Executable): 
     
     def __str__(self):
         return "<Onentry>"
 
-class Onexit(executable): 
+class Onexit(Executable): 
     def __str__(self):
         return "<Onexit>"
 
