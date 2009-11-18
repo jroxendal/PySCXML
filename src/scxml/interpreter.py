@@ -22,6 +22,17 @@ import threading
 import time
 
 
+g_continue = True
+configuration = set([])
+
+externalQueue = Queue.Queue()
+internalQueue = Queue.Queue()
+
+historyValue = {}
+dm = {}
+
+
+
 def startEventLoop():
     while g_continue:
         ee = externalQueue.get()
@@ -286,24 +297,8 @@ def send(name,data={},delay=0):
     externalQueue.put({"name":name,"data":data})
     
 
-    
-if __name__ == "__main__":
-    from compiler import Compiler
-    compiler = Compiler()
-    compiler.registerSend(send)
-    doc = compiler.parseXML(open("../resources/history.xml").read())
-    
-    
-    
-    g_continue = True
-    configuration = set([])
-    
-    externalQueue = Queue.Queue()
-    internalQueue = Queue.Queue()
-    
-    historyValue = {}
-    dm = {}
-    
+def interpret(document):
+    '''Initializes the interpreter given an SCXMLDocument instance'''
     transition = Transition(doc.rootState);
     transition.target = doc.rootState.initial;
     
@@ -311,6 +306,15 @@ if __name__ == "__main__":
     
     threading.Thread(target=startEventLoop).start()
     
+
+    
+if __name__ == "__main__":
+    from compiler import Compiler
+    compiler = Compiler()
+    compiler.registerSend(send)
+    doc = compiler.parseXML(open("../resources/history.xml").read())
+    
+    interpret(doc)
     
     send("pause", delay=1)
     send("resume", delay=1)
