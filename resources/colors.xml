@@ -9,10 +9,7 @@
      	</onentry>
      </final>
      <state id="red" >
-	     <onentry>
-	     	<raise event="quit" />
-	     </onentry>
-         <transition event="e1" target="green" />
+         <transition event="e1" target="blue" />
      </state>
      
      <state id="green">

@@ -6,7 +6,6 @@
 			<onentry>
 				<log expr="on enter s1" />
 			</onentry>
-			<transition target="s2" />
 			<history id="h" type="shallow">
 				<transition target="process" />
 			</history>
