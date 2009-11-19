@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<scxml initial="p">
+
+	<parallel id="p" initial="s1 s2">
+	
+		<state id="s1" initial="s1a">
+			<state id="s1a">
+				<transition event="switch" target="s1b" />
+			</state>
+			<state id="s1b">
+				<transition event="switch" target="s1a" />
+			</state>
+		
+		</state>
+
+		<state id="s2" initial="s2b">
+			<state id="s2a">
+				<transition event="switch" target="s2b" />
+			</state>
+			<state id="s2b">
+				<transition event="switch" target="s2a" />
+			</state>
+		</state>
+		
+	
+	</parallel> 
+
+
+</scxml>
