@@ -1,15 +1,19 @@
-<project name="pyscxml" default="compile">
+<project name="pyscxml" default="main" basedir=".">
 
 	<taskdef resource="pyAntTasks.properties" />
 
 	<property name="src.dir" value="src" />
 	<property name="pydoc.dir" value="pydoc" />
 
-	<target name="init">
+	<target name="main">
 		<mkdir dir="${pydoc.dir}" />
+		<antcall target="clean" />
+		<antcall target="compile" />
+		<antcall target="pydoc" />
+		<antcall target="tests" />
 	</target>
 
-	<target name="clean" depends="init">
+	<target name="clean">
 		<delete>
 			<fileset dir="${src.dir}">
 				<include name="**/*.pyc" />
@@ -25,7 +29,7 @@
 		<py-compile dir="${src.dir}" pythonpath="${src.dir}" optimize="0" />
 	</target>
 
-	<target name="pydoc" depends="init,compile">
+	<target name="pydoc">
 		<py-doc pythonpath="${src.dir}" destdir="${pydoc.dir}">
 			<fileset dir="${src.dir}">
 				<include name="**/*" />
@@ -36,7 +40,7 @@
 	<target name="tests" depends="compile">
 		<py-test pythonpath="${src.dir}" dir=".">
 			<fileset dir="${src.dir}">
-				<include name="unittest.py" />
+				<include name="**/pyscxmlTest.py" />
 			</fileset>
 		</py-test>
 	</target>
