@@ -23,7 +23,7 @@ class StateMachine(object):
         
         c = compiler.Compiler()
         c.registerSend(interpreter.send)
-        c.registerIn(interpreter.isIn)
+        c.registerIn(interpreter.In)
         
         self.doc = c.parseXML(xml)
         
@@ -33,6 +33,10 @@ class StateMachine(object):
     
     def start(self):
         interpreter.interpret(self.doc)
+        
+    def isFinished(self):
+        return interpreter.configuration == set()
+        
         
         
 if __name__ == "__main__":

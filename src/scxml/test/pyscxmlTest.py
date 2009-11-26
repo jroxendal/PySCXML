@@ -12,26 +12,29 @@ This file is part of pyscxml.
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    along with pyscxml. If not, see <http://www.gnu.org/licenses/>.
     
     @author: Johan Roxendal
 '''
 
 import unittest
 from scxml.compiler import Compiler
+from scxml.interpreter import interpret
+from scxml.pyscxml import StateMachine
 from xml.etree import ElementTree as etree
-from os import listdir, curdir
-import os.path
 
-class CompilerTest(unittest.TestCase):
+import os, os.path
+
+xmlDir = "unittest_xml/"
+
+class RegressionTest(unittest.TestCase):
     ''' 
     This test class is run from the context of the build.xml found in the project root.
     '''
     
     def testCompiler(self):
         
-        xmlDir = "unittest_xml/"
-        for xmlDoc in [x for x in listdir(xmlDir) if x != ".svn"]:
+        for xmlDoc in [x for x in os.listdir(xmlDir) if x != ".svn"]:
             xml = open(xmlDir + xmlDoc).read()
 
             compiler = Compiler()
@@ -42,6 +45,16 @@ class CompilerTest(unittest.TestCase):
             self.assertEqual(len(doc.stateDict.keys()),
                 len(list(state for state in etree.fromstring(xml).getiterator() if state.tag in ["state", "parallel", "final", "history", "scxml"]))
             )
-            
+    
+    def testInterpreter(self):
         
+        xmlDir = "unittest_xml/"
+        sm = StateMachine(open(xmlDir + "colors.xml").read())
+        sm.start()
+        self.assert_(sm.isFinished())
+        
+if __name__ == '__main__':
+    test = RegressionTest()
+    test.xmlDir = "../../../unittest_xml/"
+    test.testInterpreter()
     

@@ -54,13 +54,15 @@ def startEventLoop():
         initialStepComplete = False;
         while not initialStepComplete:
             enabledTransitions = selectEventlessTransitions()
-            if (enabledTransitions == set()): 
-                internalEvent = internalQueue.get() # this call returns immediately if no event is available
+            if (enabledTransitions == set()):
+                internalEvent = None
+                if not internalQueue.empty(): 
+                    internalEvent = internalQueue.get() # this call returns immediately if no event is available
                 if (internalEvent):
                     dm["event"] = internalEvent
                     enabledTransitions = selectTransitions(internalEvent)
-            else:
-                initialStepComplete = True
+                else:
+                    initialStepComplete = True
         
             if (enabledTransitions):
                  microstep(list(enabledTransitions))
@@ -82,7 +84,9 @@ def mainEventLoop():
         
         previousConfiguration = configuration
         
-        externalEvent = externalQueue.get() # this call blocks until an event is available
+        externalEvent = None
+        if not externalQueue.empty():
+            externalEvent = externalQueue.get() # this call blocks until an event is available
         dm["event"] = externalEvent
         enabledTransitions = selectTransitions(externalEvent)
         
@@ -93,8 +97,10 @@ def mainEventLoop():
             macroStepComplete = False;
             while not macroStepComplete:
                 enabledTransitions = selectEventlessTransitions()
-                if (enabledTransitions == set()): 
-                    internalEvent = internalQueue.get() # this call returns immediately if no event is available
+                if (enabledTransitions == set()):
+                    internalEvent = None
+                    if not internalQueue.empty(): 
+                        internalEvent = internalQueue.get() # this call returns immediately if no event is available
                     if (internalEvent):
                         dm["event"] = internalEvent
                         enabledTransitions = selectTransitions(internalEvent)
@@ -134,7 +140,7 @@ def selectEventlessTransitions():
             for s in [state] + getProperAncestors(state, None):
                 if done: break
                 for t in s.transition:
-                    if t.event and conditionMatch(t): 
+                    if not t.event and conditionMatch(t): 
                         enabledTransitions.add(t)
                         done = True
                         break
@@ -211,6 +217,7 @@ def executeTransitionContent(enabledTransitions):
 
 
 def enterStates(enabledTransitions):
+    global g_continue
     statesToEnter = set()
     statesForDefaultEntry = set()
     for t in enabledTransitions:
@@ -402,12 +409,8 @@ def sendFunction(name,data={},delay=0):
 def interpret(document):
     '''Initializes the interpreter given an SCXMLDocument instance'''
     
-    # why does this need to be declared globally?
     global doc
     doc = document
-    
-#    executeTransitionContent([doc.initial.transition])
-#    startEventLoop()
     
     transition = Transition(document.rootState);
     transition.target = document.rootState.initial;
@@ -433,7 +436,7 @@ if __name__ == "__main__":
     
     comp.In = In
     
-    xml = open("../../resources/colors.xml").read()
+    xml = open("../../unittest_xml/colors.xml").read()
     
     interpret(compiler.parseXML(xml))
     

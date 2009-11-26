@@ -128,6 +128,7 @@ class Final(object):
     def __init__(self, id, parent, n):
         self.onentry = []
         self.onexit = []
+        self.invoke = []
         self.id = id
         self.parent = parent
         self.n = n
@@ -194,5 +195,7 @@ class SCXMLDocument(object):
     
     def __iter__(self):
         return iter(self.rootState)
+    
+    
             
     
