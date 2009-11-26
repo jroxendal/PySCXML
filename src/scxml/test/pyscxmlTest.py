@@ -24,7 +24,12 @@ from scxml.pyscxml import StateMachine
 from xml.etree import ElementTree as etree
 
 import os, os.path
-xmlDir = "unittest_xml/"
+if os.path.abspath(os.path.curdir).split("/")[:-1] == "test":
+    xmlDir = "unittest_xml/"
+else:
+    xmlDir = "../../../unittest_xml/"
+
+     
 
 class RegressionTest(unittest.TestCase):
     ''' 
@@ -46,12 +51,13 @@ class RegressionTest(unittest.TestCase):
     
     def testInterpreter(self):
         
-        sm = StateMachine(open(xmlDir + "colors.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
+        for xmlData in [open(xmlDir + x).read() for x in ("colors.xml")]: # "history.xml",
+            sm = StateMachine(xmlData)
+            sm.start()
+            self.assert_(sm.isFinished())
         
 if __name__ == '__main__':
-    xmlDir = "../../../unittest_xml/"
+    
     unittest.main()
     
     

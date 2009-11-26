@@ -13,11 +13,14 @@ This file is part of pyscxml.
 
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    
+    @author: Johan Roxendal
+    
 '''
 
 
 from node import *
-import re
+import sys, re
 import xml.etree.ElementTree as etree
 from pprint import pprint
 
@@ -72,12 +75,12 @@ class Compiler(object):
             if node.tag == "log":
                 fList.append(getLogFunction(node.get("expr")))
             elif node.tag == "raise": 
-            # i think the functools module has a partial application function...
                 delay = int(node.get("delay")) if node.get("delay") else 0
                 fList.append(lambda: self.sendFunction(node.get("event"), {}, delay))
             elif node.tag == "cancel":
                 fList.append(lambda: self.cancelFunction(node.get("sendid")))
-    #        we'll probably need to cram all these into the same function, somehow.        
+            else:
+                sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
     #        elif node.tag == "script:
     #        elif node.tag == "assign:
     #        elif node.tag == "send:
@@ -175,5 +178,5 @@ if __name__ == '__main__':
     compiler = Compiler()
     compiler.registerSend(lambda: "dummy send")
     doc = compiler.parseXML(open("../resources/parallel.xml").read())
-    print [doc.rootState]
+    print doc.rootState
     

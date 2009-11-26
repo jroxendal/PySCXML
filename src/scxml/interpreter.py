@@ -17,6 +17,7 @@ This file is part of pyscxml.
 
 
 from node import *
+import sys
 import Queue
 import threading
 import time
@@ -67,7 +68,6 @@ def startEventLoop():
             if (enabledTransitions):
                  microstep(list(enabledTransitions))
     
-    mainEventLoop()
 
 
 
@@ -226,7 +226,6 @@ def enterStates(enabledTransitions):
                 addStatesToEnter(s,LCA,statesToEnter,statesForDefaultEntry)
     statesToEnter = list(statesToEnter)
     statesToEnter.sort(enterOrder)
-    
     for s in statesToEnter:
         configuration.add(s)
         for content in s.onentry:
@@ -419,11 +418,11 @@ def interpret(document):
     global doc
     doc = document
     
-    transition = Transition(document.rootState);
-    transition.target = document.rootState.initial;
+    transition = Transition(document.rootState)
+    transition.target = document.rootState.initial
     
     microstep([transition])
-    
+
     startEventLoop()
     
     loop = threading.Thread(target=mainEventLoop)
@@ -443,8 +442,8 @@ if __name__ == "__main__":
     compiler.registerIn(In)
     
     comp.In = In
-    
-    xml = open("../../resources/colors.xml").read()
+
+    xml = open("../../unittest_xml/history.xml").read()
     
     interpret(compiler.parseXML(xml))
     

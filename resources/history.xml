@@ -3,13 +3,13 @@
 	<state id="main" initial="process">
 		<transition event="terminate" target="terminated" />
 		<state id="process" initial="s1">
-			<onentry>
-				<log expr="on enter s1" />
-			</onentry>
 			<history id="h" type="shallow">
 				<transition target="process" />
 			</history>
 			<state id="s1">
+				<onentry>
+					<log expr="on enter s1" />
+				</onentry>
 				<transition event="e1" target="s2" />
 			</state>
 			<state id="s2">
