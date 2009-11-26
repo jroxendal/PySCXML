@@ -84,9 +84,8 @@ def mainEventLoop():
         
         previousConfiguration = configuration
         
-        externalEvent = None
-        if not externalQueue.empty():
-            externalEvent = externalQueue.get() # this call blocks until an event is available
+        externalEvent = externalQueue.get() # this call blocks until an event is available
+#        print "external event found: " + externalEvent.name
         dm["event"] = externalEvent
         enabledTransitions = selectTransitions(externalEvent)
         
@@ -396,15 +395,23 @@ def exitOrder(s1,s2):
 def In(name):
     return name in map(lambda x: x.id, configuration)
 
+timerDict = {}
 def send(name,data={},delay=0):
     """Spawns a new thread that sends an event after a specified time, in seconds"""
-    threading.Thread(target=sendFunction, args=(name, data, delay)).start()
+    if not timerDict.has_key(name):
+        timerDict[name] = []
+    timer = threading.Timer(delay, sendFunction, args=(name, data))
+    timerDict[name].append(timer)
+    timer.start()
     
-def sendFunction(name,data={},delay=0):
-    time.sleep(delay)
+def sendFunction(name, data):
     externalQueue.put(InterpreterEvent(name, data))
-    
-    
+
+def cancel(sendid):
+    if timerDict.has_key(sendid):
+        while timerDict[sendid]:
+            timer = timerDict[sendid].pop()
+            timer.cancel()
 
 def interpret(document):
     '''Initializes the interpreter given an SCXMLDocument instance'''
@@ -432,11 +439,12 @@ if __name__ == "__main__":
     import compiler as comp
     compiler = comp.Compiler()
     compiler.registerSend(send)
+    compiler.registerCancel(cancel)
     compiler.registerIn(In)
     
     comp.In = In
     
-    xml = open("../../unittest_xml/colors.xml").read()
+    xml = open("../../resources/colors.xml").read()
     
     interpret(compiler.parseXML(xml))
     

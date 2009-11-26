@@ -23,7 +23,9 @@ class StateMachine(object):
         
         c = compiler.Compiler()
         c.registerSend(interpreter.send)
+        c.registerCancel(interpreter.cancel)
         c.registerIn(interpreter.In)
+        
         
         self.doc = c.parseXML(xml)
         

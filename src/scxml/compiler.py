@@ -53,11 +53,15 @@ class Compiler(object):
     def __init__(self):
         self.doc = SCXMLDocument()
         self.sendFunction = None
+        self.cancelFunction = None
         self.In = None
         
         
     def registerSend(self, f):
         self.sendFunction = f
+        
+    def registerCancel(self, f):
+        self.cancelFunction = f
         
     def registerIn(self, f):
         self.In = f
@@ -70,8 +74,9 @@ class Compiler(object):
             elif node.tag == "raise": 
             # i think the functools module has a partial application function...
                 delay = int(node.get("delay")) if node.get("delay") else 0
-                
                 f = lambda: self.sendFunction(node.get("event"), {}, delay)
+            elif node.tag == "cancel":
+                f = lambda: self.cancelFunction(node.get("sendid"))
     #        we'll probably need to cram all these into the same function, somehow.        
     #        elif node.tag == "script:
     #        elif node.tag == "assign:
@@ -87,7 +92,8 @@ class Compiler(object):
     def parseXML(self, xmlStr):
         tree = etree.fromstring(xmlStr)
         decorateWithParent(tree)
-        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in ["log", "script", "raise", "assign", "send"]):
+        # TODO: refractor this line
+        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in ["log", "script", "raise", "assign", "send", "cancel"]):
             if hasattr(node, "parent"):
                 parentState = self.doc.getState(node.parent.get("id"))
                 

@@ -24,7 +24,6 @@ from scxml.pyscxml import StateMachine
 from xml.etree import ElementTree as etree
 
 import os, os.path
-
 xmlDir = "unittest_xml/"
 
 class RegressionTest(unittest.TestCase):
@@ -33,7 +32,6 @@ class RegressionTest(unittest.TestCase):
     '''
     
     def testCompiler(self):
-        
         for xmlDoc in [x for x in os.listdir(xmlDir) if x != ".svn"]:
             xml = open(xmlDir + xmlDoc).read()
 
@@ -48,13 +46,12 @@ class RegressionTest(unittest.TestCase):
     
     def testInterpreter(self):
         
-        xmlDir = "unittest_xml/"
         sm = StateMachine(open(xmlDir + "colors.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
         
 if __name__ == '__main__':
-    test = RegressionTest()
-    test.xmlDir = "../../../unittest_xml/"
-    test.testInterpreter()
+    xmlDir = "../../../unittest_xml/"
+    unittest.main()
+    
     

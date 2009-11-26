@@ -18,6 +18,8 @@
 			<fileset dir="${src.dir}">
 				<include name="**/*.pyc" />
 				<include name="**/*.pyo" />
+				<!-- if we've compiled using jython -->
+				<include name="**/*.class" />
 			</fileset>
 			<fileset dir="${pydoc.dir}">
 				<include name="**/*" />
@@ -37,7 +39,7 @@
 		</py-doc>
 	</target>
 
-	<target name="tests" depends="compile">
+	<target name="tests">
 		<py-test pythonpath="${src.dir}" dir=".">
 			<fileset dir="${src.dir}">
 				<include name="**/pyscxmlTest.py" />
