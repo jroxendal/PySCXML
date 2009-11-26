@@ -3,6 +3,8 @@
 	<transition event="quit" target="f1" />
 	<state id="red">
 		<onentry>
+			<log expr="logging!" />
+			<log expr="logging again!" />
 			<raise event="quit" delay="3" />
 		</onentry>
 		<onexit>
