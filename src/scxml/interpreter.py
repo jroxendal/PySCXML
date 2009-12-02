@@ -85,7 +85,7 @@ def mainEventLoop():
         previousConfiguration = configuration
         
         externalEvent = externalQueue.get() # this call blocks until an event is available
-#        print "external event found: " + externalEvent.name
+        print "external event found: " + externalEvent.name
         dm["event"] = externalEvent
         enabledTransitions = selectTransitions(externalEvent)
         
@@ -246,6 +246,7 @@ def enterStates(enabledTransitions):
 
 
 def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
+    
     if (isHistoryState(s)):
         # i think that LCA should be changed for s and have done so
          if (historyValue[s.id]):
@@ -256,24 +257,25 @@ def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
                      for s0 in getTargetStates(t.target):
                          addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
     else:
-         statesToEnter.add(s)
-         if (isParallelState(s)):
-             for child in getChildStates(s):
-                 addStatesToEnter(child,s,statesToEnter,statesForDefaultEntry)
-         elif isCompoundState(s):
-             for tState in getTargetStates(s.initial):
-                 statesForDefaultEntry.add(tState)
-                 addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
-                # switched out the lines under for those over.
-#         elif (isCompoundState(s)):
-#             statesForDefaultEntry.add(s)
-#             addStatesToEnter(getDefaultInitialState(s),s,statesToEnter,statesForDefaultEntry)
-         for anc in getProperAncestors(s,root):
-              statesToEnter.add(anc)
-              if (isParallelState(anc)):
-                  for pChild in getChildStates(anc):
-                      if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
-                            addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
+        statesToEnter.add(s)
+        if (isParallelState(s)):
+            for child in getChildStates(s):
+                addStatesToEnter(child,s,statesToEnter,statesForDefaultEntry)
+        elif isCompoundState(s):
+            for tState in getTargetStates(s.initial):
+                statesForDefaultEntry.add(tState)
+                addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
+               # switched out the lines under for those over.
+        #         elif (isCompoundState(s)):
+        #             statesForDefaultEntry.add(s)
+        #             addStatesToEnter(getDefaultInitialState(s),s,statesToEnter,statesForDefaultEntry)
+        for anc in getProperAncestors(s,root):
+            
+            statesToEnter.add(anc)
+            if (isParallelState(anc)):
+                for pChild in getChildStates(anc):
+                    if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
+                          addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
 
 
 def isInFinalState(s):
@@ -302,10 +304,12 @@ def getTargetStates(targetIds):
             
 def getProperAncestors(state,root):
     ancestors = []
-    while hasattr(state,'parent') and state.parent != root:
+    while hasattr(state,'parent') and state.parent and state.parent != root:
         state = state.parent
         ancestors.append(state)
-    return ancestors;
+    
+    print "ancestors", ancestors
+    return ancestors
 
 
 def isDescendant(state1,state2):
