@@ -51,10 +51,11 @@ class RegressionTest(unittest.TestCase):
     
     def testInterpreter(self):
         
-        for xmlData in [open(xmlDir + x).read() for x in ("colors.xml")]: # "history.xml",
-            sm = StateMachine(xmlData)
-            sm.start()
-            self.assert_(sm.isFinished())
+        sm = StateMachine(open(xmlDir + "colors.xml").read())
+        sm.start()
+        self.assert_(sm.isFinished())
+    
+        
         
 if __name__ == '__main__':
     

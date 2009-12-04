@@ -13,6 +13,14 @@ This file is part of pyscxml.
 
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    
+    This is an implementation of the interpreter algorithm described in the W3C standard document, 
+    which can be found at:
+    
+    http://www.w3.org/TR/2009/WD-scxml-20091029/ 
+    
+    @author Johan Roxendal
+    @contact: johan@roxendal.com
 '''
 
 
@@ -33,19 +41,6 @@ externalQueue = Queue.Queue()
 historyValue = {}
 dm = {}
 
-'''
-def interpret(doc):
-    expandScxmlSource(doc)
-#    if not valid(doc):
-#        pass
-    configuration = set()
-#    datamodel = Datamodel(doc)
-#    executeGlobalScriptElements(doc)
-    internalQueue = Queue()
-    externalQueue = BlockingQueue()
-    g_continue = True
-    
-'''
 
 def startEventLoop():
 #    previousConfiguration = None;
@@ -308,7 +303,6 @@ def getProperAncestors(state,root):
         state = state.parent
         ancestors.append(state)
     
-    print "ancestors", ancestors
     return ancestors
 
 
@@ -443,19 +437,17 @@ if __name__ == "__main__":
     compiler = comp.Compiler()
     compiler.registerSend(send)
     compiler.registerCancel(cancel)
-    compiler.registerIn(In)
     
     comp.In = In
 
-    xml = open("../../unittest_xml/history.xml").read()
+    xml = open("../../unittest_xml/twolock_door.xml").read()
     
     interpret(compiler.parseXML(xml))
     
     
-    
-#    send("e1", delay=1)
-#    send("resume", delay=2)
-#    send("terminate", delay=3)
+#    send("unlock_1", delay=1)
+#    send("unlock_2", delay=2)
+#    send("open", delay=3)
     
     
     

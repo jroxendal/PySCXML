@@ -14,7 +14,8 @@ This file is part of pyscxml.
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
     
-    @author: Johan Roxendal
+    @author Johan Roxendal
+    @contact: johan@roxendal.com
     
 '''
 
@@ -65,9 +66,6 @@ class Compiler(object):
         
     def registerCancel(self, f):
         self.cancelFunction = f
-        
-    def registerIn(self, f):
-        self.In = f
         
     def getExecContent(self, node):
         fList = []

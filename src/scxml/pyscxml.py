@@ -24,13 +24,13 @@ class StateMachine(object):
         c = compiler.Compiler()
         c.registerSend(interpreter.send)
         c.registerCancel(interpreter.cancel)
-        c.registerIn(interpreter.In)
-        
+        # TODO: total and utter hack, fix this
+        compiler.In = interpreter.In
         
         self.doc = c.parseXML(xml)
         
                 
-    def send(self, name, delay):
+    def send(self, name, delay=0):
         interpreter.send(name, {}, delay)    
     
     def start(self):
