@@ -16,6 +16,7 @@ This file is part of pyscxml.
     
     @author: Johan Roxendal
 '''
+import time
 
 import unittest
 from scxml.compiler import Compiler
@@ -23,11 +24,10 @@ from scxml.interpreter import interpret
 from scxml.pyscxml import StateMachine
 from xml.etree import ElementTree as etree
 
-import os, os.path
-if os.path.abspath(os.path.curdir).split("/")[:-1] == "test":
+import os.path
+xmlDir = "../../../unittest_xml/"
+if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
-else:
-    xmlDir = "../../../unittest_xml/"
 
      
 
@@ -50,9 +50,11 @@ class RegressionTest(unittest.TestCase):
             )
     
     def testInterpreter(self):
+
         
         sm = StateMachine(open(xmlDir + "colors.xml").read())
         sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
     
         
