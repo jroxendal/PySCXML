@@ -433,7 +433,7 @@ class InterpreterEvent(object):
         self.data = data
     
 if __name__ == "__main__":
-    import compiler as comp
+    import compiler as comp 
     compiler = comp.Compiler()
     compiler.registerSend(send)
     compiler.registerCancel(cancel)
@@ -444,7 +444,8 @@ if __name__ == "__main__":
     
     interpret(compiler.parseXML(xml))
     
-    
+    import time
+    time.sleep(1)
 #    send("unlock_1", delay=1)
 #    send("unlock_2", delay=2)
 #    send("open", delay=3)

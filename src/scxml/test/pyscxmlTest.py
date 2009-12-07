@@ -16,8 +16,8 @@ This file is part of pyscxml.
     
     @author: Johan Roxendal
 '''
-import time
 
+import time
 import unittest
 from scxml.compiler import Compiler
 from scxml.interpreter import interpret
