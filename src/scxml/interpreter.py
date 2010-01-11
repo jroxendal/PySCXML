@@ -20,6 +20,7 @@ This file is part of pyscxml.
     http://www.w3.org/TR/2009/WD-scxml-20091029/ 
     
     @author Johan Roxendal
+    @author Torbjšrn Lager
     @contact: johan@roxendal.com
 '''
 
