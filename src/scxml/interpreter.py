@@ -1,3 +1,4 @@
+ # -*- coding: utf-8 -*-
 ''' 
 This file is part of pyscxml.
 
@@ -20,7 +21,7 @@ This file is part of pyscxml.
     http://www.w3.org/TR/2009/WD-scxml-20091029/ 
     
     @author Johan Roxendal
-    @author Torbjšrn Lager
+    @author Torbjï¿½rn Lager
     @contact: johan@roxendal.com
 '''
 
@@ -167,7 +168,7 @@ def mainEventLoop():
         
         externalEvent = externalQueue.dequeue() # this call blocks until an event is available
         
-        print "external event found: " + str(externalEvent.name)
+#        print "external event found: " + str(externalEvent.name)
         
         dm["event"] = externalEvent
         perhapsFinalize(externalEvent)
@@ -248,7 +249,6 @@ function selectEventlessTransitions(event):
 """
 def selectEventlessTransitions():
     enabledTransitions = OrderedSet()
-    print configuration.toList().filter(isAtomicState).sort(documentOrder)
     atomicStates = configuration.toList().filter(isAtomicState).sort(documentOrder)
     for state in atomicStates:
         # fixed type-o in algorithm
@@ -512,6 +512,7 @@ def findLCA(stateList):
 def executeContent(obj):
     if callable(obj.exe):
         obj.exe()
+        
 
 def getTargetStates(targetIds):
     states = []
@@ -633,8 +634,8 @@ def In(name):
 timerDict = {}
 def send(name,data={},delay=0):
     """Spawns a new thread that sends an event after a specified time, in seconds"""
-    
     if type(name) == str: name = name.split(".")
+    
     if delay == 0: 
         sendFunction(name, data)
         return
@@ -679,7 +680,7 @@ class InterpreterEvent(object):
         self.data = data
         
     def __str__(self):
-        return "InterpreterEvent name='%s'" % self.name
+        return "InterpreterEvent name='%s'" % self.name  
     
     
 if __name__ == "__main__":
@@ -692,17 +693,16 @@ if __name__ == "__main__":
     
     comp.In = In
 
-#    xml = open("../../unittest_xml/colors.xml").read()
-    xml = open("../../resources/history.xml").read()
+    xml = open("../../unittest_xml/colors.xml").read()
+#    xml = open("../../resources/history.xml").read()
     
     interpret(compiler.parseXML(xml))
-    import time
-    time.sleep(1)
     
-    send("e1")
-    send("pause")
-    send("resume")
-    send("terminate")
+    
+#    send("e1")
+#    send("pause")
+#    send("resume")
+#    send("terminate")
     
 #    send("e1", delay=1)
 #    send("unlock_2", delay=2)

@@ -74,15 +74,22 @@ class Compiler(object):
     def getExecContent(self, node):
         fList = []
         for node in node.getchildren():
+            
             if node.tag == "log":
                 fList.append(getLogFunction(node.get("expr")))
             elif node.tag == "raise": 
                 fList.append(lambda: self.raiseFunction(node.get("event").split(".")))
+            elif node.tag == "send":
+                eventName = node.get("event").split(".")
+                delay = int(node.get("delay")) if node.get("delay") else 0
+                
+                # ugly scoping hack
+                def sendF(name=eventName):
+                    self.sendFunction(name, {}, delay)
+                    
+                fList.append(sendF)
             elif node.tag == "cancel":
                 fList.append(lambda: self.cancelFunction(node.get("sendid")))
-            elif node.tag == "send":
-                delay = int(node.get("delay")) if node.get("delay") else 0
-                fList.append(lambda: self.sendFunction(node.get("event").split("."), {}, delay))
             else:
                 sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
     #        elif node.tag == "script:
@@ -186,6 +193,6 @@ if __name__ == '__main__':
     
     compiler = Compiler()
     compiler.registerSend(lambda: "dummy send")
-    doc = compiler.parseXML(open("../resources/parallel.xml").read())
+    doc = compiler.parseXML(open("../../unittest_xml/colors.xml").read())
     print doc.rootState
     

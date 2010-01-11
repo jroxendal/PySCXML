@@ -73,14 +73,14 @@ class List(list):
 class Queue(QueueModule.Queue):
     
     def enqueue(self, item):
-        print "Enqueing Int.Evnt: %s" % string.join(item.name,".")
+#        print "Enqueing Int.Evnt: %s" % string.join(item.name,".")
         self.put(item)
     
     def dequeue(self):
         if self.empty():
             raise ValueError("Attempt to dequeue an empty queue")
         item = self.get()
-        print "Dequeing Int.Evnt: %s" % string.join(item.name,".")
+#        print "Dequeing Int.Evnt: %s" % string.join(item.name,".")
         return item
 
     def isEmpty(self):
