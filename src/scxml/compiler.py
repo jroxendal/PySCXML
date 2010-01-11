@@ -78,16 +78,22 @@ class Compiler(object):
             if node.tag == "log":
                 fList.append(getLogFunction(node.get("expr")))
             elif node.tag == "raise": 
-                fList.append(lambda: self.raiseFunction(node.get("event").split(".")))
+                eventName = node.get("event").split(".")
+                
+                # ugly scoping hack
+                def utilF(name=eventName):
+                    self.raiseFunction(name, {}, delay)
+                    
+                fList.append(utilF)
             elif node.tag == "send":
                 eventName = node.get("event").split(".")
                 delay = int(node.get("delay")) if node.get("delay") else 0
                 
                 # ugly scoping hack
-                def sendF(name=eventName):
+                def utilF(name=eventName):
                     self.sendFunction(name, {}, delay)
                     
-                fList.append(sendF)
+                fList.append(utilF)
             elif node.tag == "cancel":
                 fList.append(lambda: self.cancelFunction(node.get("sendid")))
             else:
