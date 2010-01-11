@@ -46,6 +46,9 @@ class SCXMLNode(object):
         
     def addTransition(self, trans):
         self.transition.append(trans)
+
+    def addInvoke(self, entry):
+        self.invoke.append(entry)
         
     def addOnentry(self, entry):
         self.onentry.append(entry)
@@ -89,7 +92,7 @@ class History(object):
     def __init__(self, id, parent, type, n):
         self.id = id
         self.parent = parent
-        assert type in ["deep", "shallow"]
+        if not type or type not in ["deep", "shallow"]: type = "shallow"
         self.type = type
         self.n = n
         
@@ -107,7 +110,7 @@ class Transition(Executable):
         Executable.__init__(self)
         self.source = source
         self.target = []
-        self.event = None
+        self.event = []
         self.cond = None
         self.anchor = None
         
@@ -124,28 +127,31 @@ class Transition(Executable):
     def __repr__(self):
         return str(self)
  
-class Final(object):
-    def __init__(self, id, parent, n):
-        self.onentry = []
-        self.onexit = []
-        self.invoke = []
-        self.id = id
-        self.parent = parent
-        self.n = n
+class Final(SCXMLNode):
+#    def __init__(self, id, parent, n):
+#        self.onentry = []
+#        self.onexit = []
+#        self.invoke = []
+#        self.id = id
+#        self.parent = parent
+#        self.n = n
         
-    def addOnentry(self, entry):
-        self.onentry.append(entry)
-    
-    def addOnexit(self, exit):
-        self.onexit.append(exit)
+#    def addOnentry(self, entry):
+#        self.onentry.append(entry)
+#    
+#    def addOnexit(self, exit):
+#        self.onexit.append(exit)
         
-    def getChildren(self):
-        return self.onentry + self.onexit
+#    def getChildren(self):
+#        return self.onentry + self.onexit
     def __str__(self):
         return '<Final id="%s">' % self.id
 
+class Invoke(object): 
+    def __str__(self):
+        return '<Invoke id="%s">' % self.id
+        
 class Onentry(Executable): 
-    
     def __str__(self):
         return "<Onentry>"
 

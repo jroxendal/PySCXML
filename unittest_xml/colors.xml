@@ -3,14 +3,14 @@
 
 	<state id="red">
 		<onentry>
-			<raise event="e1" />
+			<send event="e1" />
 		</onentry>
 		<transition event="e1" target="green" />
 	</state>
 
 	<state id="green">
 		<onentry>
-			<raise event="e1" />
+			<send event="e1" />
 		</onentry>
 		<transition event="e1" target="blue" />
 	</state>

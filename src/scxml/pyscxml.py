@@ -23,19 +23,22 @@ class StateMachine(object):
         
         c = compiler.Compiler()
         c.registerSend(interpreter.send)
-        c.registerIn(interpreter.In)
+        c.registerRaise(interpreter.raiseFunction)
+        c.registerCancel(interpreter.cancel)
+        # TODO: total and utter hack, fix this
+        compiler.In = interpreter.In
         
         self.doc = c.parseXML(xml)
         
                 
-    def send(self, name, delay):
+    def send(self, name, delay=0):
         interpreter.send(name, {}, delay)    
     
     def start(self):
         interpreter.interpret(self.doc)
         
     def isFinished(self):
-        return interpreter.configuration == set()
+        return len(interpreter.configuration) == 0
         
         
         

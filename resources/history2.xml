@@ -1,24 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <scxml initial="main">
 
 	<state id="main" initial="process">
 		<transition event="terminate" target="terminated" />
 		<state id="process" initial="s1">
-			<onentry>
-				<log expr="on enter s1" />
-			</onentry>
 			<history id="h" type="shallow">
 				<transition target="process" />
 			</history>
+			
 			<state id="s1">
-				<transition event="e1" target="s2" />
+				<onexit>
+					<raise event="terminate" delay="5" />
+				</onexit>
+				<transition target="s2" />
 			</state>
+			
 			<state id="s2">
+				<onentry>
+					<raise event="pause" delay="1" />
+				</onentry>
 				<transition event="e2" target="s1" />
+				<transition event="pause" target="interrupted" />
 			</state>
-			<transition event="pause" target="interrupted" />
 		</state>
 	
 		<state id="interrupted">
+			<onentry>
+				<raise event="resume" delay="1" />
+			</onentry>
 			<transition event="resume" target="h" />
 		</state>
 

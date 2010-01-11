@@ -1,0 +1,29 @@
+<scxml initial="s0">
+    <state id="s0">
+        <invoke id="i0"/>
+        <transition target="s1"/>
+    </state>
+    <state id="s1">
+        <invoke id="i1"/>
+        <onentry>
+            <send event="e" delay="2"/>
+        </onentry>
+        <transition event="e" target="s2"/>
+    </state>
+    <state id="s2">
+        <invoke id="i2"/>
+        <onentry>
+            <send event="ping" delay="1"/>
+            <send event="ping" delay="2"/>
+            <send event="pong" delay="3"/>
+        </onentry>
+        <transition event="ping">
+            <log expr="'ping detected'"/>
+        </transition>
+        <transition event="pong" target="f"/>
+    </state>
+    <final id="f"/>    
+</scxml>
+
+
+

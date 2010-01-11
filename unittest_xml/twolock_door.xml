@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scxml initial="closed">
+	
+	<final id="opened" />
+	
+	<transition event="done.state.__main__">
+		<log expr="main state done" />
+	</transition>
+	
+	<parallel id="closed" initial="lock_1 lock_2">
+		<onentry>
+			<send event="unlock_1"/>
+		</onentry>
+		<transition target="opened" cond="In('unlocked_1') and In('unlocked_2')" />
+	
+		<state id="lock_1" initial="locked_1">
+			<state id="locked_1">
+				<transition event="unlock_1" target="unlocked_1">
+					<send event="unlock_2" />
+				</transition>
+			</state>
+			<state id="unlocked_1">
+				<transition event="lock_1" target="locked_1" />
+			</state>
+		
+		</state>
+		<state id="lock_2" initial="locked_2">
+			<state id="locked_2">
+				<transition event="unlock_2" target="unlocked_2" />
+			</state>
+			<state id="unlocked_2">
+				<transition event="lock_2" target="locked_2" />
+			</state>
+		
+		</state>
+
+	</parallel> 
+
+</scxml>

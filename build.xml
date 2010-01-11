@@ -1,16 +1,24 @@
 <project name="pyscxml" default="main" basedir=".">
 
 	<taskdef resource="pyAntTasks.properties" />
-
 	<property name="src.dir" value="src" />
 	<property name="pydoc.dir" value="pydoc" />
 
+	<property name="coverage.location" value="${basedir}/coverage.py"/>
+	<property name="reports.dir" value="reports"/>
+	
+	<path id="project.python.path">
+	    <pathelement location="src"/>
+  	</path>
+	
 	<target name="main">
 		<mkdir dir="${pydoc.dir}" />
+		<mkdir dir="${reports.dir}"/>
 		<antcall target="clean" />
 		<antcall target="compile" />
 		<antcall target="pydoc" />
 		<antcall target="tests" />
+		<antcall target="coverage" />
 	</target>
 
 	<target name="clean">
@@ -18,11 +26,19 @@
 			<fileset dir="${src.dir}">
 				<include name="**/*.pyc" />
 				<include name="**/*.pyo" />
+				<!-- if we've compiled using jython -->
+				<include name="**/*.class" />
 			</fileset>
 			<fileset dir="${pydoc.dir}">
 				<include name="**/*" />
 			</fileset>
+			<fileset dir="${reports.dir}">
+				<include name="**/*" />
+			</fileset>
 		</delete>
+		<delete dir="${reports.dir}/compiler.py" />
+		<delete dir="${reports.dir}/interpreter.py" />
+		<delete dir="${reports.dir}/pyscxml.py" />
 	</target>
 
 	<target name="compile">
@@ -37,12 +53,16 @@
 		</py-doc>
 	</target>
 
-	<target name="tests" depends="compile">
+	<target name="tests">
 		<py-test pythonpath="${src.dir}" dir=".">
 			<fileset dir="${src.dir}">
 				<include name="**/pyscxmlTest.py" />
 			</fileset>
 		</py-test>
+	</target>
+	
+	<target name="coverage">
+		<py-run script="${src.dir}/scxml/test/pyscxml_coverage.py" pythonpath="${src.dir}" />
 	</target>
 
 </project>

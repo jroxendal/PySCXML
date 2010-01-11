@@ -13,11 +13,15 @@ This file is part of pyscxml.
 
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    
+    @author Johan Roxendal
+    @contact: johan@roxendal.com
+    
 '''
 
 
 from node import *
-import re
+import sys, re
 import xml.etree.ElementTree as etree
 from pprint import pprint
 
@@ -53,29 +57,42 @@ class Compiler(object):
     def __init__(self):
         self.doc = SCXMLDocument()
         self.sendFunction = None
+        self.raiseFunction = None
+        self.cancelFunction = None
         self.In = None
         
         
     def registerSend(self, f):
         self.sendFunction = f
         
-    def registerIn(self, f):
-        self.In = f
+    def registerRaise(self, f):
+        self.raiseFunction = f
+        
+    def registerCancel(self, f):
+        self.cancelFunction = f
         
     def getExecContent(self, node):
-        f = None
+        fList = []
         for node in node.getchildren():
             if node.tag == "log":
-                f = getLogFunction(node.get("expr"))
+                fList.append(getLogFunction(node.get("expr")))
             elif node.tag == "raise": 
-            # i think the functools module has a partial application function...
+                fList.append(lambda: self.raiseFunction(node.get("event").split(".")))
+            elif node.tag == "cancel":
+                fList.append(lambda: self.cancelFunction(node.get("sendid")))
+            elif node.tag == "send":
                 delay = int(node.get("delay")) if node.get("delay") else 0
-                
-                f = lambda: self.sendFunction(node.get("event"), {}, delay)
-    #        we'll probably need to cram all these into the same function, somehow.        
+                fList.append(lambda: self.sendFunction(node.get("event").split("."), {}, delay))
+            else:
+                sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
     #        elif node.tag == "script:
     #        elif node.tag == "assign:
-    #        elif node.tag == "send:
+        
+        # return a function that executes all the executable content of the node.
+        
+        def f():
+            for func in fList:
+                func()
         return f
     
     def getCondFunction(self, node):
@@ -87,7 +104,8 @@ class Compiler(object):
     def parseXML(self, xmlStr):
         tree = etree.fromstring(xmlStr)
         decorateWithParent(tree)
-        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in ["log", "script", "raise", "assign", "send"]):
+        # TODO: refractor this line
+        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in ["log", "script", "raise", "assign", "send", "cancel"]):
             if hasattr(node, "parent"):
                 parentState = self.doc.getState(node.parent.get("id"))
                 
@@ -134,7 +152,7 @@ class Compiler(object):
                 if node.get("target"):
                     t.target = node.get("target").split(" ")
                 if node.get("event"):
-                    t.event = node.get("event")
+                    t.event = map(lambda x: re.sub(r"(.*)\.\*$", r"\1", x).split("."), node.get("event").split(" "))
                 if node.get("cond"):
                     t.cond = self.getCondFunction(node)    
                 
@@ -142,7 +160,12 @@ class Compiler(object):
                 t.exe = self.getExecContent(node)
                     
                 parentState.addTransition(t)
-                
+
+            elif node.tag == "invoke":
+                s = Invoke()
+                s.id = get_sid(node)
+                parentState.addInvoke(s)
+                           
             elif node.tag == "onentry":
                 s = Onentry()
                 s.exe = self.getExecContent(node)
@@ -164,5 +187,5 @@ if __name__ == '__main__':
     compiler = Compiler()
     compiler.registerSend(lambda: "dummy send")
     doc = compiler.parseXML(open("../resources/parallel.xml").read())
-    print [doc.rootState]
+    print doc.rootState
     
