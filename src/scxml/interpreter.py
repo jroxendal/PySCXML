@@ -660,7 +660,10 @@ def interpret(document):
     '''Initializes the interpreter given an SCXMLDocument instance'''
     
     global doc
+    global dm
     doc = document
+    
+    dm = doc.datamodel
     
     transition = Transition(document.rootState)
     transition.target = document.rootState.initial
@@ -691,7 +694,7 @@ if __name__ == "__main__":
     comp.In = In
 
 #    xml = open("../../unittest_xml/colors.xml").read()
-    xml = open("../../resources/invoke.xml").read()
+    xml = open("../../resources/colors.xml").read()
     
     interpret(compiler.parseXML(xml))
     

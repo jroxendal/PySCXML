@@ -6,9 +6,13 @@
 			<log expr="logging!" />
 			<log expr="logging again!" />
 			<send id="firstSend" event="quit" delay="3" />
+			<send id="secondSend" event="quit" delay="4" />
+			<send id="thirdSend" event="quit" delay="5" />
 		</onentry>
 		<onexit>
 			<cancel sendid="firstSend" />
+			<cancel sendid="secondSend" />
+			<cancel sendid="thirdSend" />
 		</onexit>
 		<transition target="green" />
 	</state>

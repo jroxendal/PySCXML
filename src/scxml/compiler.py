@@ -25,6 +25,7 @@ import sys, re
 import xml.etree.ElementTree as etree
 from pprint import pprint
 
+validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "datamodel"]
 
 def get_sid(node):
     if node.get('id') != '':
@@ -91,11 +92,17 @@ class Compiler(object):
                     
                 fList.append(utilF)
             elif node.tag == "cancel":
-                fList.append(lambda: self.cancelFunction(node.get("sendid")))
+                # ugly scoping hack
+                def utilF(id=node.get("sendid")):
+                    self.cancelFunction(id)
+                fList.append(utilF)
+            elif node.tag == "assign":
+                def utilF(loc=node.get("location"), expr=node.get("expr")):
+                    self.doc.datamodel[loc] = getDataExpr(expr)
+                fList.append(utilF)
             else:
                 sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
     #        elif node.tag == "script:
-    #        elif node.tag == "assign:
         
         # return a function that executes all the executable content of the node.
         
@@ -104,17 +111,12 @@ class Compiler(object):
                 func()
         return f
     
-    def getCondFunction(self, node):
-        execStr = "f = lambda dm: %s" % node.get("cond")
-        exec(execStr)
-        return f
-
 
     def parseXML(self, xmlStr):
         tree = etree.fromstring(xmlStr)
         decorateWithParent(tree)
-        # TODO: refractor this line
-        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in ["log", "script", "raise", "assign", "send", "cancel"]):
+
+        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in validExecTags):
             if hasattr(node, "parent"):
                 parentState = self.doc.getState(node.parent.get("id"))
                 
@@ -163,8 +165,7 @@ class Compiler(object):
                 if node.get("event"):
                     t.event = map(lambda x: re.sub(r"(.*)\.\*$", r"\1", x).split("."), node.get("event").split(" "))
                 if node.get("cond"):
-                    t.cond = self.getCondFunction(node)    
-                
+                    t.cond = getCondFunction(node)    
                 
                 t.exe = self.getExecContent(node)
                     
@@ -185,11 +186,19 @@ class Compiler(object):
                 s.exe = self.getExecContent(node)
                 parentState.addOnexit(s)
             elif node.tag == "data":
-                self.doc.dm[node.get("id")] = node.get("expr")
+                self.doc.datamodel[node.get("id")] = getDataExpr(node.get("expr"))
     
         return self.doc
-    
-    
+
+def getCondFunction(self, node):
+    execStr = "f = lambda dm: %s" % node.get("cond")
+    exec(execStr)
+    return f
+
+def getDataExpr(expr):
+    execStr = "val = %s" % expr
+    exec(execStr)
+    return val
 
 if __name__ == '__main__':
     

@@ -161,10 +161,10 @@ class Onexit(Executable):
 
 class SCXMLDocument(object):
     def __init__(self):
-        self.dm = {}
         self.initial = None
         self.stateDict = {}
         self._rootState = None
+        self.datamodel = {}
     
     def setRoot(self, state):
         self._rootState = state
