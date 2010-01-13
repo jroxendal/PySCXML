@@ -97,8 +97,9 @@ class Compiler(object):
                     self.cancelFunction(id)
                 fList.append(utilF)
             elif node.tag == "assign":
-                def utilF(loc=node.get("location"), expr=node.get("expr")):
-                    self.doc.datamodel[loc] = getDataExpr(expr)
+                expression = node.get("expr") if node.get("expr") else node.text
+                def utilF(loc=node.get("location"), expr=getDataExpr(expression)):
+                    self.doc.datamodel[loc] = expr
                 fList.append(utilF)
             else:
                 sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
