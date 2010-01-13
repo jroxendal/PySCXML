@@ -171,7 +171,12 @@ def mainEventLoop():
 #        print "external event found: " + str(externalEvent.name)
         
         dm["event"] = externalEvent
-        perhapsFinalize(externalEvent)
+        if hasattr(externalEvent, "invokeid"):
+            for state in configuration:
+                for inv in state.invoke:
+                    if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
+                        applyFinalize(inv, externalEvent)
+                               
         enabledTransitions = selectTransitions(externalEvent)
         if not enabledTransitions.isEmpty():
             microstep(enabledTransitions.toList())
@@ -292,11 +297,6 @@ function selectTransitions(event):
 """
 For each atomic state in the configuration, check if the event is the result of an <invoke> in this state. If so, apply any <finalize> code in the state.
 """
-def perhapsFinalize(event):
-    atomicStates = configuration.toList().filter(isAtomicState)
-    for state in atomicStates:
-        if hasattr(event, "invokeid") and state.invokeid == event.invokeid:  # event is the result of an <invoke> in this state
-            applyFinalize(state, event)
             
 
 def selectTransitions(event):
@@ -632,19 +632,16 @@ def In(name):
     return OrderedSet(map(lambda x: x.id, configuration)).member(name)
 
 timerDict = {}
-def send(name,data={},delay=0):
+def send(name,sendid="", data={},delay=0):
     """Spawns a new thread that sends an event after a specified time, in seconds"""
     if type(name) == str: name = name.split(".")
     
     if delay == 0: 
         sendFunction(name, data)
         return
-    # TODO: see below.
-#    if not timerDict.has_key(name):
-#        timerDict[name] = []
     timer = threading.Timer(delay, sendFunction, args=(name, data))
-    #TODO: do only if an id is provided by the send.
-#    timerDict[name].append(timer)
+    if sendid:
+        timerDict[sendid] = timer
     timer.start()
     
 def sendFunction(name, data):
@@ -652,9 +649,9 @@ def sendFunction(name, data):
 
 def cancel(sendid):
     if timerDict.has_key(sendid):
-        while timerDict[sendid]:
-            timer = timerDict[sendid].pop()
-            timer.cancel()
+        timerDict[sendid].cancel()
+        del timerDict[sendid]
+        
 
 def raiseFunction(event):
     internalQueue.enqueue(InterpreterEvent(event, {}))
@@ -693,8 +690,8 @@ if __name__ == "__main__":
     
     comp.In = In
 
-    xml = open("../../unittest_xml/colors.xml").read()
-#    xml = open("../../resources/history.xml").read()
+#    xml = open("../../unittest_xml/colors.xml").read()
+    xml = open("../../resources/invoke.xml").read()
     
     interpret(compiler.parseXML(xml))
     

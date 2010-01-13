@@ -47,11 +47,6 @@ def decorateWithParent(tree):
         for child in node.getchildren():
             child.parent = node
             
-# reformulate:
-#def setOptionalProperties(node, obj):
-#    for key in node.keys():
-#        obj[key] = node.get(key)
-
 
 class Compiler(object):
     def __init__(self):
@@ -82,16 +77,17 @@ class Compiler(object):
                 
                 # ugly scoping hack
                 def utilF(name=eventName):
-                    self.raiseFunction(name, {}, delay)
+                    self.raiseFunction(name)
                     
                 fList.append(utilF)
             elif node.tag == "send":
                 eventName = node.get("event").split(".")
+                sendId = node.get("id") if node.get("id") else ""
                 delay = int(node.get("delay")) if node.get("delay") else 0
                 
                 # ugly scoping hack
-                def utilF(name=eventName):
-                    self.sendFunction(name, {}, delay)
+                def utilF(name=eventName, id=sendId):
+                    self.sendFunction(name, id, {}, delay)
                     
                 fList.append(utilF)
             elif node.tag == "cancel":

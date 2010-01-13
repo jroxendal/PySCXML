@@ -5,10 +5,10 @@
 		<onentry>
 			<log expr="logging!" />
 			<log expr="logging again!" />
-			<raise event="quit" delay="3" />
+			<send id="firstSend" event="quit" delay="3" />
 		</onentry>
 		<onexit>
-			<cancel sendid="quit" />
+			<cancel sendid="firstSend" />
 		</onexit>
 		<transition target="green" />
 	</state>
