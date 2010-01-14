@@ -156,7 +156,6 @@ procedure procedure mainEventLoop():
 
 def mainEventLoop():
     global previousConfiguration
-    global statesToInvoke
     while g_continue:
 
         for state in statesToInvoke:
@@ -168,7 +167,7 @@ def mainEventLoop():
         
         externalEvent = externalQueue.dequeue() # this call blocks until an event is available
         
-#        print "external event found: " + str(externalEvent.name)
+        print "external event found: " + str(externalEvent.name)
         
         dm["event"] = externalEvent
         if hasattr(externalEvent, "invokeid"):
@@ -387,7 +386,6 @@ procedure exitStates(enabledTransitions):
       configuration.delete(s)
 """
 def exitStates(enabledTransitions):
-    global statesToInvoke
     statesToExit = OrderedSet()
     for t in enabledTransitions:
         if t.target:
@@ -430,7 +428,6 @@ def executeTransitionContent(enabledTransitions):
 
 def enterStates(enabledTransitions):
     global g_continue
-    global statesToInvoke
     statesToEnter = OrderedSet()
     statesForDefaultEntry = OrderedSet()
     for t in enabledTransitions:
@@ -662,7 +659,7 @@ def interpret(document):
     global doc
     global dm
     doc = document
-    
+
     dm = doc.datamodel
     
     transition = Transition(document.rootState)
@@ -683,31 +680,3 @@ class InterpreterEvent(object):
         return "InterpreterEvent name='%s'" % self.name  
     
     
-if __name__ == "__main__":
-
-    import compiler as comp 
-    compiler = comp.Compiler()
-    compiler.registerSend(send)
-    compiler.registerRaise(raiseFunction)
-    compiler.registerCancel(cancel)
-    
-    comp.In = In
-
-#    xml = open("../../unittest_xml/colors.xml").read()
-    xml = open("../../resources/colors.xml").read()
-    
-    interpret(compiler.parseXML(xml))
-    
-    
-#    send("e1")
-#    send("pause")
-#    send("resume")
-#    send("terminate")
-    
-#    send("e1", delay=1)
-#    send("unlock_2", delay=2)
-#    send("open", delay=3)
-    
-    
-    
-
