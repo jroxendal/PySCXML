@@ -1,0 +1,18 @@
+<scxml initial="s1" >
+	<datamodel>
+		<data id="x" expr="1"/>
+	</datamodel>  
+	<state id="s1">
+		<onentry>
+			<assign location="x" expr="dm['x']+1"/>
+		</onentry>
+        <transition cond="dm['x'] &gt; 1" target="result">
+			<log label="'Result'" expr="dm['x']"/>
+		</transition>
+    </state>
+   <final id="result"/>
+</scxml>
+
+
+
+
