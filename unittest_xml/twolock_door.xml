@@ -4,7 +4,7 @@
 	<final id="opened" />
 	
 	<transition event="done.state.__main__">
-		<log expr="main state done" />
+		<log expr="'main state done'" />
 	</transition>
 	
 	<parallel id="closed" initial="lock_1 lock_2">

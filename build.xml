@@ -16,8 +16,8 @@
 		<mkdir dir="${reports.dir}"/>
 		<antcall target="clean" />
 		<antcall target="compile" />
-		<antcall target="pydoc" />
 		<antcall target="tests" />
+		<antcall target="pydoc" />
 		<antcall target="coverage" />
 	</target>
 

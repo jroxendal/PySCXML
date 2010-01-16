@@ -7,12 +7,8 @@
 			<assign location="x" expr="dm['x']+1"/>
 		</onentry>
         <transition cond="dm['x'] &gt; 1" target="result">
-			<log label="'Result'" expr="dm['x']"/>
+			<log label="Result" expr="dm['x']"/>
 		</transition>
     </state>
    <final id="result"/>
 </scxml>
-
-
-
-

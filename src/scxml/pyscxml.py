@@ -35,8 +35,8 @@ class StateMachine(object):
         
 if __name__ == "__main__":
     
-#    xml = open("../../unittest_xml/colors.xml").read()
-    xml = open("../../resources/factorial.xml").read()
+    xml = open("../../unittest_xml/assign.xml").read()
+#    xml = open("../../resources/factorial.xml").read()
     sm = StateMachine(xml)
     sm.start()
     

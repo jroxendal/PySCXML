@@ -43,7 +43,7 @@ def get_sid(node):
 def getLogFunction(label, toPrint):
     if not label: label = "Log"
     def f():
-        print "%s: %s" % (label, toPrint)
+        print "%s: %s" % (label, toPrint(doc.datamodel))
     return f
     
 
@@ -58,7 +58,7 @@ def getExecContent(node):
     for node in node.getchildren():
         
         if node.tag == "log":
-            fList.append(getLogFunction(node.get("label"),  node.get("expr")))
+            fList.append(getLogFunction(node.get("label"),  getExprFunction(node.get("expr"))))
         elif node.tag == "raise": 
             eventName = node.get("event").split(".")
             fList.append(partial(raiseFunction, eventName))
@@ -73,8 +73,8 @@ def getExecContent(node):
         elif node.tag == "assign":
             expression = node.get("expr") if node.get("expr") else node.text
             # ugly scoping hack
-            def utilF(loc=node.get("location"), expr=parseExpression(expression)):
-                doc.datamodel[loc] = expr
+            def utilF(loc=node.get("location"), expr=getExprFunction(expression)):
+                doc.datamodel[loc] = expr(doc.datamodel)
             fList.append(utilF)
         else:
             sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
@@ -142,7 +142,7 @@ def parseXML(xmlStr):
             if node.get("event"):
                 t.event = map(lambda x: re.sub(r"(.*)\.\*$", r"\1", x).split("."), node.get("event").split(" "))
             if node.get("cond"):
-                t.cond = getCondFunction(node.get("cond"))    
+                t.cond = getExprFunction(node.get("cond"))    
             
             t.exe = getExecContent(node)
                 
@@ -163,20 +163,20 @@ def parseXML(xmlStr):
             s.exe = getExecContent(node)
             parentState.addOnexit(s)
         elif node.tag == "data":
-            doc.datamodel[node.get("id")] = parseExpression(node.get("expr"))
+            doc.datamodel[node.get("id")] = getExprValue(node.get("expr"))
 
     return doc
 
 def cleanExpr(expr):
     return unescape(expr)
 
-def getCondFunction(expr):
+def getExprFunction(expr):
     expr = cleanExpr(expr)
     execStr = "f = lambda dm: %s" % expr
     exec(execStr)
     return f
 
-def parseExpression(expr):
+def getExprValue(expr):
     dm = doc.datamodel
     expr = cleanExpr(expr)
     execStr = "val = %s" % expr
@@ -184,7 +184,9 @@ def parseExpression(expr):
     return val
 
 if __name__ == '__main__':
-    
-    testdoc = parseXML(open("../../unittest_xml/colors.xml").read())
-    print testdoc
+    from pyscxml import StateMachine
+    xml = open("../../unittest_xml/factorial.xml").read()
+#    xml = open("../../resources/factorial.xml").read()
+    sm = StateMachine(xml)
+    sm.start()
     

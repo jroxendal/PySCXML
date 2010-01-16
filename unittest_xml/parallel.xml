@@ -7,7 +7,7 @@
 	<state id="s" initial="p">
 
 		<transition event="a.b" target="f" >
-			<log expr="Done transition" />
+			<log expr="'Done transition'" />
 		</transition>
 
 		<parallel id="p">
