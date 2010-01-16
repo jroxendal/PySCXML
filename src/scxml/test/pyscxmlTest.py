@@ -40,10 +40,8 @@ class RegressionTest(unittest.TestCase):
         for xmlDoc in [x for x in os.listdir(xmlDir) if x != ".svn"]:
             xml = open(xmlDir + xmlDoc).read()
             
-            print "Compiling %s:" % xmlDoc
             doc = parseXML(xml)
-#            print list(state.tag for state in etree.fromstring(xml).getiterator())
-            print doc.stateDict.keys(), list(state.tag for state in etree.fromstring(xml).getiterator() if state.tag in ["state", "parallel", "final", "history", "scxml"])
+
             # make sure that the amount of states stored in the stateDict in the parsed document equals
             # the amount of xml nodes of the same types.
             self.assertEqual(len(doc.stateDict.keys()),
@@ -63,9 +61,10 @@ class RegressionTest(unittest.TestCase):
         time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
         
-#        sm = StateMachine(open(xmlDir + "factorial.xml").read())
-#        sm.start()
-#        self.assert_(sm.isFinished())
+        sm = StateMachine(open(xmlDir + "factorial.xml").read())
+        sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assertEquals(sm.datamodel['fac'], 720)
         
         
         

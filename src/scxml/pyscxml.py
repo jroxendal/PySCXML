@@ -24,6 +24,7 @@ class StateMachine(object):
         self.send = interpreter.send
         self.In = interpreter.In
         self.doc = compiler.parseXML(xml)
+        self.datamodel = self.doc.datamodel
         
     def start(self):
         interpreter.interpret(self.doc)

@@ -353,7 +353,6 @@ def conditionMatch(t):
     if not t.cond:
         return true 
     else:
-        print "cond match "+ str(dm)
         return t.cond(dm)
 
 
