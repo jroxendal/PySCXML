@@ -96,5 +96,6 @@ class BlockingQueue(QueueModule.Queue):
     def dequeue(self):
         return self.get()
     
-
+    def __str__(self):
+        return "blockingQueue %s size: %s " % (repr(self), self.qsize())
     

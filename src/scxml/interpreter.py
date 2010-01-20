@@ -27,6 +27,7 @@ This file is part of pyscxml.
 
 
 from node import *
+from pyscxml import StateMachine
 import sys
 import threading
 import time
@@ -35,21 +36,59 @@ from datastructures import OrderedSet, List, Queue, BlockingQueue
 true = True
 false = False
 null = None
-
+print "interpreter starting"
+doc = null
 g_continue = true 
-configuration = OrderedSet()
-previousConfiguration = OrderedSet()
+configuration = null
+previousConfiguration = null
 
-statesToInvoke = OrderedSet()
+statesToInvoke = null
 
-internalQueue = Queue()
-externalQueue = BlockingQueue()
+internalQueue = null
+externalQueue = null
 
 historyValue = {}
 dm = None
 
+parentQueue = null
+invId = null
 
+def interpret(document, optionalParentExternalQueue=null, invokeId=null):
+#   if (!valid(doc)) {fail with error}
+    global doc
+    global internalQueue
+    global externalQueue
+    global g_continue
+    global configuration
+    global previousConfiguration
+    global statesToInvoke
+    global historyValue
+    global dm
+    global parentQueue
+    global invId
+    
+    parentQueue = optionalParentExternalQueue
+    invId = invokeId
+    
+    doc = document
+    dm = doc.datamodel
+    configuration = OrderedSet()
+    previousConfiguration = OrderedSet()
 
+#    executeGlobalScriptElements(doc)
+    internalQueue = Queue()
+    externalQueue = BlockingQueue()
+    print "externalQueue", externalQueue, invokeId
+    g_continue = true
+    statesToInvoke = OrderedSet()
+    historyValue = {}
+    
+    transition = Transition(doc.rootState)
+    transition.target = doc.rootState.initial
+    
+    executeTransitionContent([transition])
+    enterStates([transition])
+    startEventLoop()
 
 def startEventLoop():
 	
@@ -81,9 +120,11 @@ def mainEventLoop():
 
         previousConfiguration = configuration
         
+        print "before dequeue " + repr(externalQueue)
+        
         externalEvent = externalQueue.dequeue() # this call blocks until an event is available
         
-#        print "external event found: " + str(externalEvent.name)
+        print "external event found: " + str(externalEvent.name)
         
         dm["event"] = externalEvent
         if hasattr(externalEvent, "invokeid"):
@@ -128,8 +169,11 @@ def exitInterpreter():
             inFinalState = true 
         configuration.delete(s)
     if inFinalState:
+        if invId and parentQueue:
+            parentQueue.enqueue(Event(["done", "invoke", invId], {}))
+            print "putting to parent external queue", invId, parentQueue
+            
         print "Exiting interpreter"
-#       sendDoneEvent(???)
 
 
 
@@ -219,6 +263,11 @@ def exitStates(enabledTransitions):
 
 def invoke(inv):
     print "Invoking: " + str(inv)
+
+    sm = StateMachine(inv.content)
+    
+    sm.start(externalQueue, inv.id)
+    
     
 def cancelInvoke(inv):
     print "Cancelling: " + str(inv)
@@ -236,6 +285,9 @@ def enterStates(enabledTransitions):
     for t in enabledTransitions:
         if t.target:
             LCA = findLCA(List([t.source]).append(getTargetStates(t.target)))
+            if isParallelState(LCA):
+                for child in getChildStates(LCA):
+                    addStatesToEnter(child,LCA,statesToEnter,statesForDefaultEntry)
             for s in getTargetStates(t.target):
                 addStatesToEnter(s,LCA,statesToEnter,statesForDefaultEntry)
     
@@ -243,21 +295,19 @@ def enterStates(enabledTransitions):
         statesToInvoke.add(s)
 
     statesToEnter = statesToEnter.toList().sort(enterOrder)
-    
     for s in statesToEnter:
         configuration.add(s)
         for content in s.onentry:
             executeContent(content)
-            # no support for this yet, plus it's clearly buggy (initial is a list)
-#        if (s in statesForDefaultEntry):
-#            executeContent(s.initial.transition.children())
+        if statesForDefaultEntry.member(s):
+            executeContent(s.initial)
         if isFinalState(s):
             parent = s.parent
             grandparent = parent.parent
-            internalQueue.enqueue(InterpreterEvent(["done", "state", parent.id], {}))
+            internalQueue.enqueue(Event(["done", "state", parent.id], {}))
             if isParallelState(grandparent):
                 if getChildStates(grandparent).every(isInFinalState):
-                    internalQueue.enqueue(InterpreterEvent(["done", "state", grandparent.id], {}))
+                    internalQueue.enqueue(Event(["done", "state", grandparent.id], {}))
     for s in configuration:
         if isFinalState(s) and isScxmlState(s.parent):
             g_continue = false ;
@@ -280,13 +330,9 @@ def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
             for child in getChildStates(s):
                 addStatesToEnter(child,s,statesToEnter,statesForDefaultEntry)
         elif isCompoundState(s):
+            statesForDefaultEntry.add(s)
             for tState in getTargetStates(s.initial):
-                statesForDefaultEntry.add(tState)
                 addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
-               # switched out the lines under for those over (getDefaultInitialState function doesn't exist).
-        #         elif (isCompoundState(s)):
-        #             statesForDefaultEntry.add(s)
-        #             addStatesToEnter(getDefaultInitialState(s),s,statesToEnter,statesForDefaultEntry)
         for anc in getProperAncestors(s,root):
             
             statesToEnter.add(anc)
@@ -310,7 +356,7 @@ def findLCA(stateList):
             return anc
             
 def executeContent(obj):
-    if callable(obj.exe):
+    if hasattr(obj, "exe") and callable(obj.exe):
         obj.exe()
         
 
@@ -445,7 +491,7 @@ def send(name,sendid="", data={},delay=0):
     timer.start()
     
 def sendFunction(name, data):
-    externalQueue.enqueue(InterpreterEvent(name, data))
+    externalQueue.enqueue(Event(name, data))
 
 def cancel(sendid):
     if timerDict.has_key(sendid):
@@ -454,8 +500,10 @@ def cancel(sendid):
         
 
 def raiseFunction(event):
-    internalQueue.enqueue(InterpreterEvent(event, {}))
+    internalQueue.enqueue(Event(event, {}))
 
+
+"""
 def interpret(document):
     '''Initializes the interpreter given an SCXMLDocument instance'''
     
@@ -473,14 +521,14 @@ def interpret(document):
 
     startEventLoop()
 
+   """ 
     
-    
-class InterpreterEvent(object):
+class Event(object):
     def __init__(self, name, data):
         self.name = name
         self.data = data
         
     def __str__(self):
-        return "InterpreterEvent name='%s'" % self.name  
+        return "Event name='%s'" % self.name  
     
     

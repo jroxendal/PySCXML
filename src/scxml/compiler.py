@@ -21,6 +21,7 @@ This file is part of pyscxml.
 
 
 from node import *
+from urllib2 import urlopen
 import sys, re
 import xml.etree.ElementTree as etree
 from functools import partial
@@ -110,14 +111,13 @@ def parseXML(xmlStr):
             s = State(sid, parentState, n)
             if node.get("initial"):
                 s.initial = node.get("initial").split(" ")
+            
             doc.addNode(s)
             parentState.addChild(s)
             
         elif node.tag == "parallel":
             sid = get_sid(node)
             s = Parallel(sid, parentState, n)
-            if node.get("initial"):
-                s.initial = node.get("initial").split(" ")
             doc.addNode(s)
             parentState.addChild(s)
             
@@ -135,7 +135,7 @@ def parseXML(xmlStr):
             
             
         elif node.tag == "transition":
-            
+            if node.parent.tag == "initial": continue
             t = Transition(parentState)
             if node.get("target"):
                 t.target = node.get("target").split(" ")
@@ -149,9 +149,11 @@ def parseXML(xmlStr):
             parentState.addTransition(t)
 
         elif node.tag == "invoke":
-            s = Invoke()
-            s.id = get_sid(node)
+            s = Invoke(get_sid(node))
             parentState.addInvoke(s)
+            
+            s.content = urlopen(node.get("src")).read()
+            
                        
         elif node.tag == "onentry":
             s = Onentry()
@@ -164,6 +166,13 @@ def parseXML(xmlStr):
             parentState.addOnexit(s)
         elif node.tag == "data":
             doc.datamodel[node.get("id")] = getExprValue(node.get("expr"))
+        elif node.tag == "initial":
+            transitionNode = node.getchildren()[0]
+            assert transitionNode.get("target")
+            parentState.initial = Initial(transitionNode.get("target").split(" "))
+                
+            parentState.initial.exe = getExecContent(transitionNode)
+            
 
     return doc
 

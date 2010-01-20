@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<scxml initial="s0">
+	<state id="s0">
+		<initial>
+			<transition target="s1">
+				<log expr="'execContent in first initial'" />
+			</transition>
+		</initial>
+		<state id="s1">
+			<initial>
+				<transition target="s11" >
+					<log expr="'execContent in second initial'" />
+				</transition>
+			</initial>
+			<state id="s11">
+				<transition event="g" target="s211" />
+			</state>
+			<transition event="a" target="s1" />
+			<transition event="b" target="s11" />
+			<transition event="c" target="s2" />
+			<transition event="d" target="s0" />
+			<transition event="f" target="s211" />
+		</state>
+		<state id="s2">
+			<initial>
+				<transition target="s21" />
+			</initial>
+			<state id="s21">
+				<initial>
+					<transition target="s211">
+						<log expr="'execContent in s21s initial'" />
+					</transition>
+				</initial>
+				<state id="s211">
+					<transition event="d" target="s21" />
+					<transition event="g" target="s0" />
+					<transition event="h" target="f" />
+				</state>
+				<transition event="b" target="s211" />
+			</state>
+			<transition event="c" target="s1" />
+			<transition event="f" target="s11" />
+		</state>
+		<transition event="e" target="s211" />
+	</state>
+	<final id="f" />
+</scxml>

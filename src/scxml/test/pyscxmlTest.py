@@ -65,6 +65,30 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         time.sleep(1) #lets us avoid asynchronous errors
         self.assertEquals(sm.datamodel['fac'], 720)
+
+        sm = StateMachine(open(xmlDir + "issue_164.xml").read())
+        sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assert_(sm.isFinished())
+
+        sm = StateMachine(open(xmlDir + "all_configs.xml").read())
+        sm.start()
+        sm.send("a")
+        sm.send("b")
+        sm.send("c")
+        sm.send("d")
+        sm.send("e")
+        sm.send("f")
+        sm.send("g")
+        sm.send("h")
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assert_(sm.isFinished())
+        
+        # change xml to be able to make assertions about exited and entered states.
+#        sm = StateMachine(open(xmlDir + "cross_parallel.xml").read())
+#        sm.start()
+#        time.sleep(1) #lets us avoid asynchronous errors
+#        self.assertEquals(sm.datamodel['fac'], 720)
         
         
         

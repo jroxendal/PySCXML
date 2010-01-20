@@ -87,6 +87,12 @@ class State(SCXMLNode):
 class Parallel(SCXMLNode):
     def __str__(self):
         return '<Parallel id="%s">' % self.id
+    
+class Initial(list):
+    pass
+#    def __init__(self, seq):
+#        self.exe = None
+        
 
 class History(object): 
     def __init__(self, id, parent, type, n):
@@ -131,7 +137,10 @@ class Final(SCXMLNode):
     def __str__(self):
         return '<Final id="%s">' % self.id
 
-class Invoke(object): 
+class Invoke(object):
+    def __init__(self, id):
+         self.id = id
+         
     def __str__(self):
         return '<Invoke id="%s">' % self.id
         

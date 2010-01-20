@@ -19,6 +19,7 @@
 				</onentry>
 			</state>
 			<state id="s2" initial="f2">
+				<final id="f2" />
 			</state>
 		</parallel>
 	</state>

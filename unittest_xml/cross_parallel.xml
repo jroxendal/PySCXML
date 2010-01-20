@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scxml initial="p">
+	<onentry>
+		<send event="cross"/>
+	</onentry>
+	<parallel id="p">
+		<onentry>
+			<log expr="'Entering p'"/>
+		</onentry>
+		<onexit>
+			<log expr="'Exiting p'"/>
+		</onexit>
+		<state id="s1" initial="s1a">
+			<onentry>
+				<log expr="'Entering s1'"/>
+			</onentry>
+			<onexit>
+				<log expr="'Exiting s1'"/>
+			</onexit>
+			<state id="s1a">
+				<transition event="cross" target="s2a"/>
+			</state>
+		</state>
+		<state id="s2" initial="s2a">
+			<onentry>
+				<log expr="'Entering s2'"/>
+			</onentry>
+			<onexit>
+				<log expr="'Exiting s2'"/>
+			</onexit>
+			<state id="s2a">
+			</state>
+		</state>
+	</parallel>
+</scxml>

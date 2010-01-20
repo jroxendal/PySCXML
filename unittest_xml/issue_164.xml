@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<scxml initial="super">
+	<state id="super" initial="first">
+		<onentry>
+			<log expr="'Entering super'"/>
+		</onentry>
+		<onexit>
+			<log expr="'Exiting super'"/>
+		</onexit>
+		<transition event="done.state.super" target="later"/>
+		<state id="first">
+			<transition event="next" target="fin"/>
+			<onentry>
+				<send event="next"/>
+			</onentry>
+		</state>
+		<final id="fin"/>
+	</state>
+	<final id="later"/>
+</scxml>

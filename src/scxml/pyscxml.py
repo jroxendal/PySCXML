@@ -26,8 +26,8 @@ class StateMachine(object):
         self.doc = compiler.parseXML(xml)
         self.datamodel = self.doc.datamodel
         
-    def start(self):
-        interpreter.interpret(self.doc)
+    def start(self, parentQueue=None, invokeId=None):
+        interpreter.interpret(self.doc, parentQueue, invokeId)
         
     def isFinished(self):
         return len(interpreter.configuration) == 0
@@ -36,14 +36,9 @@ class StateMachine(object):
         
 if __name__ == "__main__":
     
-    xml = open("../../unittest_xml/assign.xml").read()
-#    xml = open("../../resources/factorial.xml").read()
+    xml = open("../../resources/invoke_test.xml").read()
+#    xml = open("../../unittest_xml/parallel.xml").read()
     sm = StateMachine(xml)
     sm.start()
     
     
-    
-#    sm.send("pause", 1)
-#    sm.send("resume", 2)
-#    
-#    sm.send("terminate", 3)

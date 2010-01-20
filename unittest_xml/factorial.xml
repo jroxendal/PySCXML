@@ -4,10 +4,11 @@
 		<data id="fac" expr="1"/>
 	</datamodel>  
 	<state id="loop">
+		<onentry>
+		</onentry>
         <transition cond="dm['x'] &gt; 1">
 			<assign location="fac" expr="dm['x'] * dm['fac']"/>
 			<assign location="x" expr="dm['x']-1"/>
-			<log expr="dm['x']" />
 		</transition>
 		<transition target="result">
 			<log label="'Result'" expr="dm['fac']"/>
