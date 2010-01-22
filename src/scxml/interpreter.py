@@ -36,7 +36,7 @@ from datastructures import OrderedSet, List, Queue, BlockingQueue
 true = True
 false = False
 null = None
-print "interpreter starting"
+
 doc = null
 g_continue = true 
 configuration = null
@@ -50,7 +50,6 @@ externalQueue = null
 historyValue = {}
 dm = None
 
-parentQueue = null
 invId = null
 
 def interpret(document, optionalParentExternalQueue=null, invokeId=null):
@@ -64,21 +63,20 @@ def interpret(document, optionalParentExternalQueue=null, invokeId=null):
     global statesToInvoke
     global historyValue
     global dm
-    global parentQueue
     global invId
-    
-    parentQueue = optionalParentExternalQueue
-    invId = invokeId
     
     doc = document
     dm = doc.datamodel
+    dm["_parent"] = optionalParentExternalQueue
+    invId = invokeId
+    
     configuration = OrderedSet()
     previousConfiguration = OrderedSet()
 
 #    executeGlobalScriptElements(doc)
     internalQueue = Queue()
     externalQueue = BlockingQueue()
-    print "externalQueue", externalQueue, invokeId
+
     g_continue = true
     statesToInvoke = OrderedSet()
     historyValue = {}
@@ -101,7 +99,7 @@ def startEventLoop():
                 initialStepComplete = true 
             else:
                 internalEvent = internalQueue.dequeue()
-                dm["event"] = internalEvent
+                dm["_event"] = internalEvent
                 enabledTransitions = selectTransitions(internalEvent)
         if not enabledTransitions.isEmpty():
              microstep(enabledTransitions.toList())
@@ -120,13 +118,12 @@ def mainEventLoop():
 
         previousConfiguration = configuration
         
-        print "before dequeue " + repr(externalQueue)
         
         externalEvent = externalQueue.dequeue() # this call blocks until an event is available
         
         print "external event found: " + str(externalEvent.name)
         
-        dm["event"] = externalEvent
+        dm["_event"] = externalEvent
         if hasattr(externalEvent, "invokeid"):
             for state in configuration:
                 for inv in state.invoke:
@@ -146,7 +143,7 @@ def mainEventLoop():
                         macroStepComplete = true 
                     else:
                         internalEvent = internalQueue.dequeue()
-                        dm["event"] = internalEvent
+                        dm["_event"] = internalEvent
                         enabledTransitions = selectTransitions(internalEvent)
                 if not enabledTransitions.isEmpty():
                      microstep(enabledTransitions.toList())
@@ -169,9 +166,8 @@ def exitInterpreter():
             inFinalState = true 
         configuration.delete(s)
     if inFinalState:
-        if invId and parentQueue:
-            parentQueue.enqueue(Event(["done", "invoke", invId], {}))
-            print "putting to parent external queue", invId, parentQueue
+        if invId and dm["_parent"]:
+            dm["_parent"].enqueue(Event(["done", "invoke", invId], {}))
             
         print "Exiting interpreter"
 
@@ -181,7 +177,6 @@ def selectEventlessTransitions():
     enabledTransitions = OrderedSet()
     atomicStates = configuration.toList().filter(isAtomicState).sort(documentOrder)
     for state in atomicStates:
-        # fixed type-o in algorithm
         if not isPreempted(state, enabledTransitions):
             done = false 
             for s in List([state]).append(getProperAncestors(state, null)):
@@ -195,8 +190,6 @@ def selectEventlessTransitions():
     return enabledTransitions
 
 
-
-
 def selectTransitions(event):
     enabledTransitions = OrderedSet()
     atomicStates = configuration.toList().filter(isAtomicState).sort(documentOrder)
@@ -206,7 +199,7 @@ def selectTransitions(event):
             for s in List([state]).append(getProperAncestors(state, null)):
                 if done: break
                 for t in s.transition:
-                    if t.event and isPrefix(t.event, event.name) and conditionMatch(t):
+                    if t.event and nameMatch(t.event, event.name) and conditionMatch(t):
                         enabledTransitions.add(t)
                         done = true 
                         break 
@@ -222,7 +215,6 @@ def isPreempted(s, transitionList):
                 preempted = true 
                 break
     return preempted
-
 
 
 def microstep(enabledTransitions):
@@ -262,8 +254,7 @@ def exitStates(enabledTransitions):
 
 
 def invoke(inv):
-    print "Invoking: " + str(inv)
-
+    """Implementation incomplete"""
     sm = StateMachine(inv.content)
     
     sm.start(externalQueue, inv.id)
@@ -316,7 +307,6 @@ def enterStates(enabledTransitions):
 def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
     
     if isHistoryState(s):
-        # i think that LCA should be changed for s and have done so
          if historyValue[s.id]:
              for s0 in historyValue[s.id]:
                   addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
@@ -386,13 +376,6 @@ def isDescendant(state1,state2):
 
 def getChildStates(state):
     return List(state.state + state.parallel + state.final + state.history)
-
-
-def nameMatch(event,t):
-    if not t.event:
-        return false 
-    else:
-        return t.event == event["name"]
     
 
 def conditionMatch(t):
@@ -402,7 +385,7 @@ def conditionMatch(t):
         return t.cond(dm)
 
 
-def isPrefix(eventList, event):
+def nameMatch(eventList, event):
     if ["*"] in eventList: return true 
     def prefixList(l1, l2):
         if len(l1) > len(l2): return false 
@@ -502,26 +485,6 @@ def cancel(sendid):
 def raiseFunction(event):
     internalQueue.enqueue(Event(event, {}))
 
-
-"""
-def interpret(document):
-    '''Initializes the interpreter given an SCXMLDocument instance'''
-    
-    global doc
-    global dm
-    doc = document
-
-    dm = doc.datamodel
-    
-    
-    transition = Transition(document.rootState)
-    transition.target = document.rootState.initial
-    
-    microstep([transition])
-
-    startEventLoop()
-
-   """ 
     
 class Event(object):
     def __init__(self, name, data):

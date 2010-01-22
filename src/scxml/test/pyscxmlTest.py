@@ -17,12 +17,15 @@ This file is part of pyscxml.
     @author: Johan Roxendal
 '''
 
+
 import time
 import unittest
 from scxml.compiler import parseXML
 from scxml.interpreter import interpret
 from scxml.pyscxml import StateMachine
 from xml.etree import ElementTree as etree
+
+
 
 import os.path
 xmlDir = "../../../unittest_xml/"
@@ -83,6 +86,11 @@ class RegressionTest(unittest.TestCase):
         sm.send("h")
         time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
+        
+        sm = StateMachine(open(xmlDir + "all_configs.xml").read())
+        sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assertEquals(sm.datamodel["x"], 584346861767418750)
         
         # change xml to be able to make assertions about exited and entered states.
 #        sm = StateMachine(open(xmlDir + "cross_parallel.xml").read())
