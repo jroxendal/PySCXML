@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<scxml initial="s1">
+	<state id="s1">
+		<invoke id="i" type="scxml" 
+			src="file://localhost/Users/johan/Development/workspace_galileo/interpreter_w3c/resources/simple.xml" />
+		<transition event="done.invoke.i" target="f2"/>
+	</state>
+	<final id="f2"/>
+</scxml>
+

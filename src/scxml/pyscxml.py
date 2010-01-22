@@ -15,30 +15,32 @@ This file is part of pyscxml.
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-import node, compiler, interpreter
+import node, compiler
+from interpreter import Interpreter
 
 
 class StateMachine(object):
     def __init__(self, xml):
         
-        self.send = interpreter.send
-        self.In = interpreter.In
-        self.doc = compiler.parseXML(xml)
+        self.interpreter = Interpreter()
+        
+        self.send = self.interpreter.send
+        self.In = self.interpreter.In
+        self.doc = compiler.parseXML(xml, self.interpreter)
         self.datamodel = self.doc.datamodel
         
     def start(self, parentQueue=None, invokeId=None):
-        interpreter.interpret(self.doc, parentQueue, invokeId)
+        self.interpreter.interpret(self.doc, parentQueue, invokeId)
         
     def isFinished(self):
-        return len(interpreter.configuration) == 0
+        return len(self.interpreter.configuration) == 0
         
         
         
 if __name__ == "__main__":
     
-#    xml = open("../../resources/issue_626.xml").read()
-    xml = open("../../unittest_xml/issue_626.xml").read()
+    xml = open("../../resources/invoke_test.xml").read()
+#    xml = open("../../unittest_xml/twolock_door.xml").read()
     sm = StateMachine(xml)
     sm.start()
     
-    print sm.datamodel["x"]

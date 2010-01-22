@@ -20,8 +20,8 @@ This file is part of pyscxml.
 
 import time
 import unittest
+import scxml.interpreter as interpreter
 from scxml.compiler import parseXML
-from scxml.interpreter import interpret
 from scxml.pyscxml import StateMachine
 from xml.etree import ElementTree as etree
 
@@ -42,8 +42,8 @@ class RegressionTest(unittest.TestCase):
     def testCompiler(self):
         for xmlDoc in [x for x in os.listdir(xmlDir) if x != ".svn"]:
             xml = open(xmlDir + xmlDoc).read()
-            
-            doc = parseXML(xml)
+            dummyInterpreter = interpreter.Interpreter()
+            doc = parseXML(xml, dummyInterpreter)
 
             # make sure that the amount of states stored in the stateDict in the parsed document equals
             # the amount of xml nodes of the same types.

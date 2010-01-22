@@ -25,11 +25,13 @@ from urllib2 import urlopen
 import sys, re
 import xml.etree.ElementTree as etree
 from functools import partial
-from interpreter import send, raiseFunction, cancel, In
+#from interpreter import send, raiseFunction, cancel, In
 from xml.sax.saxutils import unescape
 
 validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "datamodel"]
 doc = None
+interpreter = None
+In = None
 
 def get_sid(node):
     if node.get('id') != '':
@@ -62,15 +64,15 @@ def getExecContent(node):
             fList.append(getLogFunction(node.get("label"),  getExprFunction(node.get("expr"))))
         elif node.tag == "raise": 
             eventName = node.get("event").split(".")
-            fList.append(partial(raiseFunction, eventName))
+            fList.append(partial(interpreter.raiseFunction, eventName))
         elif node.tag == "send":
             eventName = node.get("event").split(".")
             sendId = node.get("id") if node.get("id") else ""
             delay = int(node.get("delay")) if node.get("delay") else 0
                 
-            fList.append(partial(send, eventName, sendId, delay=delay))
+            fList.append(partial(interpreter.send, eventName, sendId, delay=delay))
         elif node.tag == "cancel":
-            fList.append(partial(cancel, node.get("sendid")))
+            fList.append(partial(interpreter.cancel, node.get("sendid")))
         elif node.tag == "assign":
             expression = node.get("expr") if node.get("expr") else node.text
             # ugly scoping hack
@@ -88,9 +90,13 @@ def getExecContent(node):
     return f
 
 
-def parseXML(xmlStr):
+def parseXML(xmlStr, interpreterRef):
     global doc
+    global interpreter
+    global In
     doc = SCXMLDocument()
+    interpreter = interpreterRef
+    In = interpreter.In
     tree = etree.fromstring(xmlStr)
     decorateWithParent(tree)
 
@@ -180,8 +186,13 @@ def cleanExpr(expr):
     return unescape(expr)
 
 def getExprFunction(expr):
+    
     expr = cleanExpr(expr)
     execStr = "f = lambda dm: %s" % expr
+#    execStr = '''\
+#def f(dm):
+#    print "inner f: " + __name__
+#    return %s''' % expr
     exec(execStr)
     return f
 

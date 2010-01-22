@@ -1,0 +1,10 @@
+<scxml initial="s2">
+	<state id="s2">
+		<onentry>
+			<log label="simple:" expr="'simple started'" />
+			<send event="e" />
+		</onentry>
+		<transition event="e" target="f1" />
+	</state>
+	<final id="f1" />
+</scxml>
