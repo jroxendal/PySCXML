@@ -29,79 +29,98 @@ import sys
 import Queue
 import threading
 import time
+from datastructures import OrderedSet
 
 
 g_continue = True
-configuration = set()
-previousConfiguration = set()
+configuration = OrderedSet()
+previousConfiguration = OrderedSet()
 
 internalQueue = Queue.Queue()
 externalQueue = Queue.Queue()
 
+statesToInvoke = OrderedSet()
 historyValue = {}
-dm = {}
+dm = None
+invId = None
 
+def interpret(document, optionalParentExternalQueue=None, invokeId=None):
+    '''Initializes the interpreter given an SCXMLDocument instance'''
+    
+    global doc
+    global dm
+    doc = document
+    dm = doc.datamodel
+    dm["_parent"] = optionalParentExternalQueue
+    invId = invokeId
+    
+    transition = Transition(document.rootState)
+    transition.target = document.rootState.initial
+    
+    executeTransitionContent([transition])
+    enterStates([transition])
+    startEventLoop()
+    
+    
 
 def startEventLoop():
-#    previousConfiguration = None;
-    
+
+    previousConfiguration = None;    
     initialStepComplete = False;
     while not initialStepComplete:
-        initialStepComplete = False;
-        while not initialStepComplete:
-            enabledTransitions = selectEventlessTransitions()
-            if (enabledTransitions == set()):
-                internalEvent = None
-                if not internalQueue.empty(): 
-                    internalEvent = internalQueue.get() # this call returns immediately if no event is available
-                if (internalEvent):
-                    dm["event"] = internalEvent
-                    enabledTransitions = selectTransitions(internalEvent)
-                else:
-                    initialStepComplete = True
-        
-            if (enabledTransitions):
-                 microstep(list(enabledTransitions))
-    
+        enabledTransitions = selectEventlessTransitions()
+        if enabledTransitions.isEmpty():
+            if internalQueue.empty(): 
+                initialStepComplete = True 
+            else:
+                internalEvent = internalQueue.get()
+                dm["_event"] = internalEvent
+                enabledTransitions = selectTransitions(internalEvent)
+        if enabledTransitions:
+             microstep(list(enabledTransitions))
+    threading.Thread(target=mainEventLoop).start()
 
 
 
 def mainEventLoop():
     global previousConfiguration
-    while(g_continue):
-    
-        for state in configuration.difference(previousConfiguration):
-            if(isAtomicState(state)):
-                if state.invoke:
-                    pass
-#                    state.invokeid = executeInvoke(state.invoke)
-#                    datamodel.assignValue(state.invoke.attribute('idlocation'),state.invokeid)
+    while g_continue:
+        
+        for state in statesToInvoke:
+            for inv in state.invoke:
+                invoke(inv)
+        statesToInvoke.clear()
         
         previousConfiguration = configuration
         
         externalEvent = externalQueue.get() # this call blocks until an event is available
-        print "external event found: " + externalEvent.name
-        dm["event"] = externalEvent
-        enabledTransitions = selectTransitions(externalEvent)
         
-        if (enabledTransitions):
+        print "external event found: " + str(externalEvent.name)
+        
+        dm["_event"] = externalEvent
+        if hasattr(externalEvent, "invokeid"):
+            for state in configuration:
+                for inv in state.invoke:
+                    if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
+                        applyFinalize(inv, externalEvent)
+        
+        enabledTransitions = selectTransitions(externalEvent)
+        if enabledTransitions:
             microstep(list(enabledTransitions))
             
             # now take any newly enabled null transitions and any transitions triggered by internal events
             macroStepComplete = False;
             while not macroStepComplete:
                 enabledTransitions = selectEventlessTransitions()
-                if (enabledTransitions == set()):
-                    internalEvent = None
-                    if not internalQueue.empty(): 
+                if enabledTransitions.isEmpty():
+                    if internalQueue.empty(): 
+                        macroStepComplete = True
+                    else:
                         internalEvent = internalQueue.get() # this call returns immediately if no event is available
-                    if (internalEvent):
                         dm["event"] = internalEvent
                         enabledTransitions = selectTransitions(internalEvent)
-                    else:
-                        macroStepComplete = True
- 
-                if (enabledTransitions):
+
+                if enabledTransitions:
                      microstep(list(enabledTransitions))
           
     # if we get here, we have reached a top-level final state or some external entity has set g_continue to False        
@@ -119,16 +138,15 @@ def exitInterpreter():
             cancelInvoke(inv)
         if isFinalState(s) and isScxmlState(s.parent):
             inFinalState = True
-        configuration.discard(s)
+        configuration.delete(s)
     if inFinalState:
         print "Exiting interpreter"
 #        sendDoneEvent(???)
 
 def selectEventlessTransitions():
-    enabledTransitions = set()
+    enabledTransitions = OrderedSet()
     atomicStates = filter(isAtomicState, configuration)
     for state in atomicStates:
-        # fixed type-o in algorithm
         if not isPreempted(state, enabledTransitions):
             done = False
             for s in [state] + getProperAncestors(state, None):
@@ -142,19 +160,18 @@ def selectEventlessTransitions():
 
 
 def selectTransitions(event):
-    enabledTransitions = set()
+    enabledTransitions = OrderedSet()
     atomicStates = filter(isAtomicState, configuration)
     for state in atomicStates:
         if hasattr(event, "invokeid") and state.invokeid == event.invokeid:  # event is the result of an <invoke> in this state
             applyFinalize(state, event)
-            # fixed error similar to one above
+            
         if not isPreempted(state, enabledTransitions):
             done = False
             for s in [state] + getProperAncestors(state, None):
                 if done: break
                 for t in s.transition:
-                    # beware of in statement below
-                    if t.event and t.event in event.name and conditionMatch(t):
+                    if t.event and nameMatch(t.event, event.name) and conditionMatch(t):
                         enabledTransitions.add(t)
                         done = True
                         break 
@@ -166,7 +183,7 @@ def isPreempted(s, transitionList):
     for t in transitionList:
         if t.target:
             LCA = findLCA([t.source] + getTargetStates(t.target))
-            if (isDescendant(s,LCA)):
+            if isDescendant(s,LCA):
                 preempted = True
                 break
     return preempted
@@ -179,13 +196,16 @@ def microstep(enabledTransitions):
 
 
 def exitStates(enabledTransitions):
-    statesToExit = set()
+    statesToExit = OrderedSet()
     for t in enabledTransitions:
         if t.target:
             LCA = findLCA([t.source] + getTargetStates(t.target))
             for s in configuration:
-                if (isDescendant(s,LCA)):
+                if isDescendant(s,LCA):
                     statesToExit.add(s)
+    
+    for s in statesToExit:
+        statesToInvoke.delete(s)
     
     statesToExit = list(statesToExit)
     statesToExit.sort(exitOrder)
@@ -202,8 +222,17 @@ def exitStates(enabledTransitions):
             executeContent(content)
         for inv in s.invoke:
             cancelInvoke(inv)
-        configuration.discard(s)
+        configuration.delete(s)
 
+def invoke(inv):
+    """Implementation incomplete"""
+    sm = StateMachine(inv.content)
+    
+    sm.start(externalQueue, inv.id)
+    
+    
+def cancelInvoke(inv):
+    print "Cancelling: " + str(inv)
 
 def executeTransitionContent(enabledTransitions):
     for t in enabledTransitions:
@@ -212,71 +241,73 @@ def executeTransitionContent(enabledTransitions):
 
 def enterStates(enabledTransitions):
     global g_continue
-    statesToEnter = set()
-    statesForDefaultEntry = set()
+    statesToEnter = OrderedSet()
+    statesForDefaultEntry = OrderedSet()
     for t in enabledTransitions:
-        if (t.target):
+        if t.target:
             LCA = findLCA([t.source] + getTargetStates(t.target))
+            if isParallelState(LCA):
+                for child in getChildStates(LCA):
+                    addStatesToEnter(child,LCA,statesToEnter,statesForDefaultEntry)
             for s in getTargetStates(t.target):
                 addStatesToEnter(s,LCA,statesToEnter,statesForDefaultEntry)
+                
+    for s in statesToEnter:
+        statesToInvoke.add(s)
+                
     statesToEnter = list(statesToEnter)
     statesToEnter.sort(enterOrder)
     for s in statesToEnter:
         configuration.add(s)
         for content in s.onentry:
             executeContent(content)
-            # no support for this yet
-#        if (s in statesForDefaultEntry):
-#            executeContent(s.initial.transition.children())
+            
+        if s in statesForDefaultEntry:
+            executeContent(s.initial)
         if isFinalState(s):
             parent = s.parent
             grandparent = parent.parent
-            internalQueue.put(parent.id + ".Done")
-            if (isParallelState(grandparent)):
+            internalQueue.put(Event(["done", "state", parent.id], {}))
+            if isParallelState(grandparent):
                 if all(map(isInFinalState, getChildStates(grandparent))):
-                    internalQueue.put(grandparent.id + ".Done")
+                    internalQueue.put(Event(["done", "state", grandparent.id], {}))
     for s in configuration:
-        if (isFinalState(s) and isScxmlState(s.parent)):
+        if isFinalState(s) and isScxmlState(s.parent):
             g_continue = False;
 
 
 def addStatesToEnter(s,root,statesToEnter,statesForDefaultEntry):
     
-    if (isHistoryState(s)):
-        # i think that LCA should be changed for s and have done so
-         if (historyValue[s.id]):
+    if isHistoryState(s):
+         if historyValue[s.id]:
              for s0 in historyValue[s.id]:
                   addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
-             else:
-                 for t in s.transition:
-                     for s0 in getTargetStates(t.target):
-                         addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
+         else:
+             for t in s.transition:
+                 for s0 in getTargetStates(t.target):
+                     addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
     else:
         statesToEnter.add(s)
-        if (isParallelState(s)):
+        if isParallelState(s):
             for child in getChildStates(s):
                 addStatesToEnter(child,s,statesToEnter,statesForDefaultEntry)
         elif isCompoundState(s):
+            statesForDefaultEntry.add(s)
             for tState in getTargetStates(s.initial):
-                statesForDefaultEntry.add(tState)
                 addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
-               # switched out the lines under for those over.
-        #         elif (isCompoundState(s)):
-        #             statesForDefaultEntry.add(s)
-        #             addStatesToEnter(getDefaultInitialState(s),s,statesToEnter,statesForDefaultEntry)
         for anc in getProperAncestors(s,root):
             
             statesToEnter.add(anc)
-            if (isParallelState(anc)):
+            if isParallelState(anc):
                 for pChild in getChildStates(anc):
                     if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
                           addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
 
 
 def isInFinalState(s):
-    if (isCompoundState(s)):
+    if isCompoundState(s):
         return any(map(lambda s: isFinalState(s) and s in configuration, getChildStates(s)))
-    elif (isParallelState(s)):
+    elif isParallelState(s):
         return all(map(isInFinalState, getChildStates(s)))
     else:
         return False
@@ -287,7 +318,7 @@ def findLCA(stateList):
             return anc
             
 def executeContent(obj):
-    if callable(obj.exe):
+    if hasattr(obj, "exe") and callable(obj.exe):
         obj.exe()
 
 def getTargetStates(targetIds):
@@ -318,12 +349,6 @@ def getChildStates(state):
     return state.state + state.parallel + state.final + state.history
 
 
-def nameMatch(event,t):
-    if not t.event:
-        return False
-    else:
-        return t.event == event["name"]
-    
 
 def conditionMatch(t):
     if not t.cond:
@@ -331,6 +356,19 @@ def conditionMatch(t):
     else:
         return t.cond(dm)
 
+def nameMatch(eventList, event):
+    if ["*"] in eventList: return True 
+    def prefixList(l1, l2):
+        if len(l1) > len(l2): return False 
+        for tup in zip(l1, l2):
+            if tup[0] != tup[1]:
+                return False 
+        return True 
+    
+    for elem in eventList:
+        if prefixList(elem, event):
+            return True 
+    return False 
 
 ##
 ## Various tests for states
@@ -353,7 +391,7 @@ def isScxmlState(s):
 
 
 def isAtomicState(s):
-    return isinstance(s,SCXMLNode) and s.state == [] and s.parallel == [] and s.final == []
+    return isinstance(s, Final) or (isinstance(s,SCXMLNode) and s.state == [] and s.parallel == [] and s.final == [])
 
 
 def isCompoundState(s):
@@ -393,63 +431,33 @@ def In(name):
     return name in map(lambda x: x.id, configuration)
 
 timerDict = {}
-def send(name,data={},delay=0):
+def send(name,sendid="", data={},delay=0):
     """Spawns a new thread that sends an event after a specified time, in seconds"""
-    if not timerDict.has_key(name):
-        timerDict[name] = []
+    if type(name) == str: name = name.split(".")
+    
+    if delay == 0: 
+        sendFunction(name, data)
+        return
     timer = threading.Timer(delay, sendFunction, args=(name, data))
-    timerDict[name].append(timer)
+    if sendid:
+        timerDict[sendid] = timer
     timer.start()
     
 def sendFunction(name, data):
-    externalQueue.put(InterpreterEvent(name, data))
+    externalQueue.put(Event(name, data))
 
 def cancel(sendid):
     if timerDict.has_key(sendid):
-        while timerDict[sendid]:
-            timer = timerDict[sendid].pop()
-            timer.cancel()
+        timerDict[sendid].cancel()
+        del timerDict[sendid]
+        
+def raiseFunction(event):
+    internalQueue.put(Event(event, {}))
 
-def interpret(document):
-    '''Initializes the interpreter given an SCXMLDocument instance'''
     
-    global doc
-    doc = document
-    
-    transition = Transition(document.rootState)
-    transition.target = document.rootState.initial
-    
-    microstep([transition])
-
-    startEventLoop()
-    
-    loop = threading.Thread(target=mainEventLoop)
-    loop.start()
-    
-    
-class InterpreterEvent(object):
+class Event(object):
     def __init__(self, name, data):
         self.name = name
         self.data = data
     
-if __name__ == "__main__":
-    import compiler as comp 
-    compiler = comp.Compiler()
-    compiler.registerSend(send)
-    compiler.registerCancel(cancel)
     
-    comp.In = In
-
-    xml = open("../../unittest_xml/twolock_door.xml").read()
-    
-    interpret(compiler.parseXML(xml))
-    
-    import time
-    time.sleep(1)
-#    send("unlock_1", delay=1)
-#    send("unlock_2", delay=2)
-#    send("open", delay=3)
-    
-    
-    
-

@@ -3,16 +3,20 @@
 	
 	<final id="opened" />
 	
+	<transition event="done.state.__main__">
+		<log expr="'main state done'" />
+	</transition>
+	
 	<parallel id="closed" initial="lock_1 lock_2">
 		<onentry>
-			<raise event="unlock_1"/>
+			<send event="unlock_1"/>
 		</onentry>
 		<transition target="opened" cond="In('unlocked_1') and In('unlocked_2')" />
 	
 		<state id="lock_1" initial="locked_1">
 			<state id="locked_1">
 				<transition event="unlock_1" target="unlocked_1">
-					<raise event="unlock_2" />
+					<send event="unlock_2" />
 				</transition>
 			</state>
 			<state id="unlocked_1">

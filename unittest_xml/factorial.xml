@@ -1,0 +1,22 @@
+<scxml initial="loop" >
+	<datamodel>
+		<data id="x" expr="6"/>
+		<data id="fac" expr="1"/>
+	</datamodel>  
+	<state id="loop">
+		<onentry>
+		</onentry>
+        <transition cond="dm['x'] &gt; 1">
+			<assign location="fac" expr="dm['x'] * dm['fac']"/>
+			<assign location="x" expr="dm['x']-1"/>
+		</transition>
+		<transition target="result">
+			<log label="'Result'" expr="dm['fac']"/>
+		</transition>
+    </state>
+   <final id="result"/>
+</scxml>
+
+
+
+

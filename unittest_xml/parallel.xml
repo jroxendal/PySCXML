@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<scxml initial="s">
+
+	<final id="f" />
+
+	<state id="s" initial="p">
+
+		<transition event="a.b" target="f" >
+			<log expr="'Done transition'" />
+		</transition>
+
+		<parallel id="p">
+
+
+			<state id="s1" initial="f1">
+				<onentry>
+					<raise event="a.b.c.d" />
+				</onentry>
+			</state>
+			<state id="s2" initial="f2">
+				<final id="f2" />
+			</state>
+		</parallel>
+	</state>
+</scxml>

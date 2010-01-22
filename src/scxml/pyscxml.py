@@ -21,32 +21,24 @@ import node, compiler, interpreter
 class StateMachine(object):
     def __init__(self, xml):
         
-        c = compiler.Compiler()
-        c.registerSend(interpreter.send)
-        c.registerCancel(interpreter.cancel)
-        # TODO: total and utter hack, fix this
-        compiler.In = interpreter.In
+        self.send = interpreter.send
+        self.In = interpreter.In
+        self.doc = compiler.parseXML(xml)
+        self.datamodel = self.doc.datamodel
         
-        self.doc = c.parseXML(xml)
-        
-                
-    def send(self, name, delay=0):
-        interpreter.send(name, {}, delay)    
-    
-    def start(self):
-        interpreter.interpret(self.doc)
+    def start(self, parentQueue=None, invokeId=None):
+        interpreter.interpret(self.doc, parentQueue, invokeId)
         
     def isFinished(self):
-        return interpreter.configuration == set()
+        return len(interpreter.configuration) == 0
         
         
         
 if __name__ == "__main__":
-    xml = open("../../resources/history.xml").read()
+    
+#    xml = open("../../resources/issue_626.xml").read()
+    xml = open("../../unittest_xml/issue_626.xml").read()
     sm = StateMachine(xml)
     sm.start()
     
-    sm.send("pause", 1)
-    sm.send("resume", 2)
-    
-    sm.send("terminate", 3)
+    print sm.datamodel["x"]
