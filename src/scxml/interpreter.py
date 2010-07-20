@@ -81,7 +81,7 @@ class Interpreter(object):
                     self.dm["_event"] = internalEvent
                     enabledTransitions = self.selectTransitions(internalEvent)
             if enabledTransitions:
-                 self.microstep(list(enabledTransitions))
+                self.microstep(list(enabledTransitions))
         threading.Thread(target=self.mainEventLoop).start()
     
     
@@ -124,7 +124,7 @@ class Interpreter(object):
                             enabledTransitions = self.selectTransitions(internalEvent)
     
                     if enabledTransitions:
-                         self.microstep(list(enabledTransitions))
+                        self.microstep(list(enabledTransitions))
               
         # if we get here, we have reached a top-level final state or some external entity has set g_continue to False        
         self.exitInterpreter()  
@@ -265,6 +265,7 @@ class Interpreter(object):
                 self.executeContent(content)
                 
             if s in statesForDefaultEntry:
+                # this can't be right, s.initial is a list
                 self.executeContent(s.initial)
             if isFinalState(s):
                 parent = s.parent
@@ -281,13 +282,13 @@ class Interpreter(object):
     def addStatesToEnter(self, s,root,statesToEnter,statesForDefaultEntry):
         
         if isHistoryState(s):
-             if self.historyValue[s.id]:
-                 for s0 in self.historyValue[s.id]:
-                      self.addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
-             else:
-                 for t in s.transition:
-                     for s0 in self.getTargetStates(t.target):
-                         self.addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
+            if self.historyValue[s.id]:
+                for s0 in self.historyValue[s.id]:
+                    self.addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
+            else:
+                for t in s.transition:
+                    for s0 in self.getTargetStates(t.target):
+                        self.addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
         else:
             statesToEnter.add(s)
             if isParallelState(s):
@@ -298,12 +299,11 @@ class Interpreter(object):
                 for tState in self.getTargetStates(s.initial):
                     self.addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
             for anc in getProperAncestors(s,root):
-                
                 statesToEnter.add(anc)
                 if isParallelState(anc):
                     for pChild in getChildStates(anc):
                         if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
-                              self.addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
+                            self.addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
     
     
     def isInFinalState(self, s):
@@ -315,7 +315,8 @@ class Interpreter(object):
             return False
     
     def findLCA(self, stateList):
-         for anc in getProperAncestors(stateList[0], None):
+        for anc in getProperAncestors(stateList[0], None):
+            print map(lambda(s): isDescendant(s,anc), stateList[1:])
             if all(map(lambda(s): isDescendant(s,anc), stateList[1:])):
                 return anc
                 
@@ -335,7 +336,7 @@ class Interpreter(object):
         if not t.cond:
             return True
         else:
-            return t.cond(self.dm)
+            return t.cond()
                 
     def In(self, name):
         return name in map(lambda x: x.id, self.configuration)
@@ -456,7 +457,6 @@ def exitOrder(s1,s2):
     else:
         return documentOrder(s2,s1)
 
-    
 class Event(object):
     def __init__(self, name, data):
         self.name = name

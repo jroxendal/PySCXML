@@ -6,7 +6,7 @@
   </datamodel>
   <parallel id="test">
     <transition event="done" target="fin">
-      <log expr="'The final value of x is ' + str(dm['x'])"/>
+      <log expr="'The final value of x is ' + str(x)"/>
     </transition>
     <state id="foo" initial="foo1">
       <state id="foo1">
@@ -14,36 +14,36 @@
           <raise event="e"/>
         </onentry>
         <onexit>
-          <assign location="x" expr="dm['x'] * (2**dm['i'])"/>
-          <assign location="i" expr="dm['i']+1"/>
+          <assign location="x" expr="x * (2**i)"/>
+          <assign location="i" expr="i+1"/>
         </onexit>
         <transition event="e" target="foo2">
-          <assign location="x" expr="dm['x'] * (3**dm['i'])"/>
-          <assign location="i" expr="dm['i']+1"/>
+          <assign location="x" expr="x * (3**i)"/>
+          <assign location="i" expr="i+1"/>
         </transition>
       </state>
       <state id="foo2">
         <onentry>
-          <assign location="x" expr="dm['x'] * (5**dm['i'])"/>
-          <assign location="i" expr="dm['i']+1"/>
+          <assign location="x" expr="x * (5**i)"/>
+          <assign location="i" expr="i+1"/>
         </onentry>
       </state>
     </state>
     <state id="bar" initial="bar1">
       <state id="bar1">
         <onexit>
-          <assign location="x" expr="dm['x'] * (7**dm['i'])"/>
-          <assign location="i" expr="dm['i']+1"/>
+          <assign location="x" expr="x * (7**i)"/>
+          <assign location="i" expr="i+1"/>
         </onexit>
         <transition event="e" target="bar2">
-          <assign location="x" expr="dm['x'] * (11**dm['i'])"/>
-          <assign location="i" expr="dm['i']+1"/>
+          <assign location="x" expr="x * (11**i)"/>
+          <assign location="i" expr="i+1"/>
         </transition>
       </state>
       <state id="bar2">
         <onentry>
-          <assign location="x" expr="dm['x'] * (13**dm['i'])"/>
-          <assign location="i" expr="dm['i']+1"/>
+          <assign location="x" expr="x * (13**i)"/>
+          <assign location="i" expr="i+1"/>
           <raise event="done"/>
         </onentry>
       </state>

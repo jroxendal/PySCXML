@@ -6,13 +6,11 @@
 	<state id="loop">
 		<onentry>
 		</onentry>
-        <transition cond="dm['x'] &gt; 1">
-			<assign location="fac" expr="dm['x'] * dm['fac']"/>
-			<assign location="x" expr="dm['x']-1"/>
+        <transition cond="x &gt; 1">
+			<assign location="fac" expr="x * fac"/>
+			<assign location="x" expr="x-1"/>
 		</transition>
-		<transition target="result">
-			<log label="'Result'" expr="dm['fac']"/>
-		</transition>
+		<transition target="result" />
     </state>
    <final id="result"/>
 </scxml>

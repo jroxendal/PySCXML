@@ -3,9 +3,14 @@
 	<transition event="quit" target="f1" />
 	<state id="red">
 		<onentry>
-			<log expr="logging!" />
-			<log expr="logging again!" />
-			<raise event="quit" delay="3" />
+			<script>
+				import math
+				print "printing!"
+				def square(x):
+					return x + math.sin(90)
+			</script>
+			<log label="sq" expr="square(1)" />
+			<send event="quit" delay="3" />
 		</onentry>
 		<onexit>
 			<cancel sendid="quit" />
