@@ -1,14 +1,14 @@
 <scxml initial="red">
+	<script>
+		import math
+		print "printing!"
+		def square(x):
+			return x + math.sin(90)
+	</script>
 	<final id="f1" />
 	<transition event="quit" target="f1" />
 	<state id="red">
 		<onentry>
-			<script>
-				import math
-				print "printing!"
-				def square(x):
-					return x + math.sin(90)
-			</script>
 			<log label="sq" expr="square(1)" />
 			<send event="quit" delay="3" />
 		</onentry>

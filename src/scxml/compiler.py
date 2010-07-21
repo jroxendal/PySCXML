@@ -111,6 +111,8 @@ def parseXML(xmlStr, interpreterRef):
             s = State("__main__", None, n)
             if node.get("initial"):
                 s.initial = node.get("initial").split(" ")
+            if node.find("script") != None:
+                getExprFunction(node.find("script").text)()
             doc.rootState = s    
             
         elif node.tag == "state":
@@ -186,8 +188,6 @@ def parseXML(xmlStr, interpreterRef):
 
 def getExprFunction(expr):
     expr = normalizeExpr(expr)
-
-#    execStr = "def f(dm): \n\t%s" % expr
     def f():
         exec expr in doc.datamodel
     return f
@@ -208,7 +208,6 @@ def normalizeExpr(expr):
     # indent left by indent_len chars
     code = "\n".join(map(lambda x:x[indent_len:], code.split("\n")))
     
-#    exec(code)
     return code
 
 if __name__ == '__main__':

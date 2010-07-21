@@ -25,10 +25,8 @@ This file is part of pyscxml.
 
 
 from node import *
-import sys
 import Queue
 import threading
-import time
 from datastructures import OrderedSet
 import scxml.pyscxml
 
@@ -56,6 +54,7 @@ class Interpreter(object):
         
         self.doc = document
         self.dm = self.doc.datamodel
+        self.dm["In"] = self.In
         self.dm["_parent"] = optionalParentExternalQueue
         self.invId = invokeId
         
@@ -316,7 +315,6 @@ class Interpreter(object):
     
     def findLCA(self, stateList):
         for anc in getProperAncestors(stateList[0], None):
-            print map(lambda(s): isDescendant(s,anc), stateList[1:])
             if all(map(lambda(s): isDescendant(s,anc), stateList[1:])):
                 return anc
                 
@@ -332,7 +330,6 @@ class Interpreter(object):
             obj.exe()
     
     def conditionMatch(self, t):
-        In = self.In
         if not t.cond:
             return True
         else:
