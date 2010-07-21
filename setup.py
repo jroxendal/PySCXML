@@ -8,7 +8,7 @@ from distutils.core import setup
 import datetime
 
 setup(name='pyscxml',
-      version='0.4-' + str(datetime.date.today()).replace("-", ""),
+      version='0.5-' + str(datetime.date.today()).replace("-", ""),
       description='A pure Python SCXML compiler/interpreter',
       author='Johan Roxendal',
       author_email='johan@roxendal.com',

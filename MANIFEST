@@ -1,0 +1,11 @@
+README
+setup.py
+src/scxml/__init__.py
+src/scxml/compiler.py
+src/scxml/datastructures.py
+src/scxml/interpreter.py
+src/scxml/node.py
+src/scxml/pyscxml.py
+src/scxml/test/__init__.py
+src/scxml/test/pyscxmlTest.py
+src/scxml/test/pyscxml_coverage.py

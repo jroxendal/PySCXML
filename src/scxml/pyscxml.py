@@ -17,11 +17,23 @@ This file is part of pyscxml.
 
 import compiler
 from interpreter import Interpreter
+import logging
 
+
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+
+logging.getLogger("pyscxml").addHandler(NullHandler())
 
 class StateMachine(object):
     def __init__(self, xml):
-        
+        '''
+        @param xml: the scxml document to parse, expressed as a string.
+        @keyword logging_level: the logging level for the logging module, 
+        defaults to logging.DEBUG. Set to logging.NOTSET to show all logging messages.
+        '''
+
         self.interpreter = Interpreter()
         
         self.send = self.interpreter.send
@@ -29,14 +41,17 @@ class StateMachine(object):
         self.doc = compiler.parseXML(xml, self.interpreter)
         self.datamodel = self.doc.datamodel
         
+        
+        
     def start(self, parentQueue=None, invokeId=None):
+        '''Takes the statemachine to its initial state'''
         self.interpreter.interpret(self.doc, parentQueue, invokeId)
         
     def isFinished(self):
+        '''Returns True if the statemachine has reached it top-level final state'''
         return len(self.interpreter.configuration) == 0
         
-        
-        
+
 if __name__ == "__main__":
     
     xml = open("../../resources/colors.xml").read()

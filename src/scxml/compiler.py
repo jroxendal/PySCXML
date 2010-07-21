@@ -25,13 +25,11 @@ from urllib2 import urlopen
 import sys, re
 import xml.etree.ElementTree as etree
 from functools import partial
-#from interpreter import send, raiseFunction, cancel, In
 from xml.sax.saxutils import unescape
 
 validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "datamodel"]
 doc = None
 interpreter = None
-In = None
 
 def get_sid(node):
     if node.get('id') != '':
@@ -94,10 +92,8 @@ def getExecContent(node):
 def parseXML(xmlStr, interpreterRef):
     global doc
     global interpreter
-    global In
     doc = SCXMLDocument()
     interpreter = interpreterRef
-    In = interpreter.In
     tree = etree.fromstring(xmlStr)
     decorateWithParent(tree)
 
@@ -194,7 +190,7 @@ def getExprFunction(expr):
 
 
 def getExprValue(expr):
-    """These expression are always one-line, so they're value is evaluated and returned."""
+    """These expression are always one-line, so their value is evaluated and returned."""
     expr = unescape(expr)
     return eval(expr, doc.datamodel)
 

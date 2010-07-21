@@ -29,7 +29,27 @@ import Queue
 import threading
 from datastructures import OrderedSet
 import scxml.pyscxml
+import logging
 
+def initLogger():
+    # create self.logger
+    logger = logging.getLogger("pyscxml.interpreter")
+    logger.setLevel(logging.INFO)
+    
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    
+    # create formatter
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    
+    # add ch to self.logger
+    logger.addHandler(ch)
+
+    return logger
 
 
 class Interpreter(object):
@@ -47,6 +67,7 @@ class Interpreter(object):
         self.invId = None
         
         self.timerDict = {}
+        self.logger = initLogger()
         
     
     def interpret(self, document, optionalParentExternalQueue=None, invokeId=None):
@@ -97,14 +118,14 @@ class Interpreter(object):
             
             externalEvent = self.externalQueue.get() # this call blocks until an event is available
             
-            print "external event found: " + str(externalEvent.name)
+            self.logger.info("external event found: %s", externalEvent.name)
             
             self.dm["_event"] = externalEvent
             if hasattr(externalEvent, "invokeid"):
                 for state in self.configuration:
                     for inv in state.invoke:
                         if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
-                            applyFinalize(inv, externalEvent)
+                            self.applyFinalize(inv, externalEvent)
             
             enabledTransitions = self.selectTransitions(externalEvent)
             if enabledTransitions:
@@ -144,7 +165,7 @@ class Interpreter(object):
         if inFinalState:
             if self.invId and self.dm["_parent"]:
                 self.dm["_parent"].put(Event(["done", "invoke", self.invId], {}))
-            print "Exiting interpreter"
+            self.logger.info("Exiting interpreter")
     #        sendDoneEvent(???)
     
     def selectEventlessTransitions(self):
@@ -168,7 +189,7 @@ class Interpreter(object):
         atomicStates = filter(isAtomicState, self.configuration)
         for state in atomicStates:
             if hasattr(event, "invokeid") and state.invokeid == event.invokeid:  # event is the result of an <invoke> in this state
-                applyFinalize(state, event)
+                self.applyFinalize(state, event)
                 
             if not self.isPreempted(state, enabledTransitions):
                 done = False
@@ -196,7 +217,7 @@ class Interpreter(object):
         self.exitStates(enabledTransitions)
         self.executeTransitionContent(enabledTransitions)
         self.enterStates(enabledTransitions)
-        print "{" + ", ".join([s.id for s in self.configuration if s.id != "__main__"]) + "}"
+        self.logger.info("new config: {" + ", ".join([s.id for s in self.configuration if s.id != "__main__"]) + "}")
     
     
     def exitStates(self, enabledTransitions):
@@ -234,7 +255,7 @@ class Interpreter(object):
         
         
     def cancelInvoke(self, inv):
-        print "Cancelling: " + str(inv)
+        self.logger.warning("Tried to cancel invoke on id: %sinvoke but cancel not implemented: ", inv)
     
     def executeTransitionContent(self, enabledTransitions):
         for t in enabledTransitions:
@@ -318,6 +339,10 @@ class Interpreter(object):
             if all(map(lambda(s): isDescendant(s,anc), stateList[1:])):
                 return anc
                 
+    
+    def applyFinalize(self, state, event):
+        self.logger.error("finalize not implemented")
+        pass
     
     def getTargetStates(self, targetIds):
         states = []

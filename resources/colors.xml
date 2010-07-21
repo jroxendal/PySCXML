@@ -1,7 +1,6 @@
 <scxml initial="red">
 	<script>
 		import math
-		print "printing!"
 		def square(x):
 			return x + math.sin(90)
 	</script>
