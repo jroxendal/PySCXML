@@ -23,7 +23,7 @@ This file is part of pyscxml.
 from node import *
 from urllib2 import urlopen
 import sys, re
-import xml.etree.ElementTree as etree
+from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
 
@@ -31,14 +31,10 @@ validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "datamode
 doc = None
 interpreter = None
 
-def get_sid(node):
-    if node.get('id') != '':
-        return node.get('id')
-    else:
-        #probably not always unique, let's rewrite this at some point
-        id = node.parent.get("id") + "_%s_child" % node.tag
-        node.set('id',id)
-        return id
+def set_sid(node):
+    #probably not always unique, let's rewrite this at some point
+    id = node.parent.get("id") + "_%s_child" % node.tag
+    node.set('id',id)
 
     
 def getLogFunction(label, toPrint):
@@ -48,10 +44,15 @@ def getLogFunction(label, toPrint):
     return f
     
 
-def decorateWithParent(tree):
+def preprocess(tree):
+    tree.set("id", "__main__")
     for node in tree.getiterator():
         for child in node.getchildren():
+            # set a reference to the parent of the node
             child.parent = node
+            # make sure that states without ids gets an id assigned.
+            if child.tag in ["state", "parallel", "final", "invoke", "history"] and not child.get("id"):
+                set_sid(child)
             
         
 def getExecContent(node):
@@ -97,47 +98,42 @@ def parseXML(xmlStr, interpreterRef):
     doc = SCXMLDocument()
     interpreter = interpreterRef
     xmlStr = removeDefaultNamespace(xmlStr)
-    tree = etree.fromstring(xmlStr)
-    decorateWithParent(tree)
-
+    tree = ElementTree.fromstring(xmlStr)
+    ElementInclude.include(tree)
+    preprocess(tree)
+    
     for n, node in enumerate(x for x in tree.getiterator() if x.tag not in validExecTags + ["datamodel"]):
         if hasattr(node, "parent") and node.parent.get("id"):
             parentState = doc.getState(node.parent.get("id"))
             
         
         if node.tag == "scxml":
-            node.set("id", "__main__")
-            s = State("__main__", None, n)
-            if node.get("initial"):
-                s.initial = node.get("initial").split(" ")
+            s = State(node.get("id"), None, n)
+            s.initial = parseInitial(node)
+                
             if node.find("script") != None:
                 getExprFunction(node.find("script").text)()
             doc.rootState = s    
             
         elif node.tag == "state":
-            sid = get_sid(node)
-            s = State(sid, parentState, n)
-            if node.get("initial"):
-                s.initial = node.get("initial").split(" ")
+            s = State(node.get("id"), parentState, n)
+            s.initial = parseInitial(node)
             
             doc.addNode(s)
             parentState.addChild(s)
             
         elif node.tag == "parallel":
-            sid = get_sid(node)
-            s = Parallel(sid, parentState, n)
+            s = Parallel(node.get("id"), parentState, n)
             doc.addNode(s)
             parentState.addChild(s)
             
         elif node.tag == "final":
-            sid = get_sid(node)
-            s = Final(sid, parentState, n)
+            s = Final(node.get("id"), parentState, n)
             doc.addNode(s)
             parentState.addFinal(s)
             
         elif node.tag == "history":
-            sid = get_sid(node)
-            h = History(sid, parentState, node.get("type"), n)
+            h = History(node.get("id"), parentState, node.get("type"), n)
             doc.addNode(h)
             parentState.addHistory(h)
             
@@ -157,7 +153,7 @@ def parseXML(xmlStr, interpreterRef):
             parentState.addTransition(t)
 
         elif node.tag == "invoke":
-            s = Invoke(get_sid(node))
+            s = Invoke(node.get("id"))
             parentState.addInvoke(s)
             
             s.content = urlopen(node.get("src")).read()
@@ -174,15 +170,32 @@ def parseXML(xmlStr, interpreterRef):
             parentState.addOnexit(s)
         elif node.tag == "data":
             doc.datamodel[node.get("id")] = getExprValue(node.get("expr"))
-        elif node.tag == "initial":
-            transitionNode = node.getchildren()[0]
-            assert transitionNode.get("target")
-            parentState.initial = Initial(transitionNode.get("target").split(" "))
-                
-            parentState.initial.exe = getExecContent(transitionNode)
+#        elif node.tag == "initial":
+#            transitionNode = node.getchildren()[0]
+#            assert transitionNode.get("target")
+#            parentState.initial = Initial(transitionNode.get("target").split(" "))
+#                
+#            parentState.initial.exe = getExecContent(transitionNode)
             
 
     return doc
+
+
+def parseInitial(node):
+    if node.get("initial"):
+        return Initial(node.get("initial").split(" "))
+    elif node.find("initial") is not None:
+        transitionNode = node.find("initial")[0]
+        assert transitionNode.get("target")
+        initial = Initial(transitionNode.get("target").split(" "))
+        initial.exe = getExecContent(transitionNode)
+        return initial
+    else: # has neither initial tag or attribute, so we'll make the first valid state a target instead.
+        childNodes = filter(lambda x: x.tag in ["state", "parallel", "final"], list(node)) 
+        if childNodes:
+            return Initial([childNodes[0].get("id")]);
+        return None # leaf nodes have no initial 
+    
 
 
 def getExprFunction(expr):

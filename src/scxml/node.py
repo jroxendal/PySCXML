@@ -88,7 +88,7 @@ class Parallel(SCXMLNode):
     def __str__(self):
         return '<Parallel id="%s">' % self.id
     
-class Initial(list):
+class Initial(list, Executable):
     pass
 #    def __init__(self, seq):
 #        self.exe = None

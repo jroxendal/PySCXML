@@ -96,6 +96,11 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
+    
+        sm = StateMachine(open(xmlDir + "xinclude.xml").read())
+        sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assert_(sm.isFinished())
         
         # change xml to be able to make assertions about exited and entered states.
 #        sm = StateMachine(open(xmlDir + "cross_parallel.xml").read())

@@ -1,0 +1,7 @@
+<scxml xmlns:xi="http://www.w3.org/2001/XInclude">
+	<state>
+		<transition target="f" />
+	</state>
+	
+	<xi:include href="../../../unittest_xml/xinclude_final.xml" parse="xml" />
+</scxml>
