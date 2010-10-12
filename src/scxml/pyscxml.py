@@ -18,6 +18,7 @@ This file is part of pyscxml.
 import compiler
 from interpreter import Interpreter
 import logging
+import time
 
 
 class NullHandler(logging.Handler):
@@ -54,9 +55,19 @@ class StateMachine(object):
 
 if __name__ == "__main__":
     
-    xml = open("../../resources/colors.xml").read()
+#    xml = open("../../resources/colors.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-#    xml = open("../../unittest_xml/twolock_door.xml").read()
+    xml = open("../../unittest_xml/twolock_door.xml").read()
     sm = StateMachine(xml)
     sm.start()
+    time.sleep(1)
     
+    xml = open("../../unittest_xml/twolock_door.xml").read()
+    sm = StateMachine(xml)
+    sm.start()
+    time.sleep(1)
+    
+    xml = open("../../unittest_xml/twolock_door.xml").read()
+    sm = StateMachine(xml)
+    sm.start()
+    time.sleep(1)

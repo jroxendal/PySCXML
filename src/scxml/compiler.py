@@ -88,12 +88,15 @@ def getExecContent(node):
             func()
     return f
 
+def removeDefaultNamespace(xmlStr):
+    return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
 
 def parseXML(xmlStr, interpreterRef):
     global doc
     global interpreter
     doc = SCXMLDocument()
     interpreter = interpreterRef
+    xmlStr = removeDefaultNamespace(xmlStr)
     tree = etree.fromstring(xmlStr)
     decorateWithParent(tree)
 

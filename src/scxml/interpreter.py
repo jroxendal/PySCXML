@@ -31,9 +31,9 @@ from datastructures import OrderedSet
 import scxml.pyscxml
 import logging
 
-def initLogger():
+def initLogger(instance):
     # create self.logger
-    logger = logging.getLogger("pyscxml.interpreter")
+    logger = logging.getLogger("pyscxml.interpreter, id: " + str(id(instance)))
     logger.setLevel(logging.INFO)
     
     # create console handler and set level to debug
@@ -67,7 +67,7 @@ class Interpreter(object):
         self.invId = None
         
         self.timerDict = {}
-        self.logger = initLogger()
+        self.logger = initLogger(self)
         
     
     def interpret(self, document, optionalParentExternalQueue=None, invokeId=None):
