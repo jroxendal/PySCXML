@@ -1,9 +1,18 @@
 <scxml initial="s2">
+	<datamodel>
+		<data id="result1" expr="11" /> 
+		<data id="result2" expr="22" />
+	</datamodel> 
 	<state id="s2">
 		<onentry>
 			<log label="simple:" expr="'simple started'" />
 		</onentry>
-		<transition event="e" target="f1" />
+		<transition event="e" target="f1">
+			<send target="#_parent" event="quit" >
+				<param name="result1" />
+				<param name="result2" />
+			</send>
+		</transition>
 	</state>
 	<final id="f1" />
 </scxml>

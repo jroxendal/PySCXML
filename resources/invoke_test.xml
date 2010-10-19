@@ -1,15 +1,33 @@
 <?xml version="1.0"?>
-<scxml initial="s1">
+<scxml version="1.0" initial="s1" xmlns="http://www.w3.org/2005/07/scxml"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://scxml-schema.googlecode.com/svn/SCXML-Schema/ecma/scxml-profile-ecma.xsd">
+	<datamodel>
+		<data id="result1" />
+		<data id="result2" />
+	</datamodel>
 	<state id="s1">
 		<invoke id="i" type="scxml" 
-			src="file:///Users/johan/Development/workspace_helios/pyscxml/resources/simple.xml" />
+			src="file:///Users/johan/Development/workspace_helios/pyscxml/resources/simple.xml" >
+			
+			<finalize />
+			<param name="result1" />
+			<param name="result2" />
+		</invoke>
 		
 		<transition event="init.invoke.i">
 			<send target="#i" event="e" />
 		</transition>
 		
+		<transition target="f2" event="quit" />
+		
+		
 		<transition event="done.invoke.i" target="f2"/>
 	</state>
-	<final id="f2"/>
+	<final id="f2">
+		<onentry>
+			<log expr="[result1, result2]"></log>
+		</onentry>
+	</final>
 </scxml>
 

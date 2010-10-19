@@ -26,77 +26,16 @@ import sys, re
 from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
-import logging
+import logger
 
-validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "datamodel"]
+validExecTags = ["log", "script", "raise", "assign", "send", "cancel"]
 
-def initLogger(instance):
-    # create self.logger
-    logger = logging.getLogger("pyscxml.compiler, id: %s" % id(instance))
-    logger.setLevel(logging.INFO)
-    
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    
-    # create formatter
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    
-    # add ch to self.logger
-    logger.addHandler(ch)
-
-    return logger
-
-
-
-def set_sid(node):
-    #probably not always unique, let's rewrite this at some point
-    id = node.parent.get("id") + "_%s_child" % node.tag
-    node.set('id',id)
-
-    
-def getLogFunction(label, toPrint):
-    if not label: label = "Log"
-    def f():
-        print "%s: %s" % (label, toPrint())
-    return f
-    
-
-def preprocess(tree):
-    tree.set("id", "__main__")
-    for node in tree.getiterator():
-        for child in node.getchildren():
-            # set a reference to the parent of the node
-            child.parent = node
-            # make sure that states without ids gets an id assigned.
-            if child.tag in ["state", "parallel", "final", "invoke", "history"] and not child.get("id"):
-                set_sid(child)
-            
-
-def normalizeExpr(expr):
-    # TODO: what happens if we have python strings in our script blocks with &gt; ?
-    code = unescape(expr).strip("\n")
-    
-    firstLine = code.split("\n")[0]
-    # how many whitespace chars in first line?
-    indent_len = len(firstLine) - len(firstLine.lstrip())
-    # indent left by indent_len chars
-    code = "\n".join(map(lambda x:x[indent_len:], code.split("\n")))
-    
-    return code
-    
-
-def removeDefaultNamespace(xmlStr):
-    return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
 
 class Compiler(object):
     
     def __init__(self):
         self.doc = SCXMLDocument()
-        self.logger = initLogger(self)
+        self.logger = logger.initLogger("scxml.Compiler, id: " + str(id(self)))
     
     def parseAttr(self, elem, attr, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -116,8 +55,7 @@ class Compiler(object):
                 eventName = node.get("event").split(".")
                 fList.append(partial(self.interpreter.raiseFunction, eventName))
             elif node.tag == "send":
-    
-                fList.append(self.parseSend(node))
+                fList.append(partial(self.parseSend, node))
             elif node.tag == "cancel":
                 fList.append(partial(self.interpreter.cancel, node.get("sendid")))
             elif node.tag == "assign":
@@ -158,25 +96,19 @@ class Compiler(object):
         
         event = self.parseAttr(sendNode, "event").split(".")
         
-        if not sendNode.get("target"):
-            return partial(self.interpreter.send, event, sendNode.get("id"), delay)
+        target = self.parseAttr(sendNode, "target")
         
-        if sendNode.get("target")[0] == "#":
-            target = sendNode.get("target")[1:]
+        if not target:
+            self.interpreter.send(event, sendNode.get("id"), delay)
+        elif target[0] == "#":
+            target = target[1:]
             # this is where to add parsing for more send types. 
             #if(type == "scxml"):
             
             if(target == "_parent"):
-                def f():
-                    self.interpreter.send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
-                    
+                self.interpreter.send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
             else:
-                def f():
-                    self.doc.datamodel[target].send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data))
-            return f
-        
-        self.logger.error("Send parsing failed on :" + str(sendNode))
-        return lambda:None
+                self.doc.datamodel[target].send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data))
         
     
     
@@ -311,6 +243,44 @@ class Compiler(object):
             return None # leaf nodes have no initial 
     
 
+def set_sid(node, n):
+    id = node.parent.get("id") + "_%s_child_%s" % (node.tag, n)
+    node.set('id',id)
+
+    
+def getLogFunction(label, toPrint):
+    if not label: label = "Log"
+    def f():
+        print "%s: %s" % (label, toPrint())
+    return f
+    
+
+def preprocess(tree):
+    tree.set("id", "__main__")
+    for node in tree.getiterator():
+        for n, child in enumerate(node):
+            # set a reference to the parent of the node
+            child.parent = node
+            # make sure that states without ids gets an id assigned.
+            if child.tag in ["state", "parallel", "final", "invoke", "history"] and not child.get("id"):
+                set_sid(child, n)
+            
+
+def normalizeExpr(expr):
+    # TODO: what happens if we have python strings in our script blocks with &gt; ?
+    code = unescape(expr).strip("\n")
+    
+    firstLine = code.split("\n")[0]
+    # how many whitespace chars in first line?
+    indent_len = len(firstLine) - len(firstLine.lstrip())
+    # indent left by indent_len chars
+    code = "\n".join(map(lambda x:x[indent_len:], code.split("\n")))
+    
+    return code
+    
+
+def removeDefaultNamespace(xmlStr):
+    return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
 
 
 if __name__ == '__main__':

@@ -28,28 +28,7 @@ from node import *
 import Queue
 import threading
 from datastructures import OrderedSet
-import scxml.pyscxml
-import logging
-
-def initLogger(instance):
-    # create self.logger
-    logger = logging.getLogger("pyscxml.interpreter, id: " + str(id(instance)))
-    logger.setLevel(logging.INFO)
-    
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    
-    # create formatter
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    
-    # add ch to self.logger
-    logger.addHandler(ch)
-
-    return logger
+import logger
 
 
 class Interpreter(object):
@@ -67,7 +46,7 @@ class Interpreter(object):
         self.invokeId = None
         
         self.timerDict = {}
-        self.logger = initLogger(self)
+        self.logger = logger.initLogger("SCXML interpreter, id: " + str(id(self)))
         
     
     def interpret(self, document, optionalParentExternalQueue=None, invokeId=None):
@@ -256,7 +235,7 @@ class Interpreter(object):
     def invoke(self, inv, extQ):
 #        sm = scxml.pyscxml.StateMachine(inv.content)
 #        sm.start(extQ, inv.id)
-        logging.debug("invoke %s %s" % (inv, extQ))
+        
         self.dm[inv.invokeid] = inv
         inv.start(extQ, inv.invokeid)
         

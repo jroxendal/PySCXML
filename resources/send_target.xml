@@ -1,0 +1,15 @@
+<scxml>
+	<datamodel>
+		<data id="val" expr="'1'" />
+	</datamodel>
+	<state>
+		<onentry>
+			<assign location="val" expr="'3'" />
+			<send eventexpr="'a' + str(val)" />
+		</onentry>
+		<transition event="*" >
+			<log expr="_event.name" />
+		</transition>
+	</state>
+	
+</scxml>

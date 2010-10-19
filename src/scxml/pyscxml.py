@@ -31,8 +31,6 @@ class StateMachine(object):
     def __init__(self, xml):
         '''
         @param xml: the scxml document to parse, expressed as a string.
-        @keyword logging_level: the logging level for the logging module, 
-        defaults to logging.DEBUG. Set to logging.NOTSET to show all logging messages.
         '''
 
         self.interpreter = Interpreter()
@@ -55,8 +53,7 @@ class StateMachine(object):
         
 
 if __name__ == "__main__":
-    
-    xml = open("../../resources/invoke_test.xml").read()
+    xml = open("../../resources/send_target.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/xinclude.xml").read()
     sm = StateMachine(xml)
