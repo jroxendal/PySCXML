@@ -191,7 +191,7 @@ class SCXMLDocument(object):
         self.stateDict[node.id] = node
         
     def getState(self, id):
-        return self.stateDict[id]
+        return self.stateDict.get(id)
     
     def __str__(self):
         

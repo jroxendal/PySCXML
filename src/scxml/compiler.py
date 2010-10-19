@@ -138,18 +138,11 @@ class Compiler(object):
         return f
     
     def appendParam(self, child, toObj):
-        if child.find("param") != None:
-            for p in child.findall("param"):
-                expr = p.get("expr", p.get("name"))
-                if p.get("expr"):
-                    expr = p.get("expr")
-                # not necesarily standars compliant (hard to tell):
-                elif hasattr(self.doc.datamodel, p.get("name")):
-                    expr = p.get("name")
-                else:
-                    expr = ""
-    
-                toObj[p.get("name")] = self.getExprValue(expr)
+#        if child.find("param") != None:
+        for p in child.findall("param"):
+            expr = p.get("expr", p.get("name"))
+            
+            toObj[p.get("name")] = self.getExprValue(expr)
                 
         
         if child.get("namelist"):
@@ -174,11 +167,13 @@ class Compiler(object):
             #if(type == "scxml"):
             
             if(target == "_parent"):
-                return partial(self.interpreter.send, event, sendNode.get("id"), delay, self.appendParam(sendNode, data), self.interpreter.invokeid, self.doc.datamodel["_parent"])
+                def f():
+                    self.interpreter.send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
+                    
             else:
                 def f():
                     self.doc.datamodel[target].send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data))
-                return f
+            return f
         
         self.logger.error("Send parsing failed on :" + str(sendNode))
         return lambda:None
@@ -193,7 +188,7 @@ class Compiler(object):
     #    print ElementTree.tostring(tree)
         preprocess(tree)
         
-        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in validExecTags + ["datamodel"]):
+        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in validExecTags + ["datamodel", "finalize"]):
             if hasattr(node, "parent") and node.parent.get("id"):
                 parentState = self.doc.getState(node.parent.get("id"))
                 
@@ -248,7 +243,6 @@ class Compiler(object):
                 if node.get("type") == "scxml": # here's where we add more invoke types. 
                      
                     inv = InvokeSCXML(node.get("id"))
-                    parentState.addInvoke(inv)
                     if node.get("src"):
                         inv.content = urlopen(node.get("src")).read()
                     elif node.get("content"):
@@ -262,11 +256,14 @@ class Compiler(object):
                 if node.find("finalize") != None and len(node.find("finalize")) > 0:
                     inv.finalize = self.getExecContent(node.find("finalize"))
                 elif node.find("finalize") != None and node.find("param") != None:
+                    paramList = node.findall("param")
                     def f():
-                        for param in (p for p in node.findall("param") if not p.get("expr")): # get all param nodes without the expr attr
-                            self.doc.datamodel[param.get("name")] = self.doc.datamodel["_event"].data[param.get("name")]
-                    node.finalize = f
+                        for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
+                            if self.doc.datamodel["_event"].data.has_key(param.get("name")):
+                                self.doc.datamodel[param.get("name")] = self.doc.datamodel["_event"].data[param.get("name")]
+                    inv.finalize = f
                 
+                parentState.addInvoke(inv)
                            
             elif node.tag == "onentry":
                 s = Onentry()
@@ -280,6 +277,8 @@ class Compiler(object):
             elif node.tag == "data":
                 self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
                 
+                
+                
     
         return self.doc
 
@@ -291,6 +290,8 @@ class Compiler(object):
     
     def getExprValue(self, expr):
         """These expression are always one-line, so their value is evaluated and returned."""
+        if not expr: 
+            return None
         expr = unescape(expr)
         return eval(expr, self.doc.datamodel)
 

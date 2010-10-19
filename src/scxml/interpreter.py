@@ -64,7 +64,7 @@ class Interpreter(object):
         self.statesToInvoke = OrderedSet()
         self.historyValue = {}
         self.dm = None
-        self.invId = None
+        self.invokeId = None
         
         self.timerDict = {}
         self.logger = initLogger(self)
@@ -79,7 +79,7 @@ class Interpreter(object):
         self.dm["_parent"] = optionalParentExternalQueue
         if invokeId:
             self.dm["_invokeid"] = invokeId
-        self.invId = invokeId
+        self.invokeId = invokeId
         
         transition = Transition(document.rootState)
         transition.target = document.rootState.initial
@@ -167,8 +167,8 @@ class Interpreter(object):
                 inFinalState = True
             self.configuration.delete(s)
         if inFinalState:
-            if self.invId and self.dm["_parent"]:
-                self.dm["_parent"].put(Event(["done", "invoke", self.invId], {}))
+            if self.invokeId and self.dm["_parent"]:
+                self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], {}))
             self.logger.info("Exiting interpreter")
     #        sendDoneEvent(???)
     
