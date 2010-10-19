@@ -19,6 +19,7 @@ This file is part of pyscxml.
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+
 class SCXMLNode(object):
     def __init__(self, id, parent, n):
         self.transition = []
@@ -137,12 +138,29 @@ class Final(SCXMLNode):
     def __str__(self):
         return '<Final id="%s">' % self.id
 
-class Invoke(object):
+class InvokeSCXML(object):
     def __init__(self, id):
-         self.id = id
+        self.invokeid = id
+        self.autoforward = False
+        self.content = None
+        self.finalize = lambda:None
+        self.sm = None
+        self.send = None
+        
+        
+    def start(self, parentQueue, invokeId):
+        from pyscxml import StateMachine
+        self.sm = StateMachine(self.content)
+        self.send = self.sm.send
+        self.sm.start(parentQueue, invokeId)
+        self.send(["init", "invoke", invokeId], None, None, {}, invokeId, parentQueue)
+    
+    def cancel(self):
+        self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)
+    
          
     def __str__(self):
-        return '<Invoke id="%s">' % self.id
+        return '<Invoke id="%s">' % self.invokeid
         
 class Onentry(Executable): 
     def __str__(self):

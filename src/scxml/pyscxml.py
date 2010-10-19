@@ -15,7 +15,7 @@ This file is part of pyscxml.
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-import compiler
+from compiler import Compiler
 from interpreter import Interpreter
 import logging
 import time
@@ -39,7 +39,7 @@ class StateMachine(object):
         
         self.send = self.interpreter.send
         self.In = self.interpreter.In
-        self.doc = compiler.parseXML(xml, self.interpreter)
+        self.doc = Compiler().parseXML(xml, self.interpreter)
         self.datamodel = self.doc.datamodel
         
         
@@ -48,6 +48,7 @@ class StateMachine(object):
         '''Takes the statemachine to its initial state'''
         self.interpreter.interpret(self.doc, parentQueue, invokeId)
         
+        
     def isFinished(self):
         '''Returns True if the statemachine has reached it top-level final state'''
         return len(self.interpreter.configuration) == 0
@@ -55,9 +56,9 @@ class StateMachine(object):
 
 if __name__ == "__main__":
     
-#    xml = open("../../resources/colors.xml").read()
+    xml = open("../../resources/invoke_test.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-    xml = open("../../unittest_xml/all_configs.xml").read()
+#    xml = open("../../unittest_xml/xinclude.xml").read()
     sm = StateMachine(xml)
     sm.start()
     time.sleep(1)

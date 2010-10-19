@@ -26,10 +26,31 @@ import sys, re
 from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
+import logging
 
 validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "datamodel"]
-doc = None
-interpreter = None
+
+def initLogger(instance):
+    # create self.logger
+    logger = logging.getLogger("pyscxml.compiler, id: %s" % id(instance))
+    logger.setLevel(logging.INFO)
+    
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    
+    # create formatter
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    
+    # add ch to self.logger
+    logger.addHandler(ch)
+
+    return logger
+
+
 
 def set_sid(node):
     #probably not always unique, let's rewrite this at some point
@@ -54,161 +75,6 @@ def preprocess(tree):
             if child.tag in ["state", "parallel", "final", "invoke", "history"] and not child.get("id"):
                 set_sid(child)
             
-        
-def getExecContent(node):
-    fList = []
-    for node in node.getchildren():
-        
-        if node.tag == "log":
-            fList.append(getLogFunction(node.get("label"),  partial(getExprValue, node.get("expr"))))
-        elif node.tag == "raise": 
-            eventName = node.get("event").split(".")
-            fList.append(partial(interpreter.raiseFunction, eventName))
-        elif node.tag == "send":
-            eventName = node.get("event").split(".")
-            sendId = node.get("id") if node.get("id") else ""
-            delay = int(node.get("delay")) if node.get("delay") else 0
-                
-            fList.append(partial(interpreter.send, eventName, sendId, delay=delay))
-        elif node.tag == "cancel":
-            fList.append(partial(interpreter.cancel, node.get("sendid")))
-        elif node.tag == "assign":
-            expression = node.get("expr") if node.get("expr") else node.text
-            # ugly scoping hack
-            def utilF(loc=node.get("location"), expr=expression):
-                doc.datamodel[loc] = getExprValue(expr)
-            fList.append(utilF)
-        elif node.tag == "script":
-            fList.append(getExprFunction(node.text))
-        else:
-            sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
-    
-    # return a function that executes all the executable content of the node.
-    def f():
-        for func in fList:
-            func()
-    return f
-
-def removeDefaultNamespace(xmlStr):
-    return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
-
-def parseXML(xmlStr, interpreterRef):
-    global doc
-    global interpreter
-    doc = SCXMLDocument()
-    interpreter = interpreterRef
-    xmlStr = removeDefaultNamespace(xmlStr)
-    tree = ElementTree.fromstring(xmlStr)
-    ElementInclude.include(tree)
-    preprocess(tree)
-    
-    for n, node in enumerate(x for x in tree.getiterator() if x.tag not in validExecTags + ["datamodel"]):
-        if hasattr(node, "parent") and node.parent.get("id"):
-            parentState = doc.getState(node.parent.get("id"))
-            
-        
-        if node.tag == "scxml":
-            s = State(node.get("id"), None, n)
-            s.initial = parseInitial(node)
-                
-            if node.find("script") != None:
-                getExprFunction(node.find("script").text)()
-            doc.rootState = s    
-            
-        elif node.tag == "state":
-            s = State(node.get("id"), parentState, n)
-            s.initial = parseInitial(node)
-            
-            doc.addNode(s)
-            parentState.addChild(s)
-            
-        elif node.tag == "parallel":
-            s = Parallel(node.get("id"), parentState, n)
-            doc.addNode(s)
-            parentState.addChild(s)
-            
-        elif node.tag == "final":
-            s = Final(node.get("id"), parentState, n)
-            doc.addNode(s)
-            parentState.addFinal(s)
-            
-        elif node.tag == "history":
-            h = History(node.get("id"), parentState, node.get("type"), n)
-            doc.addNode(h)
-            parentState.addHistory(h)
-            
-            
-        elif node.tag == "transition":
-            if node.parent.tag == "initial": continue
-            t = Transition(parentState)
-            if node.get("target"):
-                t.target = node.get("target").split(" ")
-            if node.get("event"):
-                t.event = map(lambda x: re.sub(r"(.*)\.\*$", r"\1", x).split("."), node.get("event").split(" "))
-            if node.get("cond"):
-                t.cond = partial(getExprValue, node.get("cond"))    
-            
-            t.exe = getExecContent(node)
-                
-            parentState.addTransition(t)
-
-        elif node.tag == "invoke":
-            s = Invoke(node.get("id"))
-            parentState.addInvoke(s)
-            
-            s.content = urlopen(node.get("src")).read()
-            
-                       
-        elif node.tag == "onentry":
-            s = Onentry()
-            s.exe = getExecContent(node)
-            parentState.addOnentry(s)
-        
-        elif node.tag == "onexit":
-            s = Onexit()
-            s.exe = getExecContent(node)
-            parentState.addOnexit(s)
-        elif node.tag == "data":
-            doc.datamodel[node.get("id")] = getExprValue(node.get("expr"))
-#        elif node.tag == "initial":
-#            transitionNode = node.getchildren()[0]
-#            assert transitionNode.get("target")
-#            parentState.initial = Initial(transitionNode.get("target").split(" "))
-#                
-#            parentState.initial.exe = getExecContent(transitionNode)
-            
-
-    return doc
-
-
-def parseInitial(node):
-    if node.get("initial"):
-        return Initial(node.get("initial").split(" "))
-    elif node.find("initial") is not None:
-        transitionNode = node.find("initial")[0]
-        assert transitionNode.get("target")
-        initial = Initial(transitionNode.get("target").split(" "))
-        initial.exe = getExecContent(transitionNode)
-        return initial
-    else: # has neither initial tag or attribute, so we'll make the first valid state a target instead.
-        childNodes = filter(lambda x: x.tag in ["state", "parallel", "final"], list(node)) 
-        if childNodes:
-            return Initial([childNodes[0].get("id")]);
-        return None # leaf nodes have no initial 
-    
-
-
-def getExprFunction(expr):
-    expr = normalizeExpr(expr)
-    def f():
-        exec expr in doc.datamodel
-    return f
-
-
-def getExprValue(expr):
-    """These expression are always one-line, so their value is evaluated and returned."""
-    expr = unescape(expr)
-    return eval(expr, doc.datamodel)
 
 def normalizeExpr(expr):
     # TODO: what happens if we have python strings in our script blocks with &gt; ?
@@ -221,6 +87,230 @@ def normalizeExpr(expr):
     code = "\n".join(map(lambda x:x[indent_len:], code.split("\n")))
     
     return code
+    
+
+def removeDefaultNamespace(xmlStr):
+    return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
+
+class Compiler(object):
+    
+    def __init__(self):
+        self.doc = SCXMLDocument()
+        self.logger = initLogger(self)
+    
+    def parseAttr(self, elem, attr, is_list=False):
+        if not elem.get(attr, elem.get(attr + "expr")):
+            return
+        else:
+            output = elem.get(attr) if elem.get(attr) else self.getExprValue(elem.get(attr + "expr")) 
+            return output if not is_list else output.split(" ")
+        
+    
+    def getExecContent(self, node):
+        fList = []
+        for node in node.getchildren():
+            
+            if node.tag == "log":
+                fList.append(getLogFunction(node.get("label"),  partial(self.getExprValue, node.get("expr"))))
+            elif node.tag == "raise": 
+                eventName = node.get("event").split(".")
+                fList.append(partial(self.interpreter.raiseFunction, eventName))
+            elif node.tag == "send":
+    
+                fList.append(self.parseSend(node))
+            elif node.tag == "cancel":
+                fList.append(partial(self.interpreter.cancel, node.get("sendid")))
+            elif node.tag == "assign":
+                expression = node.get("expr") if node.get("expr") else node.text
+                # ugly scoping hack
+                def utilF(loc=node.get("location"), expr=expression):
+                    self.doc.datamodel[loc] = self.getExprValue(expr)
+                fList.append(utilF)
+            elif node.tag == "script":
+                fList.append(self.getExprFunction(node.text))
+            else:
+                sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
+        
+        # return a function that executes all the executable content of the node.
+        def f():
+            for func in fList:
+                func()
+        return f
+    
+    def appendParam(self, child, toObj):
+        if child.find("param") != None:
+            for p in child.findall("param"):
+                expr = p.get("expr", p.get("name"))
+                if p.get("expr"):
+                    expr = p.get("expr")
+                # not necesarily standars compliant (hard to tell):
+                elif hasattr(self.doc.datamodel, p.get("name")):
+                    expr = p.get("name")
+                else:
+                    expr = ""
+    
+                toObj[p.get("name")] = self.getExprValue(expr)
+                
+        
+        if child.get("namelist"):
+            for name in child.get("namelist").split(" "):
+                toObj[name] = self.getExprValue(name)
+        
+        return toObj
+    
+    def parseSend(self, sendNode):
+        type = sendNode.get("type") if sendNode.get("type") else "scxml"
+        data = {}
+        delay = int(self.parseAttr(sendNode, "delay")) if self.parseAttr(sendNode, "delay") else 0
+        
+        event = self.parseAttr(sendNode, "event").split(".")
+        
+        if not sendNode.get("target"):
+            return partial(self.interpreter.send, event, sendNode.get("id"), delay)
+        
+        if sendNode.get("target")[0] == "#":
+            target = sendNode.get("target")[1:]
+            # this is where to add parsing for more send types. 
+            #if(type == "scxml"):
+            
+            if(target == "_parent"):
+                return partial(self.interpreter.send, event, sendNode.get("id"), delay, self.appendParam(sendNode, data), self.interpreter.invokeid, self.doc.datamodel["_parent"])
+            else:
+                def f():
+                    self.doc.datamodel[target].send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data))
+                return f
+        
+        self.logger.error("Send parsing failed on :" + str(sendNode))
+        return lambda:None
+        
+    
+    
+    def parseXML(self, xmlStr, interpreterRef):
+        self.interpreter = interpreterRef
+        xmlStr = removeDefaultNamespace(xmlStr)
+        tree = ElementTree.fromstring(xmlStr)
+        ElementInclude.include(tree)
+    #    print ElementTree.tostring(tree)
+        preprocess(tree)
+        
+        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in validExecTags + ["datamodel"]):
+            if hasattr(node, "parent") and node.parent.get("id"):
+                parentState = self.doc.getState(node.parent.get("id"))
+                
+            
+            if node.tag == "scxml":
+                s = State(node.get("id"), None, n)
+                s.initial = self.parseInitial(node)
+                    
+                if node.find("script") != None:
+                    self.getExprFunction(node.find("script").text)()
+                self.doc.rootState = s    
+                
+            elif node.tag == "state":
+                s = State(node.get("id"), parentState, n)
+                s.initial = self.parseInitial(node)
+                
+                self.doc.addNode(s)
+                parentState.addChild(s)
+                
+            elif node.tag == "parallel":
+                s = Parallel(node.get("id"), parentState, n)
+                self.doc.addNode(s)
+                parentState.addChild(s)
+                
+            elif node.tag == "final":
+                s = Final(node.get("id"), parentState, n)
+                self.doc.addNode(s)
+                parentState.addFinal(s)
+                
+            elif node.tag == "history":
+                h = History(node.get("id"), parentState, node.get("type"), n)
+                self.doc.addNode(h)
+                parentState.addHistory(h)
+                
+                
+            elif node.tag == "transition":
+                if node.parent.tag == "initial": continue
+                t = Transition(parentState)
+                if node.get("target"):
+                    t.target = node.get("target").split(" ")
+                if node.get("event"):
+                    t.event = map(lambda x: re.sub(r"(.*)\.\*$", r"\1", x).split("."), node.get("event").split(" "))
+                if node.get("cond"):
+                    t.cond = partial(self.getExprValue, node.get("cond"))    
+                
+                t.exe = self.getExecContent(node)
+                    
+                parentState.addTransition(t)
+    
+            elif node.tag == "invoke":
+                
+                if node.get("type") == "scxml": # here's where we add more invoke types. 
+                     
+                    inv = InvokeSCXML(node.get("id"))
+                    parentState.addInvoke(inv)
+                    if node.get("src"):
+                        inv.content = urlopen(node.get("src")).read()
+                    elif node.get("content"):
+                        inv.content = ElementTree.tostring(node.find("content/scxml"))
+                    
+                    inv.autoforward = bool(node.get("autoforward"))
+                
+                
+                inv.type = node.get("type")   
+                
+                if node.find("finalize") != None and len(node.find("finalize")) > 0:
+                    inv.finalize = self.getExecContent(node.find("finalize"))
+                elif node.find("finalize") != None and node.find("param") != None:
+                    def f():
+                        for param in (p for p in node.findall("param") if not p.get("expr")): # get all param nodes without the expr attr
+                            self.doc.datamodel[param.get("name")] = self.doc.datamodel["_event"].data[param.get("name")]
+                    node.finalize = f
+                
+                           
+            elif node.tag == "onentry":
+                s = Onentry()
+                s.exe = self.getExecContent(node)
+                parentState.addOnentry(s)
+            
+            elif node.tag == "onexit":
+                s = Onexit()
+                s.exe = self.getExecContent(node)
+                parentState.addOnexit(s)
+            elif node.tag == "data":
+                self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
+                
+    
+        return self.doc
+
+    def getExprFunction(self, expr):
+        expr = normalizeExpr(expr)
+        def f():
+            exec expr in self.doc.datamodel
+        return f
+    
+    def getExprValue(self, expr):
+        """These expression are always one-line, so their value is evaluated and returned."""
+        expr = unescape(expr)
+        return eval(expr, self.doc.datamodel)
+
+    def parseInitial(self, node):
+        if node.get("initial"):
+            return Initial(node.get("initial").split(" "))
+        elif node.find("initial") is not None:
+            transitionNode = node.find("initial")[0]
+            assert transitionNode.get("target")
+            initial = Initial(transitionNode.get("target").split(" "))
+            initial.exe = self.getExecContent(transitionNode)
+            return initial
+        else: # has neither initial tag or attribute, so we'll make the first valid state a target instead.
+            childNodes = filter(lambda x: x.tag in ["state", "parallel", "final"], list(node)) 
+            if childNodes:
+                return Initial([childNodes[0].get("id")])
+            return None # leaf nodes have no initial 
+    
+
+
 
 if __name__ == '__main__':
     from pyscxml import StateMachine

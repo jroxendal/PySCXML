@@ -77,6 +77,8 @@ class Interpreter(object):
         self.dm = self.doc.datamodel
         self.dm["In"] = self.In
         self.dm["_parent"] = optionalParentExternalQueue
+        if invokeId:
+            self.dm["_invokeid"] = invokeId
         self.invId = invokeId
         
         transition = Transition(document.rootState)
@@ -121,11 +123,13 @@ class Interpreter(object):
             self.logger.info("external event found: %s", externalEvent.name)
             
             self.dm["_event"] = externalEvent
-            if hasattr(externalEvent, "invokeid"):
+            if externalEvent.invokeid:
                 for state in self.configuration:
                     for inv in state.invoke:
                         if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
                             self.applyFinalize(inv, externalEvent)
+                        if inv.autoforward:
+                            inv.send(externalEvent.name, None, 0, externalEvent.data);
             
             enabledTransitions = self.selectTransitions(externalEvent)
             if enabledTransitions:
@@ -188,8 +192,8 @@ class Interpreter(object):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
         for state in atomicStates:
-            if hasattr(event, "invokeid") and state.invokeid == event.invokeid:  # event is the result of an <invoke> in this state
-                self.applyFinalize(state, event)
+#            if hasattr(event, "invokeid") and state.invokeid == event.invokeid:  # event is the result of an <invoke> in this state
+#                self.applyFinalize(state, event)
                 
             if not self.isPreempted(state, enabledTransitions):
                 done = False
@@ -250,12 +254,15 @@ class Interpreter(object):
             self.configuration.delete(s)
     
     def invoke(self, inv, extQ):
-        sm = scxml.pyscxml.StateMachine(inv.content)
-        sm.start(extQ, inv.id)
+#        sm = scxml.pyscxml.StateMachine(inv.content)
+#        sm.start(extQ, inv.id)
+        logging.debug("invoke %s %s" % (inv, extQ))
+        self.dm[inv.invokeid] = inv
+        inv.start(extQ, inv.invokeid)
         
         
     def cancelInvoke(self, inv):
-        self.logger.warning("Tried to cancel invoke on id: %sinvoke but cancel not implemented: ", inv)
+        inv.cancel()
     
     def executeTransitionContent(self, enabledTransitions):
         for t in enabledTransitions:
@@ -340,9 +347,8 @@ class Interpreter(object):
                 return anc
                 
     
-    def applyFinalize(self, state, event):
-        self.logger.error("finalize not implemented")
-        pass
+    def applyFinalize(self, inv, event):
+        inv.finalize()
     
     def getTargetStates(self, targetIds):
         states = []
@@ -364,20 +370,21 @@ class Interpreter(object):
         return name in map(lambda x: x.id, self.configuration)
     
     
-    def send(self, name, sendid="", data={},delay=0):
+    def send(self, name, sendid="", delay=0, data={}, invokeid = None, toQueue = None):
         """Spawns a new thread that sends an event after a specified time, in seconds"""
         if type(name) == str: name = name.split(".")
+        if not toQueue: toQueue = self.externalQueue
+        def sendFunction(name, data, invid):
+            toQueue.put(Event(name, data, invid))
         
-        if delay == 0: 
-            self.sendFunction(name, data)
+        if not delay: 
+            sendFunction(name, data, invokeid)
             return
-        timer = threading.Timer(delay, self.sendFunction, args=(name, data))
+        timer = threading.Timer(delay, sendFunction, args=(name, data, invokeid))
         if sendid:
             self.timerDict[sendid] = timer
         timer.start()
         
-    def sendFunction(self, name, data):
-        self.externalQueue.put(Event(name, data))
     
     def cancel(self, sendid):
         if self.timerDict.has_key(sendid):
@@ -480,8 +487,9 @@ def exitOrder(s1,s2):
         return documentOrder(s2,s1)
 
 class Event(object):
-    def __init__(self, name, data):
+    def __init__(self, name, data, invokeid=None):
         self.name = name
         self.data = data
+        self.invokeid = invokeid
     
     
