@@ -32,7 +32,7 @@ validExecTags = ["log", "script", "raise", "assign", "send", "cancel"]
 
 
 class Compiler(object):
-    
+    '''The class responsible for compiling the statemachine'''
     def __init__(self):
         self.doc = SCXMLDocument()
         self.logger = logger.initLogger("scxml.Compiler, id: " + str(id(self)))

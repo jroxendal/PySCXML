@@ -3,5 +3,5 @@
 		<transition target="f" />
 	</state>
 	
-	<xi:include href="../../../unittest_xml/xinclude_final.xml" parse="xml" />
+	<xi:include href="../../unittest_xml/xinclude_final.xml" parse="xml" />
 </scxml>

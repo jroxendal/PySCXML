@@ -32,6 +32,10 @@ import logger
 
 
 class Interpreter(object):
+    '''
+    The class repsonsible for keeping track of the execution of the 
+    statemachine.
+    '''
     def __init__(self):
         self.g_continue = True
         self.configuration = OrderedSet()
@@ -350,7 +354,15 @@ class Interpreter(object):
     
     
     def send(self, name, sendid="", delay=0, data={}, invokeid = None, toQueue = None):
-        """Spawns a new thread that sends an event after a specified time, in seconds"""
+        """Send an event to the statemachine 
+        @param name: a dot delimited string, the event name
+        @param sendid: the id of the send, to be used with <cancel sendid="" />
+        @param delay: the delay in seconds before sending the event
+        @param data: the data associated with the event
+        @param invokeid: if specified, the id of sending invoked process
+        @param toQueue: if specified, the target queue on which to add the event
+        
+        """
         if type(name) == str: name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
         def sendFunction(name, data, invid):

@@ -28,6 +28,11 @@ class NullHandler(logging.Handler):
 logging.getLogger("pyscxml").addHandler(NullHandler())
 
 class StateMachine(object):
+    '''
+    This class provides the entry point for the pyscxml library. 
+    '''
+    
+    
     def __init__(self, xml):
         '''
         @param xml: the scxml document to parse, expressed as a string.

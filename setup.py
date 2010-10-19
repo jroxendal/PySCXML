@@ -14,7 +14,7 @@ setup(name='pyscxml',
       author_email='johan@roxendal.com',
       url='http://code.google.com/p/pyscxml/',
       
-      packages=['scxml', 'scxml.test'],
+      packages=['scxml'],
       package_dir={'' : "src"},
       license="LGPLv3",
      )
