@@ -1,0 +1,44 @@
+<scxml>
+	<state>
+		<invoke id="i" type="scxml">
+			<content>
+				<scxml>
+					<datamodel>
+						<data id="x" />
+						<data id="fac" expr="1" />
+					</datamodel>
+					
+					<state>
+						<transition event="calculate" target="loop">
+							<assign location="x" expr="_event.data['val']" />
+						</transition>
+					</state>
+					
+					<state id="loop">
+						<transition cond="x &gt; 1">
+							<assign location="fac" expr="x * fac" />
+							<assign location="x" expr="x-1" />
+						</transition>
+						<transition target="result">
+							<log label="'Result'" expr="fac" />
+						</transition>
+					</state>
+					<final id="result">
+						<donedata>
+							<param name="fac" />
+						</donedata>
+					</final>
+				</scxml>
+			</content>
+		</invoke>
+		<transition event="init.invoke">
+			<send type="scxml" target="#i" event="calculate">
+				<param name="val" expr="6" />
+			</send>
+		</transition>
+		<transition event="done" target="f">
+			<log expr="_event.data" />
+		</transition>
+	</state>
+	<final id="f" />
+</scxml>

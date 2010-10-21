@@ -28,7 +28,7 @@ from functools import partial
 from xml.sax.saxutils import unescape
 import logger
 
-validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "if", "elseif", "else"]
+tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit", "data", "datamodel"]
 
 
 class Compiler(object):
@@ -140,12 +140,12 @@ class Compiler(object):
         xmlStr = removeDefaultNamespace(xmlStr)
         tree = ElementTree.fromstring(xmlStr)
         ElementInclude.include(tree)
-    #    print ElementTree.tostring(tree)
         preprocess(tree)
+#        print ElementTree.tostring(tree)
         
-        for n, node in enumerate(x for x in tree.getiterator() if x.tag not in validExecTags + ["datamodel", "finalize"]):
-            if hasattr(node, "parent") and node.parent.get("id"):
-                parentState = self.doc.getState(node.parent.get("id"))
+        for n, parent, node in iter_elems(tree):
+            if parent != None and parent.get("id"):
+                parentState = self.doc.getState(parent.get("id"))
                 
             
             if node.tag == "scxml":
@@ -171,6 +171,12 @@ class Compiler(object):
             elif node.tag == "final":
                 s = Final(node.get("id"), parentState, n)
                 self.doc.addNode(s)
+                
+                if node.find("donedata") != None:
+                    s.donedata = partial(self.appendParam, node.find("donedata"), {})
+                else:
+                    s.donedata = lambda:{}
+                
                 parentState.addFinal(s)
                 
             elif node.tag == "history":
@@ -180,7 +186,7 @@ class Compiler(object):
                 
                 
             elif node.tag == "transition":
-                if node.parent.tag == "initial": continue
+#                if parent.tag == "initial": continue
                 t = Transition(parentState)
                 if node.get("target"):
                     t.target = node.get("target").split(" ")
@@ -200,7 +206,7 @@ class Compiler(object):
                     inv = InvokeSCXML(node.get("id"))
                     if node.get("src"):
                         inv.content = urlopen(node.get("src")).read()
-                    elif node.get("content"):
+                    elif node.find("content") != None:
                         inv.content = ElementTree.tostring(node.find("content/scxml"))
                     
                     inv.autoforward = bool(node.get("autoforward"))
@@ -266,10 +272,6 @@ class Compiler(object):
             return None # leaf nodes have no initial 
     
 
-def set_sid(node, n):
-    id = node.parent.get("id") + "_%s_child_%s" % (node.tag, n)
-    node.set('id',id)
-
     
 def getLogFunction(label, toPrint):
     if not label: label = "Log"
@@ -280,13 +282,11 @@ def getLogFunction(label, toPrint):
 
 def preprocess(tree):
     tree.set("id", "__main__")
-    for node in tree.getiterator():
-        for n, child in enumerate(node):
-            # set a reference to the parent of the node
-            child.parent = node
-            # make sure that states without ids gets an id assigned.
-            if child.tag in ["state", "parallel", "final", "invoke", "history"] and not child.get("id"):
-                set_sid(child, n)
+    
+    for n, parent, node in iter_elems(tree):
+        if node.tag in ["state", "parallel", "final", "invoke", "history"] and not node.get("id"):
+            id = parent.get("id") + "_%s_child_%s" % (node.tag, n)
+            node.set('id',id)
             
 
 def normalizeExpr(expr):
@@ -305,6 +305,16 @@ def normalizeExpr(expr):
 def removeDefaultNamespace(xmlStr):
     return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
 
+def iter_elems(tree):
+    queue = [(None, tree)]
+    n = 0
+    while(len(queue) > 0):
+        parent, child = queue.pop(0)
+        yield (n, parent, child)
+        n += 1 
+        for elem in child:
+            if elem.tag in tagsForTraversal:
+                queue.append((child, elem))
 
 if __name__ == '__main__':
     from pyscxml import StateMachine

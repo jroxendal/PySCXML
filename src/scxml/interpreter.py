@@ -148,10 +148,11 @@ class Interpreter(object):
                 self.cancelInvoke(inv)
             if isFinalState(s) and isScxmlState(s.parent):
                 inFinalState = True
+                doneData = s.donedata()
             self.configuration.delete(s)
         if inFinalState:
             if self.invokeId and self.dm["_parent"]:
-                self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], {}))
+                self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], doneData))
             self.logger.info("Exiting interpreter")
     #        sendDoneEvent(???)
     
@@ -280,10 +281,10 @@ class Interpreter(object):
             if isFinalState(s):
                 parent = s.parent
                 grandparent = parent.parent
-                self.internalQueue.put(Event(["done", "state", parent.id], {}))
+                self.internalQueue.put(Event(["done", "state", parent.id], s.donedata()))
                 if isParallelState(grandparent):
                     if all(map(self.isInFinalState, getChildStates(grandparent))):
-                        self.internalQueue.put(Event(["done", "state", grandparent.id], {}))
+                        self.internalQueue.put(Event(["done", "state", grandparent.id], s.donedata()))
         for s in self.configuration:
             if isFinalState(s) and isScxmlState(s.parent):
                 self.g_continue = False;

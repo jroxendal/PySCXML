@@ -135,6 +135,11 @@ class Transition(Executable):
         return str(self)
  
 class Final(SCXMLNode):
+    
+    def __init__(self, id, parent, n):
+        SCXMLNode.__init__(self, id, parent, n)
+        self.donedata = None
+    
     def __str__(self):
         return '<Final id="%s">' % self.id
 

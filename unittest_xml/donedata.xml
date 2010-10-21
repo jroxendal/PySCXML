@@ -1,0 +1,19 @@
+<scxml>
+	<datamodel>
+		<data id="out" expr="0" />
+	</datamodel>
+	
+	<state>
+		<final>
+			<onentry>
+				<assign location="out" expr="1" />
+			</onentry>
+			<donedata>
+				<param name="out" />
+			</donedata>
+		</final>
+		<transition event="done" target="f" cond="out" />
+	</state>
+	
+	<final id="f" />
+</scxml>
