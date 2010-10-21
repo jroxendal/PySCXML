@@ -2,6 +2,6 @@
 	<state>
 		<transition target="f" />
 	</state>
-	
+	<final id="f" />
 	<xi:include href="../../unittest_xml/xinclude_final.xml" parse="xml" />
 </scxml>

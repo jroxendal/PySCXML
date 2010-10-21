@@ -28,7 +28,7 @@ from functools import partial
 from xml.sax.saxutils import unescape
 import logger
 
-validExecTags = ["log", "script", "raise", "assign", "send", "cancel"]
+validExecTags = ["log", "script", "raise", "assign", "send", "cancel", "if", "elseif", "else"]
 
 
 class Compiler(object):
@@ -45,9 +45,9 @@ class Compiler(object):
             return output if not is_list else output.split(" ")
         
     
-    def getExecContent(self, node):
+    def getExecContent(self, parent):
         fList = []
-        for node in node.getchildren():
+        for node in parent:
             
             if node.tag == "log":
                 fList.append(getLogFunction(node.get("label"),  partial(self.getExprValue, node.get("expr"))))
@@ -66,6 +66,8 @@ class Compiler(object):
                 fList.append(utilF)
             elif node.tag == "script":
                 fList.append(self.getExprFunction(node.text))
+            elif node.tag == "if":
+                fList.append(partial(self.parseIf, node))
             else:
                 sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
         
@@ -74,6 +76,27 @@ class Compiler(object):
             for func in fList:
                 func()
         return f
+    
+    def parseIf(self, node):
+        def gen_prefixExec(itr):
+            for elem in itr:
+                if elem.tag not in ["elseif", "else"]:
+                    yield elem
+                else:
+                    break
+
+        def gen_ifblock(ifnode):
+            yield (ifnode, gen_prefixExec(ifnode))
+            for elem in (x for x in ifnode if x.tag == "elseif" or x.tag == "else"):
+                elemIndex = list(ifnode).index(elem)
+                yield (elem, gen_prefixExec(ifnode[elemIndex+1:]))
+        
+        for ifNode, execList in gen_ifblock(node):
+            if ifNode.tag == "else":
+                self.getExecContent(execList)()
+            elif self.getExprValue(ifNode.get("expr")):
+                self.getExecContent(execList)()
+                break
     
     def appendParam(self, child, toObj):
 #        if child.find("param") != None:

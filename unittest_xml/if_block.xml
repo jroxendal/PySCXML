@@ -1,0 +1,28 @@
+<scxml>
+	<datamodel>
+		<data id="d" expr="0" />
+ 	</datamodel>
+	<state id="s">
+		<onentry>
+			<log expr="'val: ' + str(d)" />
+			<assign location="d" expr="d + 1" />
+			<if expr="d == 1">
+				<log expr="'if executed'" />
+				<raise event="loop" />
+				<elseif expr="d == 2" />
+				<log expr="'elseif executed'" />
+				<raise event="loop" />
+				<elseif expr="d == 3" />
+				<log expr="'elseif2 executed'" />
+				<raise event="loop" />
+				<else />
+				<log expr="'else executed'" />
+				<raise event="quit" />
+				
+			</if>
+		</onentry>
+		<transition target="s" event="loop" />
+		<transition target="f" event="quit" />
+	</state>
+	<final id="f" />
+</scxml>

@@ -58,7 +58,7 @@ class StateMachine(object):
         
 
 if __name__ == "__main__":
-    xml = open("../../resources/send_target.xml").read()
+    xml = open("../../unittest_xml/if_block.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/xinclude.xml").read()
     sm = StateMachine(xml)
