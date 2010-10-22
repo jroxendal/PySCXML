@@ -20,10 +20,7 @@ This file is part of pyscxml.
 
 import time
 import unittest
-#import scxml.interpreter as interpreter
-#from scxml.compiler import parseXML
 from scxml.pyscxml import StateMachine
-#from xml.etree import ElementTree as etree
 
 
 
@@ -96,11 +93,12 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
-    
+        '''
         sm = StateMachine(open(xmlDir + "xinclude.xml").read())
         sm.start()
         time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
+        '''
         
         sm = StateMachine(open(xmlDir + "if_block.xml").read())
         sm.start()
@@ -108,6 +106,11 @@ class RegressionTest(unittest.TestCase):
         self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "donedata.xml").read())
+        sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assert_(sm.isFinished())
+
+        sm = StateMachine(open(xmlDir + "invoke.xml").read())
         sm.start()
         time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())

@@ -62,7 +62,7 @@
 	</target>
 	
 	<target name="coverage">
-		<py-run script="${src.dir}/scxml/test/pyscxml_coverage.py" pythonpath="${src.dir}" />
+		<py-run script="${src.dir}/test/pyscxml_coverage.py" pythonpath="${src.dir}" />
 	</target>
 
 </project>

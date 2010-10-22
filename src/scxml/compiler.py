@@ -46,6 +46,11 @@ class Compiler(object):
         
     
     def getExecContent(self, parent):
+        '''
+        @param parent: usually an xml Element containing executable children
+        elements, but can also be any iterator of executable elements. 
+        @return: a function corresponding to the executable content. 
+        '''
         fList = []
         for node in parent:
             
@@ -98,23 +103,26 @@ class Compiler(object):
                 self.getExecContent(execList)()
                 break
     
-    def appendParam(self, child, toObj):
-#        if child.find("param") != None:
+    def parseData(self, child):
+        '''
+        Given a parent node, returns a data object corresponding to 
+        its param child nodes or namelist attribute.
+        '''
+        output = {}
         for p in child.findall("param"):
             expr = p.get("expr", p.get("name"))
             
-            toObj[p.get("name")] = self.getExprValue(expr)
+            output[p.get("name")] = self.getExprValue(expr)
                 
         
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
-                toObj[name] = self.getExprValue(name)
+                output[name] = self.getExprValue(name)
         
-        return toObj
+        return output
     
     def parseSend(self, sendNode):
         type = sendNode.get("type") if sendNode.get("type") else "scxml"
-        data = {}
         delay = int(self.parseAttr(sendNode, "delay")) if self.parseAttr(sendNode, "delay") else 0
         
         event = self.parseAttr(sendNode, "event").split(".")
@@ -125,14 +133,14 @@ class Compiler(object):
             self.interpreter.send(event, sendNode.get("id"), delay)
         elif target[0] == "#":
             target = target[1:]
-            # this is where to add parsing for more send types. 
-            #if(type == "scxml"):
             
-            if(target == "_parent"):
-                self.interpreter.send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
-            else:
-                self.doc.datamodel[target].send(event, sendNode.get("id"), delay, self.appendParam(sendNode, data))
-        
+            if(type == "scxml"):
+                if(target == "_parent"):
+                    self.interpreter.send(event, sendNode.get("id"), delay, self.parseData(sendNode), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
+                else:
+                    self.doc.datamodel[target].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
+            # this is where to add parsing for more send types. 
+#            elif(type == "basichttp"):
     
     
     def parseXML(self, xmlStr, interpreterRef):
@@ -141,7 +149,6 @@ class Compiler(object):
         tree = ElementTree.fromstring(xmlStr)
         ElementInclude.include(tree)
         preprocess(tree)
-#        print ElementTree.tostring(tree)
         
         for n, parent, node in iter_elems(tree):
             if parent != None and parent.get("id"):
@@ -173,7 +180,7 @@ class Compiler(object):
                 self.doc.addNode(s)
                 
                 if node.find("donedata") != None:
-                    s.donedata = partial(self.appendParam, node.find("donedata"), {})
+                    s.donedata = partial(self.parseData, node.find("donedata"))
                 else:
                     s.donedata = lambda:{}
                 
@@ -186,7 +193,6 @@ class Compiler(object):
                 
                 
             elif node.tag == "transition":
-#                if parent.tag == "initial": continue
                 t = Transition(parentState)
                 if node.get("target"):
                     t.target = node.get("target").split(" ")
@@ -201,28 +207,7 @@ class Compiler(object):
     
             elif node.tag == "invoke":
                 
-                if node.get("type") == "scxml": # here's where we add more invoke types. 
-                     
-                    inv = InvokeSCXML(node.get("id"))
-                    if node.get("src"):
-                        inv.content = urlopen(node.get("src")).read()
-                    elif node.find("content") != None:
-                        inv.content = ElementTree.tostring(node.find("content/scxml"))
-                    
-                    inv.autoforward = bool(node.get("autoforward"))
-                
-                
-                inv.type = node.get("type")   
-                
-                if node.find("finalize") != None and len(node.find("finalize")) > 0:
-                    inv.finalize = self.getExecContent(node.find("finalize"))
-                elif node.find("finalize") != None and node.find("param") != None:
-                    paramList = node.findall("param")
-                    def f():
-                        for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
-                            if self.doc.datamodel["_event"].data.has_key(param.get("name")):
-                                self.doc.datamodel[param.get("name")] = self.doc.datamodel["_event"].data[param.get("name")]
-                    inv.finalize = f
+                inv = self.parseInvoke(node)
                 
                 parentState.addInvoke(inv)
                            
@@ -255,6 +240,31 @@ class Compiler(object):
             return None
         expr = unescape(expr)
         return eval(expr, self.doc.datamodel)
+
+    def parseInvoke(self, node):
+        if node.get("type") == "scxml": # here's where we add more invoke types. 
+                     
+            inv = InvokeSCXML(node.get("id"))
+            if node.get("src"):
+                inv.content = urlopen(node.get("src")).read()
+            elif node.find("content") != None:
+                inv.content = ElementTree.tostring(node.find("content/scxml"))
+            
+            inv.autoforward = bool(node.get("autoforward"))
+        
+        
+        inv.type = node.get("type")   
+        
+        if node.find("finalize") != None and len(node.find("finalize")) > 0:
+            inv.finalize = self.getExecContent(node.find("finalize"))
+        elif node.find("finalize") != None and node.find("param") != None:
+            paramList = node.findall("param")
+            def f():
+                for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
+                    if self.doc.datamodel["_event"].data.has_key(param.get("name")):
+                        self.doc.datamodel[param.get("name")] = self.doc.datamodel["_event"].data[param.get("name")]
+            inv.finalize = f
+        return inv
 
     def parseInitial(self, node):
         if node.get("initial"):
@@ -316,10 +326,4 @@ def iter_elems(tree):
             if elem.tag in tagsForTraversal:
                 queue.append((child, elem))
 
-if __name__ == '__main__':
-    from pyscxml import StateMachine
-    xml = open("../../unittest_xml/factorial.xml").read()
-#    xml = open("../../resources/factorial.xml").read()
-    sm = StateMachine(xml)
-    sm.start()
     

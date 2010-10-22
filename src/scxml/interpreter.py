@@ -405,7 +405,7 @@ def isDescendant(state1,state2):
 
 
 def getChildStates(state):
-    return state.state + state.parallel + state.final + state.history
+    return state.state + state.final + state.history
 
 
 def nameMatch(eventList, event):
@@ -443,11 +443,11 @@ def isScxmlState(s):
 
 
 def isAtomicState(s):
-    return isinstance(s, Final) or (isinstance(s,SCXMLNode) and s.state == [] and s.parallel == [] and s.final == [])
+    return isinstance(s, Final) or (isinstance(s,SCXMLNode) and s.state == [] and s.final == [])
 
 
 def isCompoundState(s):
-    return isinstance(s,SCXMLNode) and (s.state != [] or s.parallel != [] or s.final != [])
+    return isinstance(s,SCXMLNode) and (s.state != [] or s.final != [])
 
 
 ##

@@ -5,6 +5,7 @@ Created on Dec 7, 2009
 '''
 
 import sys
+import unittest
 print sys.version_info
 print sys.path
 
@@ -21,10 +22,10 @@ if not os.path.isdir(xmlDir):
 cov = coverage.coverage()
 cov.start()
 
-StateMachine(open(xmlDir + "colors.xml").read()).start()
-time.sleep(1)
-StateMachine(open(xmlDir + "twolock_door.xml").read()).start()
-time.sleep(1)
+unittest.makeSuite(pyscxmlTest.RegressionTest)
+unittest.main()
+#pyscxmlTest.RegressionTest().testInterpreter()
+
 
 cov.stop()
 cov.html_report(directory='coverage_output')

@@ -24,7 +24,6 @@ class SCXMLNode(object):
     def __init__(self, id, parent, n):
         self.transition = []
         self.state = []
-        self.parallel = [] # we can probably delete this.
         self.final = []
         self.history = []
         self.onentry = []
@@ -91,8 +90,6 @@ class Parallel(SCXMLNode):
     
 class Initial(list, Executable):
     pass
-#    def __init__(self, seq):
-#        self.exe = None
         
 
 class History(object): 
@@ -119,9 +116,6 @@ class Transition(Executable):
         self.target = []
         self.event = []
         self.cond = None
-        self.anchor = None
-        
-        
         
     def __str__(self):
         attrs = 'source="%s" ' % self.source.id
