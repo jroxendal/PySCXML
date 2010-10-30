@@ -276,7 +276,6 @@ class Interpreter(object):
                 self.executeContent(content)
                 
             if s in statesForDefaultEntry:
-                # this can't be right, s.initial is a list
                 self.executeContent(s.initial)
             if isFinalState(s):
                 parent = s.parent

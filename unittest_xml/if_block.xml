@@ -6,13 +6,13 @@
 		<onentry>
 			<log expr="'val: ' + str(d)" />
 			<assign location="d" expr="d + 1" />
-			<if expr="d == 1">
+			<if cond="d == 1">
 				<log expr="'if executed'" />
 				<raise event="loop" />
-				<elseif expr="d == 2" />
+				<elseif cond="d == 2" />
 				<log expr="'elseif executed'" />
 				<raise event="loop" />
-				<elseif expr="d == 3" />
+				<elseif cond="d == 3" />
 				<log expr="'elseif2 executed'" />
 				<raise event="loop" />
 				<else />

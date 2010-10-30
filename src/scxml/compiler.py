@@ -99,7 +99,7 @@ class Compiler(object):
         for ifNode, execList in gen_ifblock(node):
             if ifNode.tag == "else":
                 self.getExecContent(execList)()
-            elif self.getExprValue(ifNode.get("expr")):
+            elif self.getExprValue(ifNode.get("cond")):
                 self.getExecContent(execList)()
                 break
     
