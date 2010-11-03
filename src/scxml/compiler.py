@@ -58,7 +58,7 @@ class Compiler(object):
                 fList.append(getLogFunction(node.get("label"),  partial(self.getExprValue, node.get("expr"))))
             elif node.tag == "raise": 
                 eventName = node.get("event").split(".")
-                fList.append(partial(self.interpreter.raiseFunction, eventName))
+                fList.append(partial(self.interpreter.raiseFunction, eventName, self.parseData(node)))
             elif node.tag == "send":
                 fList.append(partial(self.parseSend, node))
             elif node.tag == "cancel":

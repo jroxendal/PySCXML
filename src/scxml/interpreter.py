@@ -127,7 +127,7 @@ class Interpreter(object):
                             macroStepComplete = True
                         else:
                             internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
-                            self.dm["event"] = internalEvent
+                            self.dm["_event"] = internalEvent
                             enabledTransitions = self.selectTransitions(internalEvent)
     
                     if enabledTransitions:
@@ -292,7 +292,7 @@ class Interpreter(object):
     def addStatesToEnter(self, s,root,statesToEnter,statesForDefaultEntry):
         
         if isHistoryState(s):
-            if self.historyValue[s.id]:
+            if self.historyValue.has_key(s.id):
                 for s0 in self.historyValue[s.id]:
                     self.addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
             else:
@@ -382,8 +382,8 @@ class Interpreter(object):
             self.timerDict[sendid].cancel()
             del self.timerDict[sendid]
             
-    def raiseFunction(self, event):
-        self.internalQueue.put(Event(event, {}))
+    def raiseFunction(self, event, data):
+        self.internalQueue.put(Event(event, data))
 
 
 def getProperAncestors(state,root):

@@ -57,17 +57,22 @@ class StateMachine(object):
         return len(self.interpreter.configuration) == 0
         
 
+def zup():
+    return "hello"
+
 if __name__ == "__main__":
     
-    xml = open("../../resources/microwave_parallel.xml").read()
+    xml = open("../../resources/colors.xml").read()
+#    xml = open("../../resources/history_variant.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/xinclude.xml").read()
+    
+    
+
     sm = StateMachine(xml)
     sm.start()
-    sm.send("door.open")
-    sm.send("door.close")
     time.sleep(1)
     
     

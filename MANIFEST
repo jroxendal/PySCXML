@@ -7,6 +7,3 @@ src/scxml/interpreter.py
 src/scxml/logger.py
 src/scxml/node.py
 src/scxml/pyscxml.py
-src/scxml/test/__init__.py
-src/scxml/test/pyscxmlTest.py
-src/scxml/test/pyscxml_coverage.py
