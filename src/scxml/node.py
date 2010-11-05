@@ -57,7 +57,7 @@ class SCXMLNode(object):
         self.onexit.append(exit)
         
     def getChildren(self):
-        return self.transition +self.state + self.parallel + self.history + self.final 
+        return self.transition +self.state + self.history + self.final 
     
     def __repr__(self):
         return str(self)
@@ -137,31 +137,6 @@ class Final(SCXMLNode):
     def __str__(self):
         return '<Final id="%s">' % self.id
 
-class InvokeSCXML(object):
-    def __init__(self, id):
-        self.invokeid = id
-        self.autoforward = False
-        self.content = None
-        self.finalize = lambda:None
-        self.sm = None
-        self.send = None
-        
-        
-    def start(self, parentQueue, invokeid):
-        from pyscxml import StateMachine
-        from louie import dispatcher
-        self.sm = StateMachine(self.content)
-        self.send = self.sm.send
-        self.sm.start(parentQueue, invokeid)
-        dispatcher.send("init.invoke." + invokeid, self)
-        
-    
-    def cancel(self):
-        self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)
-    
-         
-    def __str__(self):
-        return '<Invoke id="%s">' % self.invokeid
         
 class Onentry(Executable): 
     def __str__(self):

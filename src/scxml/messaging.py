@@ -8,16 +8,19 @@ from louie import dispatcher
 import threading
 import urllib2
 from urllib import urlencode
+from functools import partial
+
+def exec_async(io_function):
+    t = threading.Thread(target=io_function)
+    t.start()
 
 class UrlGetter(urllib2.HTTPDefaultErrorHandler):
     HTTP_RESULT = "HTTP_RESULT"
     HTTP_ERROR = "HTTP_ERROR"
     URL_ERROR = "URL_ERROR"
     
-    def get_async(self, url, data={}):
-        t = threading.Thread(target=self.get_sync, args=(url,data))
-        t.start()
-        
+    def get_async(self, url, data):
+        exec_async(partial(self.get_sync, url, data))
     
     def get_sync(self, url, data):
         opener = urllib2.build_opener(self)
@@ -37,8 +40,8 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
             req.get_full_url(), code, msg, headers, fp)       
         result.status = code                                  
         return result        
-        
-     
+
+    
 
 
 if __name__ == '__main__':

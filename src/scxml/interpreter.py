@@ -243,15 +243,14 @@ class Interpreter(object):
         
         self.dm[inv.invokeid] = inv
         
-        def onInvokeSignal(signal, **kwargs):
-            self.logger.debug("onInvokeSignal " + signal)
-            self.send(signal, data=kwargs.get("data", {}))
+        dispatcher.connect(self.onInvokeSignal, "init.invoke." + inv.invokeid, inv)
+        dispatcher.connect(self.onInvokeSignal, "result.invoke." + inv.invokeid, inv)
         
-        dispatcher.connect(onInvokeSignal, "init.invoke." + inv.invokeid, inv)
-        dispatcher.connect(onInvokeSignal, "result.invoke." + inv.invokeid, inv)
+        inv.start(extQ)
         
-        inv.start(extQ, inv.invokeid)
-        
+    def onInvokeSignal(self, signal, sender, **kwargs):
+        self.logger.debug("onInvokeSignal " + signal)
+        self.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)
         
     def cancelInvoke(self, inv):
         inv.cancel()

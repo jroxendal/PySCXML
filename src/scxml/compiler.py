@@ -147,7 +147,7 @@ class Compiler(object):
             
             
             # this is where to add parsing for more send types. 
-        elif(type == "basichttp"):
+        elif type == "basichttp":
             
             getter = UrlGetter()
             
@@ -165,6 +165,9 @@ class Compiler(object):
             dispatcher.connect(onURLError, UrlGetter.URL_ERROR, getter)
             
             getter.get_async(type, self.parseData(sendNode))
+        
+        elif type == "x-pyscxml-soap":
+            self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
             
         else:
             self.raiseError("error.send.typeinvalid")
@@ -271,6 +274,7 @@ class Compiler(object):
         return eval(expr, self.doc.datamodel)
 
     def parseInvoke(self, node):
+        from invoke import InvokeSCXML, InvokeSOAP
         if node.get("type") == "scxml": # here's where we add more invoke types. 
                      
             inv = InvokeSCXML(node.get("id"))
@@ -279,9 +283,13 @@ class Compiler(object):
             elif node.find("content") != None:
                 inv.content = ElementTree.tostring(node.find("content/scxml"))
             
-            inv.autoforward = bool(node.get("autoforward"))
         
+        elif node.get("type") == "x-pyscxml-soap":
+            inv = InvokeSOAP(node.get("id"))
+            inv.content = node.get("src")
+            
         
+        inv.autoforward = bool(node.get("autoforward"))
         inv.type = node.get("type")   
         
         if node.find("finalize") != None and len(node.find("finalize")) > 0:

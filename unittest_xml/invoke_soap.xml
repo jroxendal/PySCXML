@@ -1,0 +1,18 @@
+<scxml>
+	<state>
+	
+	
+		<invoke id="i" type="x-pyscxml-soap" src="http://mssoapinterop.org/asmx/simple.asmx?WSDL" />
+		
+		<transition event="init.invoke.i">
+			<send target="#i" type="x-pyscxml-soap" event="echoString"  >
+				<param name="inputString" expr="5" />
+			</send> 
+		</transition>
+		
+		<transition event="result.invoke.i">
+			<log label="result" expr="_event.data" />
+		</transition>
+	</state>
+
+</scxml>
