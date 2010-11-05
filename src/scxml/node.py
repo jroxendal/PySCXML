@@ -147,12 +147,14 @@ class InvokeSCXML(object):
         self.send = None
         
         
-    def start(self, parentQueue, invokeId):
+    def start(self, parentQueue, invokeid):
         from pyscxml import StateMachine
+        from louie import dispatcher
         self.sm = StateMachine(self.content)
         self.send = self.sm.send
-        self.sm.start(parentQueue, invokeId)
-        self.send(["init", "invoke", invokeId], None, None, {}, invokeId, parentQueue)
+        self.sm.start(parentQueue, invokeid)
+        dispatcher.send("init.invoke." + invokeid, self)
+        
     
     def cancel(self):
         self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)

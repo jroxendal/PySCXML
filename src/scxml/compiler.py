@@ -27,6 +27,8 @@ from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
 import logger
+from messaging import UrlGetter
+from louie import dispatcher
 
 tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit", "data", "datamodel"]
 
@@ -122,26 +124,53 @@ class Compiler(object):
         return output
     
     def parseSend(self, sendNode):
-        type = sendNode.get("type") if sendNode.get("type") else "scxml"
+        type = self.parseAttr(sendNode, "type") if self.parseAttr(sendNode, "type") else "scxml"
         delay = int(self.parseAttr(sendNode, "delay")) if self.parseAttr(sendNode, "delay") else 0
         
         event = self.parseAttr(sendNode, "event").split(".")
         
         target = self.parseAttr(sendNode, "target")
         
-        if not target:
-            self.interpreter.send(event, sendNode.get("id"), delay)
-        elif target[0] == "#":
-            target = target[1:]
+        
+        
+        if type == "scxml":
+            if not target:
+                self.interpreter.send(event, sendNode.get("id"), delay)
+            elif target == "#_parent":
+                self.interpreter.send(event, sendNode.get("id"), delay, self.parseData(sendNode), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
+            elif target == "#_internal":
+                self.interpreter.raiseFunction(event, self.parseData(sendNode))
+#            elif target == "#_scxml_" sessionid
+            else: # invokeid
+                self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
             
-            if(type == "scxml"):
-                if(target == "_parent"):
-                    self.interpreter.send(event, sendNode.get("id"), delay, self.parseData(sendNode), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
-                else:
-                    self.doc.datamodel[target].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
+            
+            
             # this is where to add parsing for more send types. 
-#            elif(type == "basichttp"):
-    
+        elif(type == "basichttp"):
+            
+            getter = UrlGetter()
+            
+            def onHttpError( signal, **named ):
+                self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (named["error_code"], target))
+                self.raiseError("error.send.targetunavailable")
+                
+            def onURLError(signal, **named):
+                self.logger.error("The address is currently unavailable")
+                self.raiseError("error.send.targetunavailable")
+                
+            
+#            dispatcher.connect(onHttpResult, UrlGetter.HTTP_RESULT, getter)
+            dispatcher.connect(onHttpError, UrlGetter.HTTP_ERROR, getter)
+            dispatcher.connect(onURLError, UrlGetter.URL_ERROR, getter)
+            
+            getter.get_async(type, self.parseData(sendNode))
+            
+        else:
+            self.raiseError("error.send.typeinvalid")
+            
+    def raiseError(self, err):
+        self.interpreter.raiseFunction(err, type="platform")
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef

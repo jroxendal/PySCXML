@@ -1,21 +1,15 @@
 <scxml initial="red">
 	<script>
 		import math
-		apa = 2
 		def square(x):
 			return x + math.sin(90)
 	</script>
 	<final id="f1" />
-	<transition event="quit" target="f1">
-		<log expr="_event.data['apa']" />
-	</transition>
+	<transition event="quit" target="f1" />
 	<state id="red">
 		<onentry>
 			<log label="sq" expr="square(1)" />
-<!--			<send event="quit" delay="3" />-->
-			<raise event="quit">
-				<param name="apa" expr="3" /> 
-			</raise>
+			<send event="quit" delay="3" />
 		</onentry>
 		<onexit>
 			<cancel sendid="quit" />

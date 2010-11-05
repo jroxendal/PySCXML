@@ -31,6 +31,7 @@ from datastructures import OrderedSet
 import logger
 
 
+
 class Interpreter(object):
     '''
     The class repsonsible for keeping track of the execution of the 
@@ -238,10 +239,17 @@ class Interpreter(object):
             self.configuration.delete(s)
     
     def invoke(self, inv, extQ):
-#        sm = scxml.pyscxml.StateMachine(inv.content)
-#        sm.start(extQ, inv.id)
+        from louie import dispatcher
         
         self.dm[inv.invokeid] = inv
+        
+        def onInvokeSignal(signal, **kwargs):
+            self.logger.debug("onInvokeSignal " + signal)
+            self.send(signal, data=kwargs.get("data", {}))
+        
+        dispatcher.connect(onInvokeSignal, "init.invoke." + inv.invokeid, inv)
+        dispatcher.connect(onInvokeSignal, "result.invoke." + inv.invokeid, inv)
+        
         inv.start(extQ, inv.invokeid)
         
         
@@ -383,7 +391,7 @@ class Interpreter(object):
             del self.timerDict[sendid]
             
     def raiseFunction(self, event, data):
-        self.internalQueue.put(Event(event, data))
+        self.internalQueue.put(Event(event, data, type="internal"))
 
 
 def getProperAncestors(state,root):
@@ -478,9 +486,13 @@ def exitOrder(s1,s2):
         return documentOrder(s2,s1)
 
 class Event(object):
-    def __init__(self, name, data, invokeid=None):
+    def __init__(self, name, data, invokeid=None, type="platform"):
         self.name = name
         self.data = data
         self.invokeid = invokeid
+        self.type = type
+        self.origin = None
+        self.origintype = None
+        
     
     

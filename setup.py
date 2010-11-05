@@ -4,7 +4,7 @@ Created on Nov 26, 2009
 @author: Johan Roxendal
 '''
 
-from distutils.core import setup
+from setuptools import setup
 import datetime
 
 setup(name='pyscxml',
@@ -17,5 +17,6 @@ setup(name='pyscxml',
       packages=['scxml'],
       package_dir={'' : "src"},
       license="LGPLv3",
+      install_requires=["Louie", "suds"]
      )
 
