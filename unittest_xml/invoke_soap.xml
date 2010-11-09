@@ -1,16 +1,20 @@
 <scxml>
 	<state>
-	
-	
+		<!-- invoke the webservice. since this is done asynchronously, we'll have to wait for the init event before continuing -->
 		<invoke id="i" type="x-pyscxml-soap" src="http://mssoapinterop.org/asmx/simple.asmx?WSDL" />
-		
+		<!-- the init.invoke.i event signals that the webservice can be interacted with. -->
 		<transition event="init.invoke.i">
+			<!-- The x-pyscxml-soap type of send must be specified when sending to the invoked webservice. 
+			the event attribute must match a remote method supplied by the invoked webservice -->
 			<send target="#i" type="x-pyscxml-soap" event="echoString"  >
+				<!-- the parameter can be considered a keyword argument to the method specified by the event attribute
+				as such, the send will cause the webservice to execute echoString(inputString=5) -->
 				<param name="inputString" expr="5" />
 			</send> 
 		</transition>
 		
-		<transition event="result.invoke.i">
+		<!-- the result from the webservice is caught by the result event.   -->
+		<transition event="result.invoke.i.echoString">
 			<log label="result" expr="_event.data" />
 		</transition>
 	</state>

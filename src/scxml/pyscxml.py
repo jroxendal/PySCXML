@@ -15,17 +15,13 @@ This file is part of pyscxml.
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import logger
 from compiler import Compiler
 from interpreter import Interpreter
-import logging
+
 import time
 
 
-class NullHandler(logging.Handler):
-    def emit(self, record):
-        pass
-
-logging.getLogger("pyscxml").addHandler(NullHandler())
 
 class StateMachine(object):
     '''
@@ -33,10 +29,11 @@ class StateMachine(object):
     '''
     
     
-    def __init__(self, xml):
+    def __init__(self, xml, do_logging=True):
         '''
         @param xml: the scxml document to parse, expressed as a string.
         '''
+        logger.do_logging(do_logging)
 
         self.interpreter = Interpreter()
         
@@ -44,6 +41,7 @@ class StateMachine(object):
         self.In = self.interpreter.In
         self.doc = Compiler().parseXML(xml, self.interpreter)
         self.datamodel = self.doc.datamodel
+        
         
         
         
@@ -61,7 +59,7 @@ class StateMachine(object):
 if __name__ == "__main__":
     
 #    xml = open("../../unittest_xml/colors.xml").read()
-#    xml = open("../../resources/history_variant.xml").read()
+#    xml = open("../../resources/tropo.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
     xml = open("../../unittest_xml/invoke_soap.xml").read()
@@ -69,9 +67,9 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/xinclude.xml").read()
     
     
-
     sm = StateMachine(xml)
     sm.start()
     time.sleep(1)
+#    sm.send("http.post")
     
-    
+

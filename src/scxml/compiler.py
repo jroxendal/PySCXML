@@ -26,7 +26,7 @@ import sys, re
 from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
-import logger
+import logging
 from messaging import UrlGetter
 from louie import dispatcher
 
@@ -37,7 +37,7 @@ class Compiler(object):
     '''The class responsible for compiling the statemachine'''
     def __init__(self):
         self.doc = SCXMLDocument()
-        self.logger = logger.initLogger("scxml.Compiler, id: " + str(id(self)))
+        self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
     
     def parseAttr(self, elem, attr, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -127,7 +127,7 @@ class Compiler(object):
         type = self.parseAttr(sendNode, "type") if self.parseAttr(sendNode, "type") else "scxml"
         delay = int(self.parseAttr(sendNode, "delay")) if self.parseAttr(sendNode, "delay") else 0
         
-        event = self.parseAttr(sendNode, "event").split(".")
+        event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
         
         target = self.parseAttr(sendNode, "target")
         
@@ -164,11 +164,21 @@ class Compiler(object):
             dispatcher.connect(onHttpError, UrlGetter.HTTP_ERROR, getter)
             dispatcher.connect(onURLError, UrlGetter.URL_ERROR, getter)
             
-            getter.get_async(type, self.parseData(sendNode))
-        
+            data = self.parseData(sendNode)
+            
+            if sendNode.find("content") != None:
+                data["_content"] = sendNode.find("content")[0].text
+            
+            getter.get_async(type, data)
+            
         elif type == "x-pyscxml-soap":
             self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
-            
+        
+        elif type == "x-pyscxml-response":
+            # this is an experiment
+            self.logger.debug("http response " + str(self.parseData(sendNode)))
+            self.doc.datamodel["_response"] = self.parseData(sendNode)["response"]
+        
         else:
             self.raiseError("error.send.typeinvalid")
             

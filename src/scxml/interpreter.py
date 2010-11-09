@@ -28,7 +28,7 @@ from node import *
 import Queue
 import threading
 from datastructures import OrderedSet
-import logger
+import logging
 
 
 
@@ -51,7 +51,7 @@ class Interpreter(object):
         self.invokeId = None
         
         self.timerDict = {}
-        self.logger = logger.initLogger("SCXML interpreter, id: " + str(id(self)))
+        self.logger = logging.getLogger("pyscxml.interpreter.Interpreter." + str(id(self)))
         
     
     def interpret(self, document, optionalParentExternalQueue=None, invokeId=None):
@@ -67,6 +67,7 @@ class Interpreter(object):
         
         transition = Transition(document.rootState)
         transition.target = document.rootState.initial
+        transition.exe = document.rootState.initial.exe
         
         self.executeTransitionContent([transition])
         self.enterStates([transition])

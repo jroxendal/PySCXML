@@ -82,6 +82,6 @@ class InvokeSOAP(BaseInvoke):
     def soap_send_sync(self, method, data):
         result = getattr(self.client.service, method)(**data)
         
-        dispatcher.send("result.invoke." + self.invokeid, self, data=result)
+        dispatcher.send("result.invoke.%s.%s" % (self.invokeid, method), self, data=result)
     
     

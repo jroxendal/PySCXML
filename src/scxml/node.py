@@ -89,7 +89,10 @@ class Parallel(SCXMLNode):
         return '<Parallel id="%s">' % self.id
     
 class Initial(list, Executable):
-    pass
+    def __init__(self, iterable):
+        list.__init__(self, iterable)
+        Executable.__init__(self)
+        
         
 
 class History(object): 
