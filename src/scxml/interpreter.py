@@ -141,8 +141,8 @@ class Interpreter(object):
     
     def exitInterpreter(self):
         inFinalState = False
-        statesToExit = list(self.configuration)
-        statesToExit.sort(exitOrder)
+        statesToExit = sorted(self.configuration, key=exitOrder)
+
         for s in statesToExit:
             for content in s.onexit:
                 self.executeContent(content)
@@ -222,8 +222,7 @@ class Interpreter(object):
         for s in statesToExit:
             self.statesToInvoke.delete(s)
         
-        statesToExit = list(statesToExit)
-        statesToExit.sort(exitOrder)
+        statesToExit.sort(key=exitOrder)
         
         for s in statesToExit:
             for h in s.history:
@@ -276,8 +275,8 @@ class Interpreter(object):
         for s in statesToEnter:
             self.statesToInvoke.add(s)
                     
-        statesToEnter = list(statesToEnter)
-        statesToEnter.sort(enterOrder)
+#        statesToEnter = list(statesToEnter)
+        statesToEnter.sort(key=enterOrder)
         for s in statesToEnter:
             self.configuration.add(s)
             for content in s.onentry:
@@ -457,33 +456,20 @@ def isCompoundState(s):
     return isinstance(s,SCXMLNode) and (s.state != [] or s.final != [])
 
 
-##
-## Sorting orders
-##
+def enterOrder(s):
+    return (getStateDepth(s), s.n)
 
-def documentOrder(s1,s2):
-    if s1.n - s2.n:
-        return 1
-    else:
-        return -1
-
-
-def enterOrder(s1,s2):
-    if isDescendant(s1,s2):
-        return 1
-    elif isDescendant(s2,s1):
-        return -1
-    else:
-        return documentOrder(s1,s2)
-
-
-def exitOrder(s1,s2):
-    if isDescendant(s1,s2):
-        return -1
-    elif isDescendant(s2,s1):
-        return 1
-    else:
-        return documentOrder(s2,s1)
+def exitOrder(s):
+    return (0 - getStateDepth(s), s.n)
+    
+def getStateDepth(s):
+    depth = 0
+    p = s.parent
+    while p:
+        depth += 1
+        p = p.parent
+    return depth
+        
 
 class Event(object):
     def __init__(self, name, data, invokeid=None, type="platform"):
