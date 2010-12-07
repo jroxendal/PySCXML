@@ -479,6 +479,7 @@ class Event(object):
         self.type = type
         self.origin = None
         self.origintype = None
+        self.sendid = None
         
     
     
