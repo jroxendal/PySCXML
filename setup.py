@@ -1,9 +1,8 @@
 
 from setuptools import setup
-import datetime
 
-version = "0.5.8"
-filename = version + "-" + str(datetime.date.today()).replace("-", "")
+version = "0.5.9"
+filename = "0.5.9-20101215"
 
 setup(name="pyscxml",
       version=filename,

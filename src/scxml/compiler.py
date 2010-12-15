@@ -76,7 +76,7 @@ class Compiler(object):
             elif node.tag == "if":
                 fList.append(partial(self.parseIf, node))
             else:
-                sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
+                raise Exception("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, parent.tag))
         
         # return a function that executes all the executable content of the node.
         def f():

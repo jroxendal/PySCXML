@@ -343,7 +343,10 @@ class Interpreter(object):
     def getTargetStates(self, targetIds):
         states = []
         for id in targetIds:
-            states.append(self.doc.getState(id))
+            state = self.doc.getState(id)
+            if not state:
+                raise Exception("The target state '%s' does not exist" % id)
+            states.append(state)
         return states
     
     def executeContent(self, obj):
