@@ -273,7 +273,12 @@ class Compiler(object):
     def getExprFunction(self, expr):
         expr = normalizeExpr(expr)
         def f():
-            exec expr in self.doc.datamodel
+            try:
+                exec expr in self.doc.datamodel
+            except:
+                sys.stderr.write("Error occurred while executing expression: '%s'\n" % expr)
+                raise 
+                
         return f
     
     def getExprValue(self, expr):
@@ -281,7 +286,14 @@ class Compiler(object):
         if not expr: 
             return None
         expr = unescape(expr)
-        return eval(expr, self.doc.datamodel)
+        
+        try:
+            return eval(expr, self.doc.datamodel)
+        except:
+            sys.stderr.write("Error occurred while executing expression: '%s'\n" % expr)
+            raise
+        
+        
 
     def parseInvoke(self, node):
         from invoke import InvokeSCXML, InvokeSOAP
