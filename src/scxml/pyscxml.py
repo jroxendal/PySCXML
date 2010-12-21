@@ -59,10 +59,10 @@ class StateMachine(object):
 if __name__ == "__main__":
     
 #    xml = open("../../unittest_xml/colors.xml").read()
-#    xml = open("../../resources/enter_exit_order.xml").read()
+    xml = open("../../resources/sender.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
-    xml = open("../../unittest_xml/invoke_soap.xml").read()
+#    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/xinclude.xml").read()
     

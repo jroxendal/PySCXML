@@ -85,6 +85,9 @@ class Interpreter(object):
                     initialStepComplete = True 
                 else:
                     internalEvent = self.internalQueue.get()
+                    
+                    self.logger.info("internal event found: %s", internalEvent.name)
+                    
                     self.dm["_event"] = internalEvent
                     enabledTransitions = self.selectTransitions(internalEvent)
             if enabledTransitions:
@@ -129,6 +132,9 @@ class Interpreter(object):
                             macroStepComplete = True
                         else:
                             internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
+                            
+                            self.logger.info("internal event found: %s", internalEvent.name)
+                            
                             self.dm["_event"] = internalEvent
                             enabledTransitions = self.selectTransitions(internalEvent)
     
@@ -156,7 +162,6 @@ class Interpreter(object):
             if self.invokeId and self.dm["_parent"]:
                 self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], doneData))
             self.logger.info("Exiting interpreter")
-    #        sendDoneEvent(???)
     
     def selectEventlessTransitions(self):
         enabledTransitions = OrderedSet()
@@ -275,7 +280,6 @@ class Interpreter(object):
         for s in statesToEnter:
             self.statesToInvoke.add(s)
                     
-#        statesToEnter = list(statesToEnter)
         statesToEnter.sort(key=enterOrder)
         for s in statesToEnter:
             self.configuration.add(s)
@@ -392,8 +396,8 @@ class Interpreter(object):
             self.timerDict[sendid].cancel()
             del self.timerDict[sendid]
             
-    def raiseFunction(self, event, data):
-        self.internalQueue.put(Event(event, data, type="internal"))
+    def raiseFunction(self, event, data, type="internal"):
+        self.internalQueue.put(Event(event, data, type=type))
 
 
 def getProperAncestors(state,root):

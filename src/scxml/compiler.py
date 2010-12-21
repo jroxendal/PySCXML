@@ -22,7 +22,7 @@ This file is part of pyscxml.
 
 from node import *
 from urllib2 import urlopen
-import sys, re
+import sys, re, time
 from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
@@ -37,6 +37,7 @@ class Compiler(object):
     '''The class responsible for compiling the statemachine'''
     def __init__(self):
         self.doc = SCXMLDocument()
+        self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time()) 
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
     
     def parseAttr(self, elem, attr, is_list=False):
@@ -76,7 +77,7 @@ class Compiler(object):
             elif node.tag == "if":
                 fList.append(partial(self.parseIf, node))
             else:
-                raise Exception("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, parent.tag))
+                raise Exception("PySXML doesn't recognize the executabel content '%s'" % node.tag)
         
         # return a function that executes all the executable content of the node.
         def f():
@@ -139,51 +140,66 @@ class Compiler(object):
             elif target == "#_parent":
                 self.interpreter.send(event, sendNode.get("id"), delay, self.parseData(sendNode), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
             elif target == "#_internal":
-                self.interpreter.raiseFunction(event, self.parseData(sendNode))
+                self.interpreter.raiseFunction(event.split("."), self.parseData(sendNode))
 #            elif target == "#_scxml_" sessionid
-            else: # invokeid
+            elif target[0] == "#" and target[1] != "_": # invokeid
                 self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
-            
+            elif target[:7] == "http://": # target is a remote scxml processor
+                from eventprocessor import SCXMLEventProcessor as Processor
+                eventXML = Processor.toxml(sendNode, self.parseData(sendNode))
+                
+                getter = self.getUrlGetter(target)
+                
+                getter.get_sync(target, {"_content" : eventXML})
+                
+            else: 
+                self.raiseError("error.send.targetunavailable")
             
             
             # this is where to add parsing for more send types. 
         elif type == "basichttp":
             
-            getter = UrlGetter()
-            
-            def onHttpError( signal, **named ):
-                self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (named["error_code"], target))
-                self.raiseError("error.send.targetunavailable")
-                
-            def onURLError(signal, **named):
-                self.logger.error("The address is currently unavailable")
-                self.raiseError("error.send.targetunavailable")
-                
-            
-#            dispatcher.connect(onHttpResult, UrlGetter.HTTP_RESULT, getter)
-            dispatcher.connect(onHttpError, UrlGetter.HTTP_ERROR, getter)
-            dispatcher.connect(onURLError, UrlGetter.URL_ERROR, getter)
+            getter = self.getUrlGetter(target)
             
             data = self.parseData(sendNode)
             
             if sendNode.find("content") != None:
                 data["_content"] = sendNode.find("content")[0].text
             
-            getter.get_async(type, data)
+            getter.get_sync(target, data)
             
         elif type == "x-pyscxml-soap":
             self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
         
-        elif type == "x-pyscxml-response":
-            # this is an experiment
-            self.logger.debug("http response " + str(self.parseData(sendNode)))
-            self.doc.datamodel["_response"] = self.parseData(sendNode)["response"]
-        
         else:
             self.raiseError("error.send.typeinvalid")
-            
+    
+    def getUrlGetter(self, target):
+        getter = UrlGetter()
+        
+        dispatcher.connect(self.onHttpResult, UrlGetter.HTTP_RESULT, getter)
+        dispatcher.connect(self.onHttpError, UrlGetter.HTTP_ERROR, getter)
+        dispatcher.connect(self.onURLError, UrlGetter.URL_ERROR, getter)
+        
+        return getter
+
+    def onHttpError(self, signal, error_code, source, **named ):
+        self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
+        self.raiseError("error.communication")
+
+#        if error_code == 403: # this seems to have changed, it's all error.communication
+#        elif error_code == 404: 
+#            self.raiseError("error.send.targetunavailable")
+        
+    def onURLError(self, signal, source, **named):
+        self.logger.error("The address %s is currently unavailable" % source)
+        self.raiseError("error.communication")
+        
+    def onHttpResult(self, signal, **named):
+        self.logger.error("onHttpResult " + str(named))
+    
     def raiseError(self, err):
-        self.interpreter.raiseFunction(err, type="platform")
+        self.interpreter.raiseFunction(err.split("."), {}, type="platform")
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef

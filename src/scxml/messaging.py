@@ -53,10 +53,13 @@ if __name__ == '__main__':
         print '  result', named
     def onHttpError( signal, **named ):
         print '  error', named
+    def onUrlError( signal, **named ):
+        print '  error', named
     
     
     dispatcher.connect(onHttpResult, UrlGetter.HTTP_RESULT, getter)
     dispatcher.connect(onHttpError, UrlGetter.HTTP_ERROR, getter)
+    dispatcher.connect(onUrlError, UrlGetter.URL_ERROR, getter)
     
     getter.get_async("http://localhost/cgi-bin/cgi_test.py", {'mykey' : 'myvalue'})
     
