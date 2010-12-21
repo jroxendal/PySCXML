@@ -1,7 +1,22 @@
 '''
+This file is part of pyscxml.
+
+    pyscxml is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    pyscxml is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+
 Created on Sep 21, 2010
 
-@author: johan
+@author: Johan Roxendal
 '''
 
 from pprint import pprint
@@ -13,8 +28,13 @@ import logging
 from eventprocessor import SCXMLEventProcessor as Processor
 import threading
 import cgi
+from interpreter import Event
+from functools import partial
+from xml.parsers.expat import ExpatError
 
 logger = logging.getLogger("pyscxml.pyscxml_server")
+
+sm_mapping = {}
 
 def request_handler(environ, start_response):
     if environ['REQUEST_METHOD'] == 'POST':
@@ -25,19 +45,22 @@ def request_handler(environ, start_response):
                                environ=post_env,
                                keep_blank_values=True)
         
-        
+        output = ""
+        headers = [('Content-type', 'text/plain')]
         try:
-            parse_response(environ["PATH_INFO"], fs)
+            event_reporter = parse_request(environ["PATH_INFO"], fs)
             status = '200 OK'
+            timer = threading.Timer(0.1, event_reporter)
+            timer.start()
         except KeyError:
             status = '403 FORBIDDEN'
-#        except Exception as e:
-#            status = '400 BAD REQUEST'
-        
+        except ExpatError as e:
+            logger.error("Parsing of incoming scxml message failed for message %s" % fs.getvalue("_content") )
+            status = '400 BAD REQUEST'
+            output = str(e)
 
-        headers = [('Content-type', 'text/plain')]
         start_response(status, headers)
-        return [""]
+        return [output]
     else:
         status = '200 OK'
         headers = [('Content-type', 'text/plain')]
@@ -46,75 +69,104 @@ def request_handler(environ, start_response):
 
 
 
-
-sm_mapping = {}
-
-def parse_response(path, fs):
+def parse_request(path, fs):
     pathlist = filter(lambda x: bool(x), path.split("/"))
     session = pathlist[0]
     
     sm = sm_mapping[session]
     
     type = pathlist[1]
+
     
     if type == "basichttp":
         
-        event = Processor.fromxml(fs)
-        sm.interpreter.externalQueue.put(event)
+        if "_content" in fs:
+            event = Processor.fromxml(fs.getvalue("_content"), "unknown")
+        else:
+            data = dict([(key, fs.getvalue(key)) for key in fs])
+            
+            event = Event(["http", "post"], data=data)
         
-    if type == "scxml":
-        
-        event = Processor.fromxml(fs["_content"].value)
-        sm.interpreter.externalQueue.put(event)
-        
+    elif type == "scxml":
+        event = Processor.fromxml(fs.getvalue("_content"))
+
+    return partial(sm.interpreter.externalQueue.put, event)
+    
 
 
-def start_server(host, port, scxml_doc):
+    
+
+
+def start_server(host, port, scxml_doc, *init_sessions):
     """Start the server."""
     print "starting pyscxml_server"
     global xml
     xml = scxml_doc
     
-    sm = StateMachine(xml)
-    sm_mapping[sm.datamodel["_sessionid"]] = sm
+    for sessionid in init_sessions:
+        print "initializing session at '%s'" % sessionid
+        sm = StateMachine(xml)
+        sm.datamodel["_sessionid"] = sessionid
+        sm_mapping[sessionid] = sm
+        sm.datamodel["_ioprocessors"] = {"scxml" : "http://" + host + ":" + str(port) + "/" + sessionid + "/" + "scxml",
+                                         "basichttp" : "http://" + host + ":" + str(port) + "/" + sessionid + "/" + "basichttp" }
+        sm.start()
     
-    sm.datamodel["_ioprocessors"] = {"scxml" : "http://" + host + ":" + str(port) + "/" + sm.datamodel["_sessionid"] + "/" + "scxml",
-                                     "basichttp" : "http://" + host + ":" + str(port) + "/" + sm.datamodel["_sessionid"] + "/" + "basichttp" }
-    print "URLs:"
-    print sm.datamodel["_ioprocessors"]["scxml"]
-    print sm.datamodel["_ioprocessors"]["basichttp"]
-    sm.start()
     
     httpd = make_server(host, port, request_handler)
     httpd.serve_forever()
 
+
+
 if __name__ == "__main__":
-#    start_server("192.168.1.101", 8081, open("../../resources/server.xml").read())
-    t = threading.Thread(target=start_server, args=("192.168.1.110", 8081, open("../../resources/server.xml").read()))
-    t.start()
-    sleep(1)
-    xml = '''\
-        <scxml>
+
+    sessionid = "session1"
+    xml1 = '''\
+        <scxml name="session1">
             <state id="s1">
-                <onentry>
-                    <send event="e1" target="%s"  >
-                        <param name="name" expr="'value'" />
-                    </send> 
-                </onentry>
-                <transition event="lol" target="s1" />
-                <transition event="error.communication" target="f" />
+                <transition event="e1" target="f">
+                    <log label="e1 transition taken" expr="_event.data" />
+                    <log label="origin" expr="_event.origin" />
+                    <send event="ok" targetexpr="_event.origin" />
+                </transition>
             </state>
             
             <final id="f">
                 <onentry>
-                    <log label="final state reached" />
+                    <log label="session1 final state reached" />
                 </onentry>
             </final>
         </scxml>
-    ''' % "http://192.168.1.110:8081/pyscxml_session_1292899308.02/scxml"
-#    ''' % sm_mapping.values()[0].datamodel["_ioprocessors"]["scxml"]
+    '''
     
-    sm = StateMachine(xml)
-    sm.start()
+    t = threading.Thread(target=start_server, args=("localhost", 8081, xml1, sessionid))
+    t.start()
+    sleep(1)
+    
+    
+    sessionid = "session2"
+    xml2 = '''\
+        <scxml name="session2">
+            <state id="s1">
+                <onentry>
+                    <send event="e1" target="http://localhost:8081/session1/scxml">
+                        <param name="name" expr="132" />
+                    </send> 
+                </onentry>
+                <transition event="ok" target="f" />
+            </state>
+            
+            <final id="f">
+                <onentry>
+                    <log label="session2 final state reached" />
+                </onentry>
+            </final>
+        </scxml>
+    '''
+    
+    t = threading.Thread(target=start_server, args=("localhost", 8082, xml2, sessionid))
+    t.start()
+    sleep(1)
+    
     
     

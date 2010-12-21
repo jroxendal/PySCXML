@@ -41,6 +41,7 @@ class StateMachine(object):
         self.In = self.interpreter.In
         self.doc = Compiler().parseXML(xml, self.interpreter)
         self.datamodel = self.doc.datamodel
+        self.name = self.doc.name
         
         
         

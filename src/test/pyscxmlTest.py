@@ -21,10 +21,9 @@ This file is part of pyscxml.
 import time
 import unittest
 from scxml.pyscxml import StateMachine
-
-
-
 import os.path
+import threading
+from scxml import pyscxml_server
 xmlDir = "../../unittest_xml/"
 if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
@@ -119,6 +118,46 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         time.sleep(6) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
+        
+        sessionid = "session1"
+        xml1 = '''\
+            <scxml name="session1">
+                <state id="s1">
+                    <transition event="e1" target="f">
+                        <send event="ok" targetexpr="_event.origin" />
+                    </transition>
+                </state>
+                
+                <final id="f" />
+            </scxml>
+        '''
+        
+        t = threading.Thread(target=pyscxml_server.start_server, args=("localhost", 8081, xml1, sessionid))
+        t.start()
+        time.sleep(1)
+        
+        
+        sessionid2 = "session2"
+        xml2 = '''\
+            <scxml name="session2">
+                <state id="s1">
+                    <onentry>
+                        <send event="e1" target="http://localhost:8081/session1/scxml">
+                            <param name="name" expr="132" />
+                        </send> 
+                    </onentry>
+                    <transition event="ok" target="f" />
+                </state>
+                
+                <final id="f" />
+            </scxml>
+        '''
+
+        t = threading.Thread(target=pyscxml_server.start_server, args=("localhost", 8082, xml2, sessionid2))
+        t.start()
+        time.sleep(1)
+        self.assert_(pyscxml_server.sm_mapping[sessionid].isFinished() and pyscxml_server.sm_mapping[sessionid2].isFinished())
+            
         
         # change xml to be able to make assertions about exited and entered states.
 #        sm = StateMachine(open(xmlDir + "cross_parallel.xml").read())

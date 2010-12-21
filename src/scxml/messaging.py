@@ -19,10 +19,16 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
     HTTP_ERROR = "HTTP_ERROR"
     URL_ERROR = "URL_ERROR"
     
+    def __init__(self):
+        self.url = None
+        
+    
     def get_async(self, url, data):
+        self.url = url
         exec_async(partial(self.get_sync, url, data))
     
     def get_sync(self, url, data):
+        self.url = url
         opener = urllib2.build_opener(self)
         try:
             f = opener.open(url, data=urlencode(data))

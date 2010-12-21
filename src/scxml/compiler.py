@@ -146,7 +146,11 @@ class Compiler(object):
                 self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
             elif target[:7] == "http://": # target is a remote scxml processor
                 from eventprocessor import SCXMLEventProcessor as Processor
-                eventXML = Processor.toxml(sendNode, self.parseData(sendNode))
+                try:
+                    origin = self.doc.datamodel["_ioprocessors"]["scxml"]
+                except KeyError:
+                    origin = ""
+                eventXML = Processor.toxml(".".join(event), target, self.parseData(sendNode), origin, sendNode.get("id", ""))
                 
                 getter = self.getUrlGetter(target)
                 
@@ -191,12 +195,13 @@ class Compiler(object):
 #        elif error_code == 404: 
 #            self.raiseError("error.send.targetunavailable")
         
-    def onURLError(self, signal, source, **named):
-        self.logger.error("The address %s is currently unavailable" % source)
+    def onURLError(self, signal, sender):
+        print "urlerror", sender.url
+        self.logger.error("The address is currently unavailable")
         self.raiseError("error.communication")
         
     def onHttpResult(self, signal, **named):
-        self.logger.error("onHttpResult " + str(named))
+        self.logger.info("onHttpResult " + str(named))
     
     def raiseError(self, err):
         self.interpreter.raiseFunction(err.split("."), {}, type="platform")
@@ -216,6 +221,7 @@ class Compiler(object):
             if node.tag == "scxml":
                 s = State(node.get("id"), None, n)
                 s.initial = self.parseInitial(node)
+                self.doc.name = node.get("name", "")
                     
                 if node.find("script") != None:
                     self.getExprFunction(node.find("script").text)()

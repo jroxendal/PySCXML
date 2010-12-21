@@ -155,6 +155,7 @@ class SCXMLDocument(object):
         self.stateDict = {}
         self._rootState = None
         self.datamodel = {}
+        self.name = ""
     
     def setRoot(self, state):
         self._rootState = state
