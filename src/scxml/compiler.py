@@ -38,6 +38,16 @@ class Compiler(object):
     def __init__(self):
         self.doc = SCXMLDocument()
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
+        
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+    
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+        self.logger = logging.getLogger("pyscxml.interpreter.Interpeter." + str(id(self)))
+    
     
     def parseAttr(self, elem, attr, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -77,6 +87,7 @@ class Compiler(object):
                 fList.append(partial(self.parseIf, node))
             else:
                 sys.exit("%s is either an invalid child of %s or it's not yet implemented" % (node.tag, node.parent.tag))
+        
         
         # return a function that executes all the executable content of the node.
         def f():
@@ -203,6 +214,10 @@ class Compiler(object):
                     
                 if node.find("script") != None:
                     self.getExprFunction(node.find("script").text)()
+                    
+                    # keep the text on the node for unpickling, and a reference to the compiler
+                    s.scriptText = node.find("script").text
+                    s.compiler = self
                 self.doc.rootState = s    
                 
             elif node.tag == "state":
@@ -244,6 +259,10 @@ class Compiler(object):
                     t.cond = partial(self.getExprValue, node.get("cond"))    
                 
                 t.exe = self.getExecContent(node)
+                
+                # add a reference from the transition back to this compiler
+                # for manual unpickling of functions
+                t.compiler = self 
                     
                 parentState.addTransition(t)
     
@@ -265,7 +284,7 @@ class Compiler(object):
             elif node.tag == "data":
                 self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
                 
-                
+            
                 
     
         return self.doc
@@ -321,6 +340,9 @@ class Compiler(object):
             assert transitionNode.get("target")
             initial = Initial(transitionNode.get("target").split(" "))
             initial.exe = self.getExecContent(transitionNode)
+            # add a reference from the transition back to this compiler
+            # for manual unpickling of functions
+            initial.compiler = self 
             return initial
         else: # has neither initial tag or attribute, so we'll make the first valid state a target instead.
             childNodes = filter(lambda x: x.tag in ["state", "parallel", "final"], list(node)) 
