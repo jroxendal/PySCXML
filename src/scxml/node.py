@@ -82,6 +82,24 @@ class Executable(object):
 class State(SCXMLNode):
     def __str__(self):
         return '<State id="%s">' % self.id
+    
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        #if hasattr(self, 'exe'):
+        #   del d['exe']
+        return d
+    
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+        
+        #
+        # TO-DO
+        #
+        # Not sure this is right - should the function be executed on the compiler? 
+        #
+        if hasattr(self, 'scriptText'):
+            self.compiler.getExprFunction(self.scriptText)()
+    
         
 
 class Parallel(SCXMLNode):
@@ -93,7 +111,14 @@ class Initial(list, Executable):
         list.__init__(self, iterable)
         Executable.__init__(self)
         
-        
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['exe']
+        return d
+    
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+        self.exe = self.compiler.getExecContent(self)    
 
 class History(object): 
     def __init__(self, id, parent, type, n):
@@ -119,7 +144,19 @@ class Transition(Executable):
         self.target = []
         self.event = []
         self.cond = None
-        
+    
+    
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['cond']
+        del d['exe']
+        return d
+    
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+        self.cond = self.compiler.getExecContent(self)
+    
+    
     def __str__(self):
         attrs = 'source="%s" ' % self.source.id
         if self.target:
