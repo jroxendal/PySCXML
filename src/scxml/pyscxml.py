@@ -29,13 +29,15 @@ class StateMachine(object):
     '''
     
     
-    def __init__(self, xml, do_logging=True):
+    def __init__(self, xml, do_logging=True, eventProcessor=None):
         '''
         @param xml: the scxml document to parse, expressed as a string.
+        @param eventProcessor: optional event processor to allow for a 
+            different event processing mechanism
         '''
         logger.do_logging(do_logging)
 
-        self.interpreter = Interpreter()
+        self.interpreter = Interpreter(eventProcessor)
         
         self.send = self.interpreter.send
         self.In = self.interpreter.In
@@ -59,7 +61,7 @@ class StateMachine(object):
 if __name__ == "__main__":
     
 #    xml = open("../../unittest_xml/colors.xml").read()
-#    xml = open("../../resources/enter_exit_order.xml").read()
+#    xml = open("../../resources/tropo.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
     xml = open("../../unittest_xml/invoke_soap.xml").read()
