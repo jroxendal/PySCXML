@@ -8,6 +8,7 @@ Created on Dec 6, 2010
 import xml.etree.ElementTree as etree
 from interpreter import Event
 import pickle
+import json
 
 class SCXMLEventProcessor(object):
     @staticmethod
@@ -25,7 +26,8 @@ class SCXMLEventProcessor(object):
                                   "target" : target,
                                   "type" : "scxml",
                                   "name" : event,
-                                  "sendid" : sendid
+                                  "sendid" : sendid,
+                                  "language" : "python"
         })
         
         b.start("scxml:payload", {})
@@ -51,7 +53,12 @@ class SCXMLEventProcessor(object):
 
         data = {}
         for prop in xml.getiterator("{http://www.w3.org/2005/07/scxml}property"):
-            data[prop.get("name")] = pickle.loads(prop.text) 
+            if xml.get("language") == "json":
+                value = json.loads(prop.text)
+            elif xml.get("language") == "python":
+                value = pickle.loads(prop.text)
+                
+            data[prop.get("name")] = value
         
         event = Event(xml.get("name").split("."), data)
         event.origin = xml.get("source") 

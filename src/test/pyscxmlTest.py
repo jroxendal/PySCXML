@@ -35,18 +35,6 @@ class RegressionTest(unittest.TestCase):
     This test class is run from the context of the build.xml found in the project root.
     '''
     
-#    def testCompiler(self):
-#        for xmlDoc in [x for x in os.listdir(xmlDir) if x != ".svn"]:
-#            xml = open(xmlDir + xmlDoc).read()
-#            dummyInterpreter = interpreter.Interpreter()
-#            doc = parseXML(xml, dummyInterpreter)
-#
-#            # make sure that the amount of states stored in the stateDict in the parsed document equals
-#            # the amount of xml nodes of the same types.
-#            self.assertEqual(len(doc.stateDict.keys()),
-#                len(list(state for state in etree.fromstring(xml).getiterator() if state.tag in ["state", "parallel", "final", "history", "scxml"]))
-#            )
-    
     def testInterpreter(self):
 
         

@@ -100,12 +100,10 @@ def parse_request(path, fs):
 def start_server(host, port, scxml_doc, *init_sessions):
     """Start the server."""
     print "starting pyscxml_server"
-    global xml
-    xml = scxml_doc
     
     for sessionid in init_sessions:
         print "initializing session at '%s'" % sessionid
-        sm = StateMachine(xml)
+        sm = StateMachine(scxml_doc)
         sm.datamodel["_sessionid"] = sessionid
         sm_mapping[sessionid] = sm
         sm.datamodel["_ioprocessors"] = {"scxml" : "http://" + host + ":" + str(port) + "/" + sessionid + "/" + "scxml",

@@ -59,7 +59,7 @@ class Compiler(object):
             
             if node.tag == "log":
                 fList.append(getLogFunction(node.get("label"),  partial(self.getExprValue, node.get("expr"))))
-            elif node.tag == "raise": 
+            elif node.tag == "raise":
                 eventName = node.get("event").split(".")
                 fList.append(partial(self.interpreter.raiseFunction, eventName, self.parseData(node)))
             elif node.tag == "send":
@@ -67,7 +67,7 @@ class Compiler(object):
             elif node.tag == "cancel":
                 fList.append(partial(self.interpreter.cancel, node.get("sendid")))
             elif node.tag == "assign":
-                expression = node.get("expr") if node.get("expr") else node.text
+                expression = node.get("expr") if node.get("expr") else node.text.strip()
                 # ugly scoping hack
                 def utilF(loc=node.get("location"), expr=expression):
                     self.doc.datamodel[loc] = self.getExprValue(expr)
@@ -77,11 +77,13 @@ class Compiler(object):
             elif node.tag == "if":
                 fList.append(partial(self.parseIf, node))
             else:
-                raise Exception("PySXML doesn't recognize the executabel content '%s'" % node.tag)
+                raise Exception("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
         
         # return a function that executes all the executable content of the node.
         def f():
             for func in fList:
+                if hasattr(func, "arg1"):
+                    print getattr(func, "arg1"), getattr(func, "arg2"), getattr(func, "arg3")
                 func()
         return f
     
@@ -133,7 +135,6 @@ class Compiler(object):
         target = self.parseAttr(sendNode, "target")
         
         
-        
         if type == "scxml":
             if not target:
                 self.interpreter.send(event, sendNode.get("id"), delay)
@@ -160,7 +161,6 @@ class Compiler(object):
                 self.raiseError("error.send.targetunavailable")
             
             
-            # this is where to add parsing for more send types. 
         elif type == "basichttp":
             
             getter = self.getUrlGetter(target)
@@ -175,6 +175,7 @@ class Compiler(object):
         elif type == "x-pyscxml-soap":
             self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
         
+        # this is where to add parsing for more send types. 
         else:
             self.raiseError("error.send.typeinvalid")
     
@@ -297,9 +298,10 @@ class Compiler(object):
         def f():
             try:
                 exec expr in self.doc.datamodel
-            except:
-                sys.stderr.write("Error occurred while executing expression: '%s'\n" % expr)
-                raise 
+            except Exception as e:
+                sys.stderr.write("Exception while executing expression: '%s'\n" % expr)
+                sys.stderr.write("%s: %s\n" % (type(e).__name__, str(e)) )
+                self.raiseError("error.execution." + type(e).__name__.lower())
                 
         return f
     
@@ -311,9 +313,11 @@ class Compiler(object):
         
         try:
             return eval(expr, self.doc.datamodel)
-        except:
-            sys.stderr.write("Error occurred while executing expression: '%s'\n" % expr)
-            raise
+        except Exception as e:
+            sys.stderr.write("Exception while executing expression: '%s'\n" % expr)
+            sys.stderr.write("%s: %s\n" % (type(e).__name__, str(e)) )
+            self.raiseError("error.execution." + type(e).__name__.lower())
+            return None
         
         
 
