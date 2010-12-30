@@ -22,6 +22,10 @@ from interpreter import Interpreter
 import time
 
 
+def default_logfunction(label, msg):
+    if not label: label = "Log"
+    print "%s: %s" % (label, msg)
+
 
 class StateMachine(object):
     '''
@@ -29,20 +33,27 @@ class StateMachine(object):
     '''
     
     
-    def __init__(self, xml, do_logging=True):
+    def __init__(self, xml, logger_handler=logger.default_handler, log_function=default_logfunction):
         '''
         @param xml: the scxml document to parse, expressed as a string.
+        @param logger_handler: the logger will log to this handler, using 
+        the logging.getLogger("pyscxml") logger.
+        @param log_function: the function to execute on a <log /> element. 
+        signature is f(label, msg), where label is a string and msg a string. 
         '''
-        logger.do_logging(do_logging)
+        if logger_handler:
+            logger.addHandler(logger_handler)
+        else:
+            logger.addHandler(logger.NullHandler())
 
         self.interpreter = Interpreter()
-        
+        self.compiler = Compiler()
+        self.compiler.log_function = log_function
         self.send = self.interpreter.send
         self.In = self.interpreter.In
-        self.doc = Compiler().parseXML(xml, self.interpreter)
+        self.doc = self.compiler.parseXML(xml, self.interpreter)
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
-        
         
         
         
@@ -57,14 +68,15 @@ class StateMachine(object):
         
 
 
+
 if __name__ == "__main__":
     
-#    xml = open("../../unittest_xml/colors.xml").read()
-#    xml = open("../../resources/sender.xml").read()
+    xml = open("../../resources/colors.xml").read()
+#    xml = open("../../resources/history_variant.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
-    xml = open("../../unittest_xml/factorial.xml").read()
+#    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     

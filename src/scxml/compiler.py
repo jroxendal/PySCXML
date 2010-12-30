@@ -39,53 +39,43 @@ class Compiler(object):
         self.doc = SCXMLDocument()
         self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time()) 
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
+        self.log_function = None
     
-    def parseAttr(self, elem, attr, is_list=False):
+    def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
-            return
+            return default
         else:
             output = elem.get(attr) if elem.get(attr) else self.getExprValue(elem.get(attr + "expr")) 
             return output if not is_list else output.split(" ")
         
     
-    def getExecContent(self, parent):
+    def do_execute_content(self, parent):
         '''
         @param parent: usually an xml Element containing executable children
         elements, but can also be any iterator of executable elements. 
-        @return: a function corresponding to the executable content. 
         '''
-        fList = []
         for node in parent:
             
             if node.tag == "log":
-                fList.append(getLogFunction(node.get("label"),  partial(self.getExprValue, node.get("expr"))))
+                self.log_function, node.get("label"), self.getExprValue(node.get("expr"))
             elif node.tag == "raise":
                 eventName = node.get("event").split(".")
-                fList.append(partial(self.interpreter.raiseFunction, eventName, self.parseData(node)))
+                self.interpreter.raiseFunction(eventName, self.parseData(node))
             elif node.tag == "send":
-                fList.append(partial(self.parseSend, node))
+                self.parseSend(node)
             elif node.tag == "cancel":
-                fList.append(partial(self.interpreter.cancel, node.get("sendid")))
+                self.interpreter.cancel(self.parseAttr(node, "sendid"))
             elif node.tag == "assign":
                 expression = node.get("expr") if node.get("expr") else node.text.strip()
-                # ugly scoping hack
-                def utilF(loc=node.get("location"), expr=expression):
-                    self.doc.datamodel[loc] = self.getExprValue(expr)
-                fList.append(utilF)
+                self.doc.datamodel[node.get("location")] = self.getExprValue(expression)
             elif node.tag == "script":
-                fList.append(self.getExprFunction(node.text))
+                self.execExpr(node.text)
             elif node.tag == "if":
-                fList.append(partial(self.parseIf, node))
+                self.parseIf(node)
             else:
+                #TODO: crashing here depends on lax or strict exmode 
                 raise Exception("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
         
-        # return a function that executes all the executable content of the node.
-        def f():
-            for func in fList:
-                if hasattr(func, "arg1"):
-                    print getattr(func, "arg1"), getattr(func, "arg2"), getattr(func, "arg3")
-                func()
-        return f
     
     def parseIf(self, node):
         def gen_prefixExec(itr):
@@ -103,9 +93,9 @@ class Compiler(object):
         
         for ifNode, execList in gen_ifblock(node):
             if ifNode.tag == "else":
-                self.getExecContent(execList)()
+                self.do_execute_content(execList)
             elif self.getExprValue(ifNode.get("cond")):
-                self.getExecContent(execList)()
+                self.do_execute_content(execList)
                 break
     
     def parseData(self, child):
@@ -124,51 +114,53 @@ class Compiler(object):
             for name in child.get("namelist").split(" "):
                 output[name] = self.getExprValue(name)
         
+        if child.find("content") != None:
+            output["content"] = child.find("content").text % self.doc.datamodel
+            print "content", output["content"]
+                    
         return output
     
     def parseSend(self, sendNode):
-        type = self.parseAttr(sendNode, "type") if self.parseAttr(sendNode, "type") else "scxml"
-        delay = int(self.parseAttr(sendNode, "delay")) if self.parseAttr(sendNode, "delay") else 0
-        
+
+        type = self.parseAttr(sendNode, "type", "scxml")
+        delay = int(self.parseAttr(sendNode, "delay", 0))
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
-        
         target = self.parseAttr(sendNode, "target")
+        data = self.parseData(sendNode)
+        # TODO: incorperate 
+        hints = self.parseAttr(sendNode, "hints")
         
         
         if type == "scxml":
             if not target:
-                self.interpreter.send(event, sendNode.get("id"), delay)
+                self.interpreter.send(event, sendNode.get("id"), delay, data)
             elif target == "#_parent":
-                self.interpreter.send(event, sendNode.get("id"), delay, self.parseData(sendNode), self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
+                self.interpreter.send(event, sendNode.get("id"), delay, data, self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
             elif target == "#_internal":
-                self.interpreter.raiseFunction(event.split("."), self.parseData(sendNode))
+                self.interpreter.raiseFunction(event.split("."), data)
 #            elif target == "#_scxml_" sessionid
             elif target[0] == "#" and target[1] != "_": # invokeid
-                self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
+                self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, data)
             elif target[:7] == "http://": # target is a remote scxml processor
                 from eventprocessor import SCXMLEventProcessor as Processor
                 try:
                     origin = self.doc.datamodel["_ioprocessors"]["scxml"]
                 except KeyError:
                     origin = ""
-                eventXML = Processor.toxml(".".join(event), target, self.parseData(sendNode), origin, sendNode.get("id", ""))
+                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id", ""))
                 
                 getter = self.getUrlGetter(target)
                 
                 getter.get_sync(target, {"_content" : eventXML})
                 
             else: 
-                self.raiseError("error.send.targetunavailable")
+                self.logger.error("The send target %s is malformed or unsupported by the platform." % target)
+                self.raiseError("error.send.target")
             
             
         elif type == "basichttp":
             
             getter = self.getUrlGetter(target)
-            
-            data = self.parseData(sendNode)
-            
-            if sendNode.find("content") != None:
-                data["_content"] = sendNode.find("content")[0].text
             
             getter.get_sync(target, data)
             
@@ -177,7 +169,8 @@ class Compiler(object):
         
         # this is where to add parsing for more send types. 
         else:
-            self.raiseError("error.send.typeinvalid")
+            self.logger.error("The send type %s is invalid or unsupported by the platform" % type)
+            self.raiseError("error.send.event")
     
     def getUrlGetter(self, target):
         getter = UrlGetter()
@@ -197,8 +190,7 @@ class Compiler(object):
 #            self.raiseError("error.send.targetunavailable")
         
     def onURLError(self, signal, sender):
-        print "urlerror", sender.url
-        self.logger.error("The address is currently unavailable")
+        self.logger.error("The address %s is currently unavailable" % sender.url)
         self.raiseError("error.communication")
         
     def onHttpResult(self, signal, **named):
@@ -225,7 +217,7 @@ class Compiler(object):
                 self.doc.name = node.get("name", "")
                     
                 if node.find("script") != None:
-                    self.getExprFunction(node.find("script").text)()
+                    self.execExpr(node.find("script").text)
                 self.doc.rootState = s    
                 
             elif node.tag == "state":
@@ -266,7 +258,7 @@ class Compiler(object):
                 if node.get("cond"):
                     t.cond = partial(self.getExprValue, node.get("cond"))    
                 
-                t.exe = self.getExecContent(node)
+                t.exe = partial(self.do_execute_content, node)
                     
                 parentState.addTransition(t)
     
@@ -278,32 +270,29 @@ class Compiler(object):
                            
             elif node.tag == "onentry":
                 s = Onentry()
-                s.exe = self.getExecContent(node)
+                s.exe = partial(self.do_execute_content, node)
                 parentState.addOnentry(s)
             
             elif node.tag == "onexit":
                 s = Onexit()
-                s.exe = self.getExecContent(node)
+                s.exe = partial(self.do_execute_content, node)
                 parentState.addOnexit(s)
             elif node.tag == "data":
                 self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
                 
-                
-                
     
         return self.doc
 
-    def getExprFunction(self, expr):
+    def execExpr(self, expr):
         expr = normalizeExpr(expr)
-        def f():
-            try:
-                exec expr in self.doc.datamodel
-            except Exception as e:
-                sys.stderr.write("Exception while executing expression: '%s'\n" % expr)
-                sys.stderr.write("%s: %s\n" % (type(e).__name__, str(e)) )
-                self.raiseError("error.execution." + type(e).__name__.lower())
+
+        try:
+            exec expr in self.doc.datamodel
+        except Exception as e:
+            sys.stderr.write("Exception while executing expression in a script block: '%s'\n" % expr)
+            sys.stderr.write("%s: %s\n" % (type(e).__name__, str(e)) )
+            self.raiseError("error.execution." + type(e).__name__.lower())
                 
-        return f
     
     def getExprValue(self, expr):
         """These expression are always one-line, so their value is evaluated and returned."""
@@ -341,7 +330,7 @@ class Compiler(object):
         inv.type = node.get("type")   
         
         if node.find("finalize") != None and len(node.find("finalize")) > 0:
-            inv.finalize = self.getExecContent(node.find("finalize"))
+            inv.finalize = partial(self.do_execute_content, node.find("finalize"))
         elif node.find("finalize") != None and node.find("param") != None:
             paramList = node.findall("param")
             def f():
@@ -358,7 +347,7 @@ class Compiler(object):
             transitionNode = node.find("initial")[0]
             assert transitionNode.get("target")
             initial = Initial(transitionNode.get("target").split(" "))
-            initial.exe = self.getExecContent(transitionNode)
+            initial.exe = partial(self.do_execute_content, transitionNode)
             return initial
         else: # has neither initial tag or attribute, so we'll make the first valid state a target instead.
             childNodes = filter(lambda x: x.tag in ["state", "parallel", "final"], list(node)) 
@@ -368,11 +357,11 @@ class Compiler(object):
     
 
     
-def getLogFunction(label, toPrint):
-    if not label: label = "Log"
-    def f():
-        print "%s: %s" % (label, toPrint())
-    return f
+#def getLogFunction(label, toPrint):
+#    if not label: label = "Log"
+#    def f():
+#        print "%s: %s" % (label, toPrint())
+#    return f
     
 
 def preprocess(tree):

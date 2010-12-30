@@ -43,6 +43,7 @@ class SCXMLEventProcessor(object):
         root = b.close()
         
         return etree.tostring(root)
+    
     @staticmethod
     def fromxml(xmlstr, origintype="scxml"):
         '''

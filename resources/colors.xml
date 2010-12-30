@@ -1,15 +1,22 @@
 <scxml initial="red">
 	<script>
 		import math
+		variable = 10
 		def square(x):
 			return x + math.sin(90)
 	</script>
 	<final id="f1" />
-	<transition event="quit" target="f1" />
+	<transition event="quit" target="f1" >
+		<log expr="_event.data['content']" />
+	</transition>
 	<state id="red">
 		<onentry>
 			<log label="sq" expr="square(1)" />
-			<send event="quit" delay="3" />
+			<send event="quit" delay="3">
+				<content>
+					my test content with value: %(variable)s
+				</content>
+			</send>
 		</onentry>
 		<onexit>
 			<cancel sendid="quit" />
