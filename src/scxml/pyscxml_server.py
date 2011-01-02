@@ -91,10 +91,6 @@ def parse_request(path, fs):
         event = Processor.fromxml(fs.getvalue("_content"))
 
     return partial(sm.interpreter.externalQueue.put, event)
-    
-
-
-    
 
 
 def start_server(host, port, scxml_doc, *init_sessions):

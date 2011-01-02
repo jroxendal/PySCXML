@@ -1,0 +1,25 @@
+<scxml>
+	<state>
+		<onentry>
+			<assign location="apa" expr="1" />
+		</onentry>
+		<transition event="error.execution" target="s2" /> 
+	</state>
+	<state id="s2">
+		<onentry>
+			<log expr="apa" />
+		</onentry>
+		<transition event="error.execution" target="s3" /> 
+	</state>
+	<state id="s3">
+		<onentry>
+			<script>
+				non_existing_dict["abc"] = 123
+			</script>
+		</onentry>
+		<transition event="error.execution" target="f" /> 
+	</state>
+	
+	
+	<final id="f" />
+</scxml>

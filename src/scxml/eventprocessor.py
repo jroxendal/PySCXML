@@ -33,7 +33,11 @@ class SCXMLEventProcessor(object):
         b.start("scxml:payload", {})
         for k, v in data.items():
             b.start("scxml:property", {"name" : k})
-            b.data(pickle.dumps(v))
+            if k != "content":
+                b.data(pickle.dumps(v))
+            else:
+                b.data(v)
+                
             b.end("scxml:property")
             
         
@@ -58,7 +62,11 @@ class SCXMLEventProcessor(object):
                 value = json.loads(prop.text)
             elif xml.get("language") == "python":
                 value = pickle.loads(prop.text)
-                
+            
+            #data under the property content is assumed to be plain text
+            if prop.get("name") == "content":
+                value = prop.text
+            
             data[prop.get("name")] = value
         
         event = Event(xml.get("name").split("."), data)

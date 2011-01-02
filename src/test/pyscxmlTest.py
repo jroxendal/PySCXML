@@ -102,6 +102,11 @@ class RegressionTest(unittest.TestCase):
         time.sleep(1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
 
+        sm = StateMachine(open(xmlDir + "error_management.xml").read())
+        sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assert_(sm.isFinished())
+
         sm = StateMachine(open(xmlDir + "history.xml").read())
         sm.start()
         time.sleep(6) #lets us avoid asynchronous errors

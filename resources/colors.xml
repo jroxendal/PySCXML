@@ -4,7 +4,11 @@
 		variable = 10
 		def square(x):
 			return x + math.sin(90)
+		print doc
 	</script>
+	<datamodel>
+		<data id="doc" src="http://google.com" />
+	</datamodel>
 	<final id="f1" />
 	<transition event="quit" target="f1" >
 		<log expr="_event.data['content']" />

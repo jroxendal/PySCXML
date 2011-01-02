@@ -21,7 +21,6 @@ This file is part of pyscxml.
 
 
 from node import *
-from urllib2 import urlopen
 import sys, re, time
 from xml.etree import ElementTree, ElementInclude
 from functools import partial
@@ -29,8 +28,9 @@ from xml.sax.saxutils import unescape
 import logging
 from messaging import UrlGetter
 from louie import dispatcher
+from urllib2 import urlopen
 
-tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit", "data", "datamodel"]
+tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit"]
 
 
 class Compiler(object):
@@ -40,12 +40,13 @@ class Compiler(object):
         self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time()) 
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
         self.log_function = None
+        self.strict_parse = False
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
             return default
         else:
-            output = elem.get(attr) if elem.get(attr) else self.getExprValue(elem.get(attr + "expr")) 
+            output = elem.get(attr) or self.getExprValue(elem.get(attr + "expr")) 
             return output if not is_list else output.split(" ")
         
     
@@ -66,15 +67,25 @@ class Compiler(object):
             elif node.tag == "cancel":
                 self.interpreter.cancel(self.parseAttr(node, "sendid"))
             elif node.tag == "assign":
-                expression = node.get("expr") if node.get("expr") else node.text.strip()
+                
+                if node.get("location") not in self.doc.datamodel:
+                    self.logger.error("The location expression %s was not instantiated in the datamodel." % node.get("location"))
+                    self.raiseError("error.execution.nameerror")
+                    continue
+                
+                expression = node.get("expr") or node.text.strip()
                 self.doc.datamodel[node.get("location")] = self.getExprValue(expression)
             elif node.tag == "script":
-                self.execExpr(node.text)
+                if node.get("src"):
+                    self.execExpr(urlopen(node.get("src")).read())
+                else:
+                    self.execExpr(node.text)
+                    
             elif node.tag == "if":
                 self.parseIf(node)
             else:
-                #TODO: crashing here depends on lax or strict exmode 
-                raise Exception("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
+                if self.strict_parse: 
+                    raise Exception("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
         
     
     def parseIf(self, node):
@@ -101,7 +112,7 @@ class Compiler(object):
     def parseData(self, child):
         '''
         Given a parent node, returns a data object corresponding to 
-        its param child nodes or namelist attribute.
+        its param child nodes, namelist attribute or content child element.
         '''
         output = {}
         for p in child.findall("param"):
@@ -135,7 +146,12 @@ class Compiler(object):
             if not target:
                 self.interpreter.send(event, sendNode.get("id"), delay, data)
             elif target == "#_parent":
-                self.interpreter.send(event, sendNode.get("id"), delay, data, self.interpreter.invokeId, toQueue=self.doc.datamodel["_parent"])
+                self.interpreter.send(event, 
+                                      sendNode.get("id"), 
+                                      delay, 
+                                      data, 
+                                      self.interpreter.invokeId, 
+                                      toQueue=self.doc.datamodel["_parent"])
             elif target == "#_internal":
                 self.interpreter.raiseFunction(event.split("."), data)
 #            elif target == "#_scxml_" sessionid
@@ -153,7 +169,7 @@ class Compiler(object):
                 
                 getter.get_sync(target, {"_content" : eventXML})
                 
-            else: 
+            else:
                 self.logger.error("The send target %s is malformed or unsupported by the platform." % target)
                 self.raiseError("error.send.target")
             
@@ -204,12 +220,13 @@ class Compiler(object):
         xmlStr = removeDefaultNamespace(xmlStr)
         tree = ElementTree.fromstring(xmlStr)
         ElementInclude.include(tree)
+        self.strict_parse = tree.get("exmode", "lax") == "strict"
         preprocess(tree)
+        self.setDatamodel(tree)
         
         for n, parent, node in iter_elems(tree):
             if parent != None and parent.get("id"):
                 parentState = self.doc.getState(parent.get("id"))
-                
             
             if node.tag == "scxml":
                 s = State(node.get("id"), None, n)
@@ -248,7 +265,6 @@ class Compiler(object):
                 self.doc.addNode(h)
                 parentState.addHistory(h)
                 
-                
             elif node.tag == "transition":
                 t = Transition(parentState)
                 if node.get("target"):
@@ -259,15 +275,11 @@ class Compiler(object):
                     t.cond = partial(self.getExprValue, node.get("cond"))    
                 
                 t.exe = partial(self.do_execute_content, node)
-                    
                 parentState.addTransition(t)
     
             elif node.tag == "invoke":
-                
                 inv = self.parseInvoke(node)
-                
                 parentState.addInvoke(inv)
-                           
             elif node.tag == "onentry":
                 s = Onentry()
                 s.exe = partial(self.do_execute_content, node)
@@ -277,8 +289,7 @@ class Compiler(object):
                 s = Onexit()
                 s.exe = partial(self.do_execute_content, node)
                 parentState.addOnexit(s)
-            elif node.tag == "data":
-                self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
+#            elif node.tag == "data":
                 
     
         return self.doc
@@ -289,8 +300,8 @@ class Compiler(object):
         try:
             exec expr in self.doc.datamodel
         except Exception as e:
-            sys.stderr.write("Exception while executing expression in a script block: '%s'\n" % expr)
-            sys.stderr.write("%s: %s\n" % (type(e).__name__, str(e)) )
+            self.logger.error("Exception while executing expression in a script block: '%s'" % expr.strip())
+            self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
             self.raiseError("error.execution." + type(e).__name__.lower())
                 
     
@@ -303,8 +314,8 @@ class Compiler(object):
         try:
             return eval(expr, self.doc.datamodel)
         except Exception as e:
-            sys.stderr.write("Exception while executing expression: '%s'\n" % expr)
-            sys.stderr.write("%s: %s\n" % (type(e).__name__, str(e)) )
+            self.logger.error("Exception while executing expression: '%s'" % expr)
+            self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
             self.raiseError("error.execution." + type(e).__name__.lower())
             return None
         
@@ -355,6 +366,19 @@ class Compiler(object):
                 return Initial([childNodes[0].get("id")])
             return None # leaf nodes have no initial 
     
+    def setDatamodel(self, tree):
+        
+        for node in tree.getiterator("data"):
+            self.doc.datamodel[node.get("id")] = None
+            if node.get("expr"):
+                self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
+            elif node.get("src"):
+                try:
+                    self.doc.datamodel[node.get("id")] = urlopen(node.get("src")).read()
+                except Exception as e:
+                    self.logger.error("Data src not found : '%s'\n" % node.get("src"))
+                    self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
+                    raise e
 
     
 #def getLogFunction(label, toPrint):
