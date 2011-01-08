@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<scxml>
+	<state id="outer">
+		<initial>
+			<transition target="process">
+				<send event="e1" />
+				<send event="e2" />
+			</transition>
+		</initial>
+		<onentry>
+			<log expr="'Entered outer'" />
+		</onentry>
+		<state id="process" initial="s1">
+			<history id="h" type="shallow" />
+			<state id="s1">
+				<transition event="e1" target="s2" />
+			</state>
+		</state>
+		<state id="s2">
+			<transition event="e2" target="h">
+				<send event="quit" />
+			</transition>
+		</state>
+		<transition event="quit" target="f" />
+	</state>
+	<final id="f" />
+</scxml>

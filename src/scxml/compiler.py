@@ -29,6 +29,9 @@ import logging
 from messaging import UrlGetter
 from louie import dispatcher
 from urllib2 import urlopen
+import Queue
+from eventprocessor import Event, SCXMLEventProcessor as Processor
+from invoke import InvokeSCXML, InvokeSOAP, InvokePySCXMLServer, InvokeWrapper
 
 tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit"]
 
@@ -37,7 +40,9 @@ class Compiler(object):
     '''The class responsible for compiling the statemachine'''
     def __init__(self):
         self.doc = SCXMLDocument()
-        self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time()) 
+        self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time())
+        self.doc.datamodel["_response"] = Queue.Queue() 
+        self.doc.datamodel["_x"] = {} 
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
         self.log_function = None
         self.strict_parse = False
@@ -58,7 +63,7 @@ class Compiler(object):
         for node in parent:
             
             if node.tag == "log":
-                self.log_function, node.get("label"), self.getExprValue(node.get("expr"))
+                self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
             elif node.tag == "raise":
                 eventName = node.get("event").split(".")
                 self.interpreter.raiseFunction(eventName, self.parseData(node))
@@ -127,7 +132,6 @@ class Compiler(object):
         
         if child.find("content") != None:
             output["content"] = child.find("content").text % self.doc.datamodel
-            print "content", output["content"]
                     
         return output
     
@@ -153,12 +157,19 @@ class Compiler(object):
                                       self.interpreter.invokeId, 
                                       toQueue=self.doc.datamodel["_parent"])
             elif target == "#_internal":
-                self.interpreter.raiseFunction(event.split("."), data)
+                self.interpreter.raiseFunction(event, data)
 #            elif target == "#_scxml_" sessionid
             elif target[0] == "#" and target[1] != "_": # invokeid
-                self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, data)
-            elif target[:7] == "http://": # target is a remote scxml processor
-                from eventprocessor import SCXMLEventProcessor as Processor
+                inv = self.doc.datamodel[target[1:]]
+                if isinstance(inv, InvokePySCXMLServer):
+                    inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id", "")))
+                else:
+                    inv.send(event, sendNode.get("id"), delay, data)
+            elif target[0] == "#" and target[1:] == "_response":
+                self.logger.debug("sending to _response")
+                self.doc.datamodel["_response"].put(self.parseData(sendNode))
+                
+            elif target.startswith("http://"): # target is a remote scxml processor
                 try:
                     origin = self.doc.datamodel["_ioprocessors"]["scxml"]
                 except KeyError:
@@ -182,6 +193,14 @@ class Compiler(object):
             
         elif type == "x-pyscxml-soap":
             self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
+        elif type == "x-pyscxml-statemachine":
+            try:
+                evt_obj = Event(event, data)
+                self.doc.datamodel[target].send(evt_obj)
+            except Exception, e:
+                self.logger.error("Exception while executing function at target: '%s'" % target)
+                self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
+                self.raiseError("error.execution." + type(e).__name__.lower()) 
         
         # this is where to add parsing for more send types. 
         else:
@@ -278,8 +297,9 @@ class Compiler(object):
                 parentState.addTransition(t)
     
             elif node.tag == "invoke":
-                inv = self.parseInvoke(node)
-                parentState.addInvoke(inv)
+#                inv = self.parseInvoke(node, parentState.id)
+#                inv_func = partial(self.parseInvoke, node, parentState.id)
+                parentState.addInvoke(self.make_invoke_wrapper(node, parentState))
             elif node.tag == "onentry":
                 s = Onentry()
                 s.exe = partial(self.do_execute_content, node)
@@ -299,7 +319,7 @@ class Compiler(object):
 
         try:
             exec expr in self.doc.datamodel
-        except Exception as e:
+        except Exception, e:
             self.logger.error("Exception while executing expression in a script block: '%s'" % expr.strip())
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
             self.raiseError("error.execution." + type(e).__name__.lower())
@@ -313,32 +333,67 @@ class Compiler(object):
         
         try:
             return eval(expr, self.doc.datamodel)
-        except Exception as e:
+        except Exception, e:
             self.logger.error("Exception while executing expression: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
             self.raiseError("error.execution." + type(e).__name__.lower())
             return None
+    
+    
+        
+    def make_invoke_wrapper(self, node, parentId):
+        invokeid = node.get("id")
+        if not invokeid:
+            invokeid = parentId + "." + self.doc.datamodel["_sessionid"]
+            self.doc.datamodel[node.get("idlocation")] = invokeid
         
         
-
+        def start_invoke(wrapper):
+            inv = self.parseInvoke(node)
+            wrapper.set_invoke(inv)
+            self.doc.datamodel[inv.invokeid] = inv
+            dispatcher.connect(self.onInvokeSignal, "init.invoke." + wrapper.invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "result.invoke." + wrapper.invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + wrapper.invokeid, inv)
+            
+            inv.start(self.interpreter.externalQueue)
+            
+        wrapper = InvokeWrapper(invokeid)
+        wrapper.invoke = start_invoke
+        
+        return wrapper
+        
+        
+        
+    def onInvokeSignal(self, signal, sender, **kwargs):
+        self.logger.debug("onInvokeSignal " + signal)
+        if signal.startswith("error"):
+            self.raiseError(signal)
+        else:
+            self.interpreter.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)  
+    
     def parseInvoke(self, node):
-        from invoke import InvokeSCXML, InvokeSOAP
-        if node.get("type") == "scxml": # here's where we add more invoke types. 
+        type = self.parseAttr(node, "type")
+        src = self.parseAttr(node, "src")
+        if type == "scxml": # here's where we add more invoke types. 
                      
-            inv = InvokeSCXML(node.get("id"))
-            if node.get("src"):
-                inv.content = urlopen(node.get("src")).read()
+            inv = InvokeSCXML()
+            if src:
+                #TODO:this should be asynchronous
+                inv.content = urlopen(src).read()
             elif node.find("content") != None:
-                inv.content = ElementTree.tostring(node.find("content/scxml"))
+                inv.content = node.find("content").text % self.doc.datamodel
             
         
         elif node.get("type") == "x-pyscxml-soap":
-            inv = InvokeSOAP(node.get("id"))
-            inv.content = node.get("src")
-            
+            inv = InvokeSOAP()
+            inv.content = src
+        elif node.get("type") == "x-pyscxml-sessionserver":
+            inv = InvokePySCXMLServer()
+            inv.content = src
         
-        inv.autoforward = bool(node.get("autoforward"))
-        inv.type = node.get("type")   
+        inv.autoforward = node.get("autoforward", "false").lower() == "true"
+        inv.type = type    
         
         if node.find("finalize") != None and len(node.find("finalize")) > 0:
             inv.finalize = partial(self.do_execute_content, node.find("finalize"))
@@ -346,7 +401,7 @@ class Compiler(object):
             paramList = node.findall("param")
             def f():
                 for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
-                    if self.doc.datamodel["_event"].data.has_key(param.get("name")):
+                    if param.get("name") in self.doc.datamodel["_event"].data:
                         self.doc.datamodel[param.get("name")] = self.doc.datamodel["_event"].data[param.get("name")]
             inv.finalize = f
         return inv
@@ -375,17 +430,11 @@ class Compiler(object):
             elif node.get("src"):
                 try:
                     self.doc.datamodel[node.get("id")] = urlopen(node.get("src")).read()
-                except Exception as e:
+                except Exception, e:
                     self.logger.error("Data src not found : '%s'\n" % node.get("src"))
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
                     raise e
 
-    
-#def getLogFunction(label, toPrint):
-#    if not label: label = "Log"
-#    def f():
-#        print "%s: %s" % (label, toPrint())
-#    return f
     
 
 def preprocess(tree):

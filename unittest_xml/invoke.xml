@@ -1,7 +1,7 @@
 <scxml>
 	<state>
 		<invoke id="i" type="scxml">
-			<content>
+			<content><![CDATA[
 				<scxml>
 					<datamodel>
 						<data id="x" />
@@ -29,7 +29,7 @@
 						</donedata>
 					</final>
 				</scxml>
-			</content>
+			]]></content>
 		</invoke>
 		<transition event="init.invoke">
 			<send type="scxml" target="#i" event="calculate">

@@ -6,7 +6,7 @@ Created on Dec 6, 2010
 '''
 
 import xml.etree.ElementTree as etree
-from interpreter import Event
+
 import pickle
 import json
 
@@ -76,3 +76,12 @@ class SCXMLEventProcessor(object):
         
         return event
     
+class Event(object):
+    def __init__(self, name, data, invokeid=None, type="platform"):
+        self.name = name
+        self.data = data
+        self.invokeid = invokeid
+        self.type = type
+        self.origin = None
+        self.origintype = None
+        self.sendid = None

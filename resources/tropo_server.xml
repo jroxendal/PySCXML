@@ -1,0 +1,74 @@
+<scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://scxml-schema.googlecode.com/svn/SCXML-Schema/ecma/scxml-profile-ecma.xsd">
+    
+    <datamodel>
+        <data id="session_server" expr="'http://cling.gu.se:8082/'" /> 
+        <data id="json_request" /> 
+    </datamodel>
+    
+    <script><![CDATA[
+        import json
+        
+        def get_session():
+            if json_request.get("session"):
+                return json_request['session']['callId']
+            else:
+                return json_request["result"]["callId"]
+            return _event
+        
+        def get_session_target(session):
+            return session_server +'%s/scxml' % session
+        
+        def get_json():
+            return json.loads(_event.data["request"])
+        
+        def parseEvent():
+            if json_request.get("session"):
+                event = "tropo.init"
+            elif json_request["result"].get("actions"):
+                if json_request["result"]["actions"].get("disposition") == "TIMEOUT":
+                    event = "tropo.timeout"
+                elif json_request["result"]["actions"].get("disposition") == "NOMATCH":
+                    event = "tropo.nomatch"
+                else:
+                    event = "tropo.answer.ask"
+                
+            elif json_request["result"].get("error"):
+                event = "tropo.error"
+            else:
+                event = "tropo.answer.say"
+                
+            return event
+        
+        
+    ]]></script>
+
+    <state id="listening">
+
+        <transition event="http.post" target="processing">
+            <log label="post content" expr="_event.data" />
+            <assign location="json_request" expr="get_json()" />
+        </transition>
+
+    </state>
+    
+    <state id="processing">
+        <invoke id="i" type="x-pyscxml-sessionserver" 
+            srcexpr="get_session_target(get_session())" /> 
+        
+        <transition event="init.invoke.i">
+            <send eventexpr="parseEvent()" target="#i" >
+                <param name="json_data" expr="json_request" />
+            </send>
+        </transition>
+        <transition event="result.invoke.i" target="listening">
+            <log label="sending response" expr="_event.data" />
+            <send target="#_response">
+                <param name="content" expr="_event.data['response']" />
+            </send>
+        </transition>
+        
+    </state>
+
+</scxml>

@@ -29,6 +29,7 @@ import Queue
 import threading
 from datastructures import OrderedSet
 import logging
+from eventprocessor import Event
 
 
 
@@ -101,7 +102,7 @@ class Interpreter(object):
             
             for state in self.statesToInvoke:
                 for inv in state.invoke:
-                    self.invoke(inv, self.externalQueue)
+                    inv.invoke(inv)
             self.statesToInvoke.clear()
             
             self.previousConfiguration = self.configuration
@@ -243,19 +244,6 @@ class Interpreter(object):
                 self.cancelInvoke(inv)
             self.configuration.delete(s)
     
-    def invoke(self, inv, extQ):
-        from louie import dispatcher
-        
-        self.dm[inv.invokeid] = inv
-        
-        dispatcher.connect(self.onInvokeSignal, "init.invoke." + inv.invokeid, inv)
-        dispatcher.connect(self.onInvokeSignal, "result.invoke." + inv.invokeid, inv)
-        
-        inv.start(extQ)
-        
-    def onInvokeSignal(self, signal, sender, **kwargs):
-        self.logger.debug("onInvokeSignal " + signal)
-        self.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)
         
     def cancelInvoke(self, inv):
         inv.cancel()
@@ -478,15 +466,4 @@ def getStateDepth(s):
     return depth
         
 
-class Event(object):
-    def __init__(self, name, data, invokeid=None, type="platform"):
-        self.name = name
-        self.data = data
-        self.invokeid = invokeid
-        self.type = type
-        self.origin = None
-        self.origintype = None
-        self.sendid = None
-        
-    
     

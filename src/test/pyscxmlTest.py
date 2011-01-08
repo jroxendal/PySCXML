@@ -23,7 +23,7 @@ import unittest
 from scxml.pyscxml import StateMachine
 import os.path
 import threading
-from scxml import pyscxml_server
+from scxml.pyscxml_server import PySCXMLServer
 xmlDir = "../../unittest_xml/"
 if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
@@ -112,6 +112,8 @@ class RegressionTest(unittest.TestCase):
         time.sleep(6) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
         
+        
+        
         sessionid = "session1"
         xml1 = '''\
             <scxml name="session1">
@@ -125,7 +127,8 @@ class RegressionTest(unittest.TestCase):
             </scxml>
         '''
         
-        t = threading.Thread(target=pyscxml_server.start_server, args=("localhost", 8081, xml1, sessionid))
+        server = PySCXMLServer("localhost", 8081, xml1)
+        t = threading.Thread(target=server.serve_forever)
         t.start()
         time.sleep(1)
         
@@ -146,7 +149,8 @@ class RegressionTest(unittest.TestCase):
             </scxml>
         '''
 
-        t = threading.Thread(target=pyscxml_server.start_server, args=("localhost", 8082, xml2, sessionid2))
+        server = PySCXMLServer("localhost", 8081, xml, server_type=TYPE_RESPONSE)
+        t = threading.Thread(target=server.serve_forever)
         t.start()
         time.sleep(1)
         self.assert_(pyscxml_server.sm_mapping[sessionid].isFinished() and pyscxml_server.sm_mapping[sessionid2].isFinished())

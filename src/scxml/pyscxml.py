@@ -52,6 +52,7 @@ class StateMachine(object):
         self.send = self.interpreter.send
         self.In = self.interpreter.In
         self.doc = self.compiler.parseXML(xml, self.interpreter)
+        self.doc.datamodel["_x"] = {"self" : self}
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
         
@@ -71,10 +72,10 @@ class StateMachine(object):
 
 if __name__ == "__main__":
     
-    xml = open("../../resources/colors.xml").read()
+#    xml = open("../../resources/colors.xml").read()
 #    xml = open("../../resources/history_variant.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
-#    xml = open("../../unittest_xml/invoke.xml").read()
+    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()

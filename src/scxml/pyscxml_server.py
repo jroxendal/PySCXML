@@ -21,8 +21,8 @@ Created on Sep 21, 2010
 
 from pprint import pprint
 from wsgiref.simple_server import make_server
-import json
 from scxml.pyscxml import StateMachine
+from scxml import logger
 from time import sleep, time
 import logging
 from eventprocessor import SCXMLEventProcessor as Processor
@@ -32,88 +32,138 @@ from interpreter import Event
 from functools import partial
 from xml.parsers.expat import ExpatError
 
-logger = logging.getLogger("pyscxml.pyscxml_server")
+TYPE_RESPONSE = "type_response"
+TYPE_DEFAULT = "type_default"
 
-sm_mapping = {}
 
-def request_handler(environ, start_response):
-    if environ['REQUEST_METHOD'] == 'POST':
-        
-        post_env = environ.copy()
-
-        fs = cgi.FieldStorage(fp=environ['wsgi.input'],
-                               environ=post_env,
-                               keep_blank_values=True)
-        
-        output = ""
-        headers = [('Content-type', 'text/plain')]
+class PySCXMLServer(object):
+    
+    def __init__(self, host, port, scxml_doc, server_type=TYPE_RESPONSE):
+        self.logger = logging.getLogger("pyscxml.pyscxml_server.PySCXMLServer")
+        self.host = host
+        self.port = port
+        self.scxml_doc = scxml_doc
+        self.sm_mapping = {}
+        self.server_type = server_type
+        self.httpd = make_server(host, port, self.request_handler)
+    
+    def serve_forever(self):
+        """Start the server."""
+        self.logger.info("Starting the server")
         try:
-            event_reporter = parse_request(environ["PATH_INFO"], fs)
-            status = '200 OK'
-            timer = threading.Timer(0.1, event_reporter)
-            timer.start()
-        except KeyError:
-            status = '403 FORBIDDEN'
-        except ExpatError as e:
-            logger.error("Parsing of incoming scxml message failed for message %s" % fs.getvalue("_content") )
-            status = '400 BAD REQUEST'
-            output = str(e)
-
-        start_response(status, headers)
-        return [output]
-    else:
-        status = '200 OK'
-        headers = [('Content-type', 'text/plain')]
-        start_response(status, headers)
-        return ["server running."]
-
-
-
-def parse_request(path, fs):
-    pathlist = filter(lambda x: bool(x), path.split("/"))
-    session = pathlist[0]
-    
-    sm = sm_mapping[session]
-    
-    type = pathlist[1]
-
-    
-    if type == "basichttp":
+            self.httpd.serve_forever()
+        except KeyboardInterrupt:
+            import sys
+            sys.exit("KeyboardInterrupt")
         
-        if "_content" in fs:
-            event = Processor.fromxml(fs.getvalue("_content"), "unknown")
-        else:
-            data = dict([(key, fs.getvalue(key)) for key in fs])
-            
-            event = Event(["http", "post"], data=data)
-        
-    elif type == "scxml":
-        event = Processor.fromxml(fs.getvalue("_content"))
-
-    return partial(sm.interpreter.externalQueue.put, event)
-
-
-def start_server(host, port, scxml_doc, *init_sessions):
-    """Start the server."""
-    print "starting pyscxml_server"
-    
-    for sessionid in init_sessions:
-        print "initializing session at '%s'" % sessionid
-        sm = StateMachine(scxml_doc)
+    def init_session(self, sessionid):
+        sm = StateMachine(self.scxml_doc)
         sm.datamodel["_sessionid"] = sessionid
-        sm_mapping[sessionid] = sm
-        sm.datamodel["_ioprocessors"] = {"scxml" : "http://" + host + ":" + str(port) + "/" + sessionid + "/" + "scxml",
-                                         "basichttp" : "http://" + host + ":" + str(port) + "/" + sessionid + "/" + "basichttp" }
+        self.sm_mapping[sessionid] = sm
+        sm.datamodel["_ioprocessors"] = {"scxml" : "http://%s:%s/%s/scxml" % (self.host, self.port, sessionid),
+                                         "basichttp" : "http://%s:%s/%s/basichttp" % (self.host, self.port, sessionid)}
         sm.start()
-    
-    
-    httpd = make_server(host, port, request_handler)
-    httpd.serve_forever()
+        return sm
+        
+    def request_handler(self, environ, start_response):
+        if environ['REQUEST_METHOD'] == 'POST':
+            
+            fs = cgi.FieldStorage(fp=environ['wsgi.input'],
+                                   environ=environ,
+                                   keep_blank_values=True)
+            
+            try:
+                data = dict([(key, fs.getvalue(key)) for key in fs.keys()])
+            except TypeError:
+                data = {"request" : fs.value }
+            
+            if environ["QUERY_STRING"]:
+                data.update(x.split("=") for x in environ["QUERY_STRING"].split("&"))
+
+            output = ""
+            headers = [('Content-type', 'text/plain')]
+            pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+            session = pathlist[0]
+            sm = self.sm_mapping.get(session) or self.init_session(session)
+            type = pathlist[1]
 
 
+            try:
+                status = '200 OK'
+                
+                if type == "basichttp":
+            
+                    if "_content" in data:
+                        event = Processor.fromxml(data["_content"], "unknown")
+                    else:
+                        event = Event(["http", "post"], data=data)
+                    
+                elif type == "scxml":
+                    if "_content" in data:
+                        event = Processor.fromxml(data["_content"])
+                    else:
+                        event = Processor.fromxml(data["request"])    
+                
+                if self.server_type == TYPE_DEFAULT:
+                    timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
+                    timer.start()
+                elif self.server_type == TYPE_RESPONSE:
+                    sm.interpreter.externalQueue.put(event)
+                    output = sm.datamodel["_response"].get() #blocks
+                    output = output["content"].strip()
+                
+            except KeyError:
+                status = '403 FORBIDDEN'
+            except ExpatError, e:
+                self.logger.error("Parsing of incoming scxml message failed for message %s" % fs.getvalue("_content") )
+                status = '400 BAD REQUEST'
+                output = str(e)
+    
+            start_response(status, headers)
+            
+            return [output]
+        else:
+            pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+            session = pathlist[0]
+            sm = self.sm_mapping.get(session) or self.init_session(session)
+            status = '200 OK'
+            headers = [('Content-type', 'text/plain')]
+            start_response(status, headers)
+            return ["configuration : %s" % sm.interpreter.configuration]
+
+        
 
 if __name__ == "__main__":
+#    xml = open("../../resources/tropo_server.xml").read()
 
+    xml = '''\
+        <scxml>
+            <state>
+                <transition event="update">
+                    <log label="server update" expr="_event.data" />
+                    <send target="#_response" >
+                        <content>
+                            hello!
+                        </content>
+                    </send>
+                </transition>
+            </state>
+        </scxml>
+    '''
+    
+    xml = open("../../resources/tropo_server.xml").read()
+    
+    server = PySCXMLServer("cling.gu.se", 8081, xml, server_type=TYPE_RESPONSE)
+    t = threading.Thread(target=server.serve_forever)
+    t.start()
+    
+    xml2 = open("../../resources/tropo_colors.xml").read()
+    
+    server = PySCXMLServer("cling.gu.se", 8082, xml2, server_type=TYPE_RESPONSE)
+    server.serve_forever()
+    
+    
+    
     sessionid = "session1"
     xml1 = '''\
         <scxml name="session1">
@@ -133,9 +183,9 @@ if __name__ == "__main__":
         </scxml>
     '''
     
-    t = threading.Thread(target=start_server, args=("localhost", 8081, xml1, sessionid))
-    t.start()
-    sleep(1)
+#    t = threading.Thread(target=start_server, args=("localhost", 8081, xml1, sessionid))
+#    t.start()
+#    sleep(1)
     
     
     sessionid = "session2"
@@ -158,9 +208,9 @@ if __name__ == "__main__":
         </scxml>
     '''
     
-    t = threading.Thread(target=start_server, args=("localhost", 8082, xml2, sessionid))
-    t.start()
-    sleep(1)
+#    t = threading.Thread(target=start_server, args=("localhost", 8082, xml2, sessionid))
+#    t.start()
+#    sleep(1)
     
     
     

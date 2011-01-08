@@ -25,22 +25,42 @@ This file is part of pyscxml.
 from louie import dispatcher
 from messaging import exec_async
 from functools import partial
+from scxml.messaging import UrlGetter
+import logging
 
-class BaseInvoke(object):
+
+class InvokeWrapper(object):
+    
     def __init__(self, id):
+        self.invoke = lambda: None
         self.invokeid = id
+        self.invoke_obj = None
+        
+    def set_invoke(self, inv):
+        self.invoke_obj = inv
+        inv.invokeid = self.invokeid
+        self.autoforward = inv.autoforward
+        self.cancel = inv.cancel
+        
+    def finalize(self):
+        if self.invoke_obj:
+            self.invoke_obj.finalize()
+    
+class BaseInvoke(object):
+    def __init__(self):
+        self.invokeid = None
         self.autoforward = False
         self.content = None
         self.finalize = lambda:None
         
         
     def start(self, parentQueue):
-        pass
 #        dispatcher.send("init.invoke." + self.invokeid, self)
-        
+        pass
     
     def cancel(self):
-        self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)
+        pass
+        #self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)
     
          
     def __str__(self):
@@ -48,8 +68,8 @@ class BaseInvoke(object):
     
 
 class InvokeSCXML(BaseInvoke):
-    def __init__(self, id):
-        BaseInvoke.__init__(self, id)
+    def __init__(self):
+        BaseInvoke.__init__(self)
         self.sm = None
         self.send = None
         
@@ -64,8 +84,8 @@ class InvokeSCXML(BaseInvoke):
 
 class InvokeSOAP(BaseInvoke):
     
-    def __init__(self, id):
-        BaseInvoke.__init__(self, id)
+    def __init__(self):
+        BaseInvoke.__init__(self)
         self.client = None
     
     def start(self, parentQueue):
@@ -84,4 +104,34 @@ class InvokeSOAP(BaseInvoke):
         
         dispatcher.send("result.invoke.%s.%s" % (self.invokeid, method), self, data=result)
     
+class InvokePySCXMLServer(BaseInvoke):
     
+    def __init__(self):
+        BaseInvoke.__init__(self)
+        self.logger = logging.getLogger("pyscxml.invoke.InvokePySCXMLServer")
+        self.getter = UrlGetter()
+        
+        dispatcher.connect(self.onHttpResult, UrlGetter.HTTP_RESULT, self.getter)
+        dispatcher.connect(self.onHttpError, UrlGetter.HTTP_ERROR, self.getter)
+        dispatcher.connect(self.onURLError, UrlGetter.URL_ERROR, self.getter)
+        
+        
+    def send(self, messageXML):
+        self.getter.get_async(self.content, {"_content" : messageXML})
+    
+    def start(self, parentQueue):
+        dispatcher.send("init.invoke." + self.invokeid, self)
+    
+    def onHttpError(self, signal, error_code, source, **named ):
+        self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
+        dispatcher.send("error.communication.invoke." + self.invokeid, self, data={"error_code" : error_code})
+
+    def onURLError(self, signal, sender):
+        self.logger.error("The address %s is currently unavailable" % sender.url)
+        dispatcher.send("error.communication.invoke." + self.invokeid, self)
+        
+    def onHttpResult(self, signal, result, **named):
+        self.logger.info("onHttpResult " + str(named))
+        dispatcher.send("result.invoke.%s" % (self.invokeid), self, data={"response" : result})
+    
+        
