@@ -18,7 +18,6 @@
     </state>
     
     <state id="greeting">
-        
         <onentry>
             <send target="#_response">
                 <content>
@@ -26,18 +25,39 @@
                 </content>
             </send>
         </onentry>
-        
+        <transition target="dialog" event="tropo.answer.say" />
+    </state>
+    
+    <state id="error">
+        <state id="nomatch">
+            <onentry>
+                <send target="#_response">
+                    <content>
+                        {"say": {value : "I'm afraid I didn't quite get that.'"}}
+                    </content>
+                </send>
+            </onentry>
+        </state>
+        <state id="timeout">
+            <onentry>
+                <send target="#_response">
+                    <content>
+                        {"say": {value : "I can't hear you."}}
+                    </content>
+                </send>
+            </onentry>
+        </state>
+        <transition event="tropo.answer.say" target="h" />
     </state>
     
     <state id="dialog">
-    
-       <transition event="tropo.nomatch tropo.timeout">
-            <send target="#_response">
-                <content>
-                    {"hangup": null}
-                </content>
-            </send>
-        </transition>
+        <history id="h" >
+            <transition target="colors" />
+        </history>
+       <transition event="tropo.timeout" target="timeout" />
+       <transition event="tropo.nomatch" target="nomatch" />
+       
+            
         
         <state id="colors">
             <state id="color_q" >
