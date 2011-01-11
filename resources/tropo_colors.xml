@@ -33,7 +33,7 @@
             <onentry>
                 <send target="#_response">
                     <content>
-                        {"say": {value : "I'm afraid I didn't quite get that.'"}}
+                        {"say": {"value" : "I'm afraid I didn't quite get that."}}
                     </content>
                 </send>
             </onentry>
@@ -42,7 +42,7 @@
             <onentry>
                 <send target="#_response">
                     <content>
-                        {"say": {value : "I can't hear you."}}
+                        {"say": {"value" : "I can't hear you."}}
                     </content>
                 </send>
             </onentry>
@@ -56,7 +56,6 @@
         </history>
        <transition event="tropo.timeout" target="timeout" />
        <transition event="tropo.nomatch" target="nomatch" />
-       
             
         
         <state id="colors">
@@ -67,7 +66,7 @@
                         {
                             "ask": {
                                 "say": {
-                                    "value": "Welcome. Which do you prefer, red or blue?" 
+                                    "value": "Which do you prefer, red or blue?" 
                                 },
                                 "choices": {
                                     "value": "blue, red, quit" 

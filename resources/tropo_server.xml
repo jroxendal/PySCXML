@@ -15,7 +15,7 @@
                 session = json_request['session']['callId']
             else:
                 session = json_request["result"]["callId"]
-            return return session_server +'%s/scxml' % session
+            return session_server +'%s/scxml' % session
         
         def get_json():
             return json.loads(_event.data["request"])
