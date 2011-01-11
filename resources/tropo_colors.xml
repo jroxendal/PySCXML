@@ -14,7 +14,19 @@
     </script>
     
     <state id="init">
-       <transition event="tropo.init" target="dialog" />
+       <transition event="tropo.init" target="greeting" />
+    </state>
+    
+    <state id="greeting">
+        
+        <onentry>
+            <send target="#_response">
+                <content>
+                    {"say":{"value": "Welcome to the our simple dialog."}}
+                </content>
+            </send>
+        </onentry>
+        
     </state>
     
     <state id="dialog">
@@ -22,43 +34,27 @@
        <transition event="tropo.nomatch tropo.timeout">
             <send target="#_response">
                 <content>
-                    {
-                    "tropo": [
-                        {
-                            "hangup": null
-                        }
-                    ] 
-                }
+                    {"hangup": null}
                 </content>
             </send>
         </transition>
-    
+        
         <state id="colors">
-            <state id="c1" >
+            <state id="color_q" >
                 <onentry>
                     <send target="#_response">
                     <content>
                         {
-                            "tropo": [
-                                {
-                                    "ask": {
-                                        "say": {
-                                            "value": "Welcome. Which do you prefer, red or blue?" 
-                                        },
-                                        "choices": {
-                                            "value": "blue, red, quit" 
-                                        },
-                                        "name": "color" ,
-                                        "bargein": false
-                                    }
+                            "ask": {
+                                "say": {
+                                    "value": "Welcome. Which do you prefer, red or blue?" 
                                 },
-                                {
-                                    "on": {
-                                        "next": "/session1/basichttp",
-                                        "event": "continue" 
-                                    } 
-                                } 
-                            ] 
+                                "choices": {
+                                    "value": "blue, red, quit" 
+                                },
+                                "name": "color" ,
+                                "bargein": false
+                            }
                         }
                    </content>
                 </send>
@@ -66,7 +62,7 @@
                 </onentry>
                 <transition event="tropo.answer.ask" 
                             cond="get_actions_attr('interpretation') != 'quit'" 
-                            target="c2">
+                            target="color_a">
                             
                     <script>
                         interpretation = get_actions_attr('interpretation')
@@ -74,84 +70,56 @@
                     </script>   
                     <send target="#_response">
                     <content>
-                    {
-                    "tropo": [
-                    {
-                    "say": [{"value": "You said %(interpretation)s"},
-                    {"value": "With a confidence of %(confidence)s"}]
-                    },                    {
-                        "on": {
-                            "next": "/session1/basichttp",
-                            "event": "continue" 
-                        } 
-                    }
-                    ]
-                    }
+                        {
+                        "say": [
+                            {"value": "You said %(interpretation)s"},
+                            {"value": "With a confidence of %(confidence)s"}
+                            ]
+                        }                    
                     </content>
                </send>
                 </transition>
             </state>
             
-            <state id="c2">
+            <state id="color_a">
                 <transition event="tropo.answer.say" target="sizes" />
             </state>
             
         </state>
         <state id="sizes">
-            <state id="s1">
+            <state id="size_q">
                 <onentry>
                 <send target="#_response">
                     <content>
-                    {
-                            "tropo": [
-                                {
-                                    "ask": {
-                                        "say": {
-                                            "value": "Which do you prefer, small or large?" 
-                                        },
-                                        "choices": {
-                                            "value": "small, large, quit" 
-                                        },
-                                        "name": "size" ,
-                                        "bargein": false
-                                    }
+                        {
+                            "ask": {
+                                "say": {
+                                    "value": "Which do you prefer, small or large?" 
                                 },
-                                {
-                                    "on": {
-                                        "next": "/session1/basichttp",
-                                        "event": "continue" 
-                                    } 
-                                } 
-                            ] 
+                                "choices": {
+                                    "value": "small, large, quit" 
+                                },
+                                "name": "size" ,
+                                "bargein": false
+                            }
                         }
-
                    </content>
                    </send>
                 </onentry>
                 
                 <transition event="tropo.answer.ask" 
                             cond="get_actions_attr('interpretation') != 'quit'" 
-                            target="s2" >
+                            target="size_a" >
                     <script>confidence = get_actions_attr("confidence")</script>
                     <send target="#_response">
                     <content>
-                    {
-                    "tropo": [
-                        {"say": {"value": "You answered with a confidence of %(confidence)s"}},
-                        {
-                        "on": {
-                            "next": "/session1/basichttp",
-                            "event": "continue" 
-                        } 
-                    }
-                        ]
-                    }
+                        {"say": {"value": "You answered with a confidence of %(confidence)s"}}
                    </content>
                    </send>
                 </transition>
             </state>
             
-            <state id="s2">
+            <state id="size_a">
                 <transition event="tropo.answer.say" target="colors" />
             </state>
         </state>
@@ -160,15 +128,10 @@
             <send target="#_response">
             <content>
                 {
-                    "tropo": [
-                        {
-                            "say": {
-                                "value" : "Ok, thank you and goodbye!"
-                                }
-                        }
-                    ] 
+                    "say": {
+                        "value" : "Ok, thank you and goodbye!"
+                    }
                 }
-
            </content>
            </send>
         </transition>

@@ -388,7 +388,7 @@ class Compiler(object):
         elif node.get("type") == "x-pyscxml-soap":
             inv = InvokeSOAP()
             inv.content = src
-        elif node.get("type") == "x-pyscxml-sessionserver":
+        elif node.get("type") == "x-pyscxml-responseserver":
             inv = InvokePySCXMLServer()
             inv.content = src
         

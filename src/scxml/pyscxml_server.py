@@ -38,7 +38,7 @@ TYPE_DEFAULT = "type_default"
 
 class PySCXMLServer(object):
     
-    def __init__(self, host, port, scxml_doc, server_type=TYPE_RESPONSE):
+    def __init__(self, host, port, scxml_doc, server_type=TYPE_DEFAULT):
         self.logger = logging.getLogger("pyscxml.pyscxml_server.PySCXMLServer")
         self.host = host
         self.port = port
@@ -153,13 +153,13 @@ if __name__ == "__main__":
     
     xml = open("../../resources/tropo_server.xml").read()
     
-    server = PySCXMLServer("cling.gu.se", 8081, xml, server_type=TYPE_RESPONSE)
+    server = PySCXMLServer("localhost", 8081, xml, server_type=TYPE_RESPONSE)
     t = threading.Thread(target=server.serve_forever)
     t.start()
     
     xml2 = open("../../resources/tropo_colors.xml").read()
     
-    server = PySCXMLServer("cling.gu.se", 8082, xml2, server_type=TYPE_RESPONSE)
+    server = PySCXMLServer("localhost", 8082, xml2, server_type=TYPE_RESPONSE)
     server.serve_forever()
     
     

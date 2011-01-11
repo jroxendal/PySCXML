@@ -10,15 +10,12 @@
     <script><![CDATA[
         import json
         
-        def get_session():
+        def get_session_target():
             if json_request.get("session"):
-                return json_request['session']['callId']
+                session = json_request['session']['callId']
             else:
-                return json_request["result"]["callId"]
-            return _event
-        
-        def get_session_target(session):
-            return session_server +'%s/scxml' % session
+                session = json_request["result"]["callId"]
+            return return session_server +'%s/scxml' % session
         
         def get_json():
             return json.loads(_event.data["request"])
@@ -41,21 +38,33 @@
                 
             return event
         
+        def build_response():
+            return '''\
+                {"tropo" : [
+                    %s,
+                        { "on": {
+                                "next": "/session1/basichttp",
+                                "event": "continue" 
+                            }
+                        }
+                    ]
+                }
+                
+            ''' % _event.data['response']
+            
         
     ]]></script>
 
     <state id="listening">
 
         <transition event="http.post" target="processing">
-            <log label="post content" expr="_event.data" />
             <assign location="json_request" expr="get_json()" />
         </transition>
 
     </state>
     
     <state id="processing">
-        <invoke id="i" type="x-pyscxml-sessionserver" 
-            srcexpr="get_session_target(get_session())" /> 
+        <invoke id="i" type="x-pyscxml-responseserver" srcexpr="get_session_target()" /> 
         
         <transition event="init.invoke.i">
             <send eventexpr="parseEvent()" target="#i" >
@@ -63,9 +72,8 @@
             </send>
         </transition>
         <transition event="result.invoke.i" target="listening">
-            <log label="sending response" expr="_event.data" />
             <send target="#_response">
-                <param name="content" expr="_event.data['response']" />
+                <param name="content" expr="build_response()" />
             </send>
         </transition>
         
