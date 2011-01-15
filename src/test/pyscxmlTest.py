@@ -20,10 +20,10 @@ This file is part of pyscxml.
 
 import time
 import unittest
-from scxml.pyscxml import StateMachine
+from scxml.pyscxml import StateMachine, MultiSession
 import os.path
 import threading
-from scxml.pyscxml_server import PySCXMLServer
+from scxml.pyscxml_server import PySCXMLServer, TYPE_RESPONSE
 xmlDir = "../../unittest_xml/"
 if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
@@ -111,7 +111,35 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         time.sleep(6) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
+
+        sm = StateMachine(open(xmlDir + "cheetah.xml").read())
+        sm.start()
+        time.sleep(1) #lets us avoid asynchronous errors
+        self.assert_(sm.isFinished())
         
+        
+        xml2 = '''
+        <scxml>
+            <state>
+                <onentry>
+                    <send event="e1" target="#_scxml_session1"  />
+                </onentry>
+            </state>
+        </scxml>
+        '''
+        xml1 = '''
+            <scxml>
+                <state>
+                    <transition event="e1">
+                        <log label="event fired" expr="_event" />
+                    </transition>
+                </state>
+            </scxml>
+        '''
+        
+        ms = MultiSession(session1=xml1, session2=xml2)
+        time.sleep(1)
+        self.assert_(sm.isFinished())
         
         
         sessionid = "session1"

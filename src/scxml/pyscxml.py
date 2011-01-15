@@ -18,6 +18,7 @@ This file is part of pyscxml.
 import logger
 from compiler import Compiler
 from interpreter import Interpreter
+from louie import dispatcher
 
 import time
 
@@ -32,7 +33,6 @@ class StateMachine(object):
     This class provides the entry point for the pyscxml library. 
     '''
     
-    
     def __init__(self, xml, logger_handler=logger.default_handler, log_function=default_logfunction):
         '''
         @param xml: the scxml document to parse, expressed as a string.
@@ -46,7 +46,9 @@ class StateMachine(object):
         else:
             logger.addHandler(logger.NullHandler())
 
+        self.is_finished = False
         self.interpreter = Interpreter()
+        dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
         self.compiler = Compiler()
         self.compiler.log_function = log_function
         self.send = self.interpreter.send
@@ -65,8 +67,56 @@ class StateMachine(object):
         
     def isFinished(self):
         '''Returns True if the statemachine has reached it top-level final state'''
-        return len(self.interpreter.configuration) == 0
+        return self.is_finished
+    
+    def on_exit(self, sender):
+        if sender is self.interpreter:
+            self.is_finished = True
+            dispatcher.send("signal_exit", self)
         
+
+class MultiSession(object):
+    
+    def __init__(self, **kwargs):
+        '''
+        @param kwargs: the optional keyword arguments run 
+        make_session(key, value) on each kwarg pair, thus initalizing 
+        a set of sessions. 
+        '''
+        self.sm_mapping = {}
+        for sessionid, xml in kwargs.items():
+            self.make_session(sessionid, xml)
+            
+    def __iter__(self):
+        return self.dm_mapping.iteritems()
+    
+    def _register_session(self, sm):
+        for sessionid, session in self.sm_mapping.items():
+            session.datamodel["_x"]["sessions"][sm.datamodel["_sessionid"]] = sm
+            sm.datamodel["_x"]["sessions"][sessionid] = session
+            
+    def _unregister_session(self, sm):
+        for session in self.sm_mapping.values():
+            del session.datamodel["_x"]["sessions"][sm.datamodel["_sessionid"]]
+        del sm
+              
+    
+    def make_session(self, sessionid, xml):
+        '''initalizes and starts a new StateMachine 
+        session at the provided sessionid. '''
+        sm = StateMachine(xml)
+        self.sm_mapping[sessionid] = sm
+        sm.datamodel["_x"]["sessions"] = {}
+        sm.datamodel["_sessionid"] = sessionid
+        self._register_session(sm)
+        dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
+        sm.start()
+        
+        
+    
+    def on_sm_exit(self, sender):
+        if sender.datamodel["_sessionid"] in self.sm_mapping:
+            self._unregister_session(sender)
 
 
 
@@ -81,6 +131,38 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     
+    xml = '''
+        <scxml>
+            <datamodel>
+                <data id="num_list" expr="range(2)" />
+            </datamodel>
+            <state>
+                <invoke>
+                    <content><![CDATA[
+                        <scxml>
+                            <parallel id="p">
+                                #for $n in $num_list
+                                <state id="s$str($n)">
+                                    <onentry><log label="entered state" expr="'$n'" /></onentry>
+                                    <final id="local_final$n" />
+                                </state>
+                                #end for
+                                <transition event="done.state.p" target="final" />
+                            </parallel>
+                            <final id="final" />
+                        </scxml>
+                    ]]></content>
+                </invoke>
+                <transition event="done.invoke" target="f" />
+            </state>
+            <final id="f" />
+        </scxml>
+    '''
+    from Cheetah.Template import Template
+    xml = str(Template(xml, searchList=[{"num_list" : range(3)}]))
+    print xml
+#    from xml.etree import ElementTree as etree
+#    print etree.tostring(etree.fromstring(xml))
     sm = StateMachine(xml)
     sm.start()
     time.sleep(1)

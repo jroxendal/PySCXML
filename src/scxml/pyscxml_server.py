@@ -14,14 +14,14 @@ This file is part of pyscxml.
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
 
-Created on Sep 21, 2010
+Created on Dec 15, 2010
 
 @author: Johan Roxendal
 '''
 
 from pprint import pprint
 from wsgiref.simple_server import make_server
-from scxml.pyscxml import StateMachine
+from scxml.pyscxml import StateMachine, MultiSession
 from scxml import logger
 from time import sleep, time
 import logging
@@ -38,7 +38,7 @@ TYPE_DEFAULT = "type_default"
 
 class PySCXMLServer(object):
     
-    def __init__(self, host, port, scxml_doc, server_type=TYPE_DEFAULT):
+    def __init__(self, host, port, scxml_doc, server_type=TYPE_DEFAULT, **kwargs):
         self.logger = logging.getLogger("pyscxml.pyscxml_server.PySCXMLServer")
         self.host = host
         self.port = port
@@ -46,6 +46,10 @@ class PySCXMLServer(object):
         self.sm_mapping = {}
         self.server_type = server_type
         self.httpd = make_server(host, port, self.request_handler)
+        self.handler_mapping = {}
+    
+    def register_handler(self, type, input_handler, output_handler=str.strip):
+        self.handler_mapping[type] = (input_handler, output_handler)
     
     def serve_forever(self):
         """Start the server."""
@@ -60,8 +64,8 @@ class PySCXMLServer(object):
         sm = StateMachine(self.scxml_doc)
         sm.datamodel["_sessionid"] = sessionid
         self.sm_mapping[sessionid] = sm
-        sm.datamodel["_ioprocessors"] = {"scxml" : "http://%s:%s/%s/scxml" % (self.host, self.port, sessionid),
-                                         "basichttp" : "http://%s:%s/%s/basichttp" % (self.host, self.port, sessionid)}
+        sm.datamodel["_ioprocessors"].update( (k, "http://%s:%s/%s/%s" % (self.host, self.port, sessionid, k) )  
+                                              for k in list(self.handler_mapping) + ["basichttp", "scxml"] )
         sm.start()
         return sm
         
@@ -87,10 +91,8 @@ class PySCXMLServer(object):
             sm = self.sm_mapping.get(session) or self.init_session(session)
             type = pathlist[1]
 
-
             try:
                 status = '200 OK'
-                
                 if type == "basichttp":
             
                     if "_content" in data:
@@ -102,7 +104,12 @@ class PySCXMLServer(object):
                     if "_content" in data:
                         event = Processor.fromxml(data["_content"])
                     else:
-                        event = Processor.fromxml(data["request"])    
+                        event = Processor.fromxml(data["request"])
+                        
+                elif type in self.handler_mapping:
+                    #picks out the input handler and executes it.
+                    event = self.handler_mapping[type](session, data, sm, fs)
+                    
                 
                 if self.server_type == TYPE_DEFAULT:
                     timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
@@ -110,6 +117,7 @@ class PySCXMLServer(object):
                 elif self.server_type == TYPE_RESPONSE:
                     sm.interpreter.externalQueue.put(event)
                     output = sm.datamodel["_response"].get() #blocks
+
                     output = output["content"].strip()
                 
             except KeyError:
@@ -131,7 +139,8 @@ class PySCXMLServer(object):
             start_response(status, headers)
             return ["configuration : %s" % sm.interpreter.configuration]
 
-        
+
+
 
 if __name__ == "__main__":
 #    xml = open("../../resources/tropo_server.xml").read()
@@ -151,17 +160,11 @@ if __name__ == "__main__":
         </scxml>
     '''
     
-    xml = open("../../resources/tropo_server.xml").read()
-    
-    server = PySCXMLServer("localhost", 8081, xml, server_type=TYPE_RESPONSE)
-    t = threading.Thread(target=server.serve_forever)
-    t.start()
-    
-    xml2 = open("../../resources/tropo_colors.xml").read()
-    
-    server = PySCXMLServer("localhost", 8082, xml2, server_type=TYPE_RESPONSE)
-    server.serve_forever()
-    
+#    xml = open("../../resources/tropo_server.xml").read()
+#    
+#    server = PySCXMLServer("localhost", 8081, xml, server_type=TYPE_RESPONSE)
+#    t = threading.Thread(target=server.serve_forever)
+#    t.start()
     
     
     sessionid = "session1"

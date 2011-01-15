@@ -32,6 +32,10 @@ from urllib2 import urlopen
 import Queue
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import InvokeSCXML, InvokeSOAP, InvokePySCXMLServer, InvokeWrapper
+from Cheetah.Template import Template 
+from xml.parsers.expat import ExpatError
+
+
 
 tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit"]
 
@@ -131,7 +135,7 @@ class Compiler(object):
                 output[name] = self.getExprValue(name)
         
         if child.find("content") != None:
-            output["content"] = child.find("content").text % self.doc.datamodel
+            output["content"] = str(Template(child.find("content").text, self.doc.datamodel))
                     
         return output
     
@@ -142,7 +146,6 @@ class Compiler(object):
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
         target = self.parseAttr(sendNode, "target")
         data = self.parseData(sendNode)
-        # TODO: incorperate 
         hints = self.parseAttr(sendNode, "hints")
         
         
@@ -158,11 +161,20 @@ class Compiler(object):
                                       toQueue=self.doc.datamodel["_parent"])
             elif target == "#_internal":
                 self.interpreter.raiseFunction(event, data)
-#            elif target == "#_scxml_" sessionid
+                
+            elif target.startswith("#_scxml_"): #sessionid
+                sessionid = target.split("_")[-1]
+                try:
+                    toQueue = self.doc.datamodel["_x"]["sessions"][sessionid].interpreter.externalQueue
+                    self.interpreter.send(event, sendNode.get("id"), delay, data, toQueue=toQueue)
+                except KeyError:
+                    self.logger.error("The session %s is unaccessible." % sessionid)
+                    self.raiseError("error.send.target")
+                
             elif target[0] == "#" and target[1] != "_": # invokeid
                 inv = self.doc.datamodel[target[1:]]
                 if isinstance(inv, InvokePySCXMLServer):
-                    inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id", "")))
+                    inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
                 else:
                     inv.send(event, sendNode.get("id"), delay, data)
             elif target[0] == "#" and target[1:] == "_response":
@@ -174,7 +186,7 @@ class Compiler(object):
                     origin = self.doc.datamodel["_ioprocessors"]["scxml"]
                 except KeyError:
                     origin = ""
-                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id", ""))
+                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id"), hints)
                 
                 getter = self.getUrlGetter(target)
                 
@@ -237,7 +249,13 @@ class Compiler(object):
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef
         xmlStr = removeDefaultNamespace(xmlStr)
-        tree = ElementTree.fromstring(xmlStr)
+        try:
+            tree = ElementTree.fromstring(xmlStr)
+        except ExpatError:
+            
+            xmlStr = "\n".join("%s %s" % (n, line) for n, line in enumerate(xmlStr.split("\n")))
+            self.logger.error(xmlStr)
+            raise
         ElementInclude.include(tree)
         self.strict_parse = tree.get("exmode", "lax") == "strict"
         preprocess(tree)
@@ -373,7 +391,7 @@ class Compiler(object):
             self.interpreter.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)  
     
     def parseInvoke(self, node):
-        type = self.parseAttr(node, "type")
+        type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         if type == "scxml": # here's where we add more invoke types. 
                      
@@ -382,7 +400,7 @@ class Compiler(object):
                 #TODO:this should be asynchronous
                 inv.content = urlopen(src).read()
             elif node.find("content") != None:
-                inv.content = node.find("content").text % self.doc.datamodel
+                inv.content = str(Template(node.find("content").text, self.doc.datamodel))
             
         
         elif node.get("type") == "x-pyscxml-soap":

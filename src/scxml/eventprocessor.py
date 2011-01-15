@@ -8,11 +8,11 @@ Created on Dec 6, 2010
 import xml.etree.ElementTree as etree
 
 import pickle
-import json
+
 
 class SCXMLEventProcessor(object):
     @staticmethod
-    def toxml(event, target, data, origin="", sendid=""):
+    def toxml(event, target, data, origin="", sendid="", hints=""):
         '''
         takes a send element and a dictionary corresponding to its 
         param and namelist attributes and outputs the equivalient 
@@ -31,6 +31,11 @@ class SCXMLEventProcessor(object):
         })
         
         b.start("scxml:payload", {})
+        if hints:
+            b.start("scxml:hints")
+            b.data(hints)
+            b.end("scxml:hints")
+            
         for k, v in data.items():
             b.start("scxml:property", {"name" : k})
             if k != "content":
@@ -59,6 +64,7 @@ class SCXMLEventProcessor(object):
         data = {}
         for prop in xml.getiterator("{http://www.w3.org/2005/07/scxml}property"):
             if xml.get("language") == "json":
+                import json
                 value = json.loads(prop.text)
             elif xml.get("language") == "python":
                 value = pickle.loads(prop.text)
@@ -85,3 +91,6 @@ class Event(object):
         self.origin = None
         self.origintype = None
         self.sendid = None
+        
+    def __str__(self):
+        return "<eventprocessor.Event>, " + str(self.__dict__)

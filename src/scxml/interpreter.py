@@ -30,6 +30,7 @@ import threading
 from datastructures import OrderedSet
 import logging
 from eventprocessor import Event
+from louie import dispatcher
 
 
 
@@ -163,6 +164,7 @@ class Interpreter(object):
             if self.invokeId and self.dm["_parent"]:
                 self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], doneData))
             self.logger.info("Exiting interpreter")
+            dispatcher.send("signal_exit", self)
     
     def selectEventlessTransitions(self):
         enabledTransitions = OrderedSet()
@@ -368,7 +370,10 @@ class Interpreter(object):
         if type(name) == str: name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
         def sendFunction(name, data, invid):
-            toQueue.put(Event(name, data, invid))
+            evt = Event(name, data, invid)
+            evt.origin = self.dm["_sessionid"]
+            evt.origintype = "scxml"
+            toQueue.put(evt)
         
         if not delay: 
             sendFunction(name, data, invokeid)
@@ -380,7 +385,7 @@ class Interpreter(object):
         
     
     def cancel(self, sendid):
-        if self.timerDict.has_key(sendid):
+        if sendid in self.timerDict:
             self.timerDict[sendid].cancel()
             del self.timerDict[sendid]
             

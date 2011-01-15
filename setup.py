@@ -1,8 +1,8 @@
 
 from setuptools import setup
 
-version = "0.6.1"
-filename = "0.6.1-20110102"
+version = "0.6.2"
+filename = "0.6.2-20110111"
 
 setup(name="pyscxml",
       version=filename,
