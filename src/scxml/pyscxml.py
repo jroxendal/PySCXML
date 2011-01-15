@@ -88,7 +88,11 @@ class MultiSession(object):
             self.make_session(sessionid, xml)
             
     def __iter__(self):
-        return self.dm_mapping.iteritems()
+        return self.sm_mapping.itervalues()
+    
+    def start(self):
+        for sm in self:
+            sm.start()
     
     def _register_session(self, sm):
         for sessionid, session in self.sm_mapping.items():
@@ -110,7 +114,7 @@ class MultiSession(object):
         sm.datamodel["_sessionid"] = sessionid
         self._register_session(sm)
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
-        sm.start()
+#        sm.start()
         
         
     

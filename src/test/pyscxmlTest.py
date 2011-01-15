@@ -118,28 +118,33 @@ class RegressionTest(unittest.TestCase):
         self.assert_(sm.isFinished())
         
         
-        xml2 = '''
+        listener = '''
+            <scxml>
+                <state>
+                    <transition event="e1" target="f">
+                        <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
+                    </transition>
+                </state>
+                <final id="f" />
+            </scxml>
+        '''
+        sender = '''
         <scxml>
             <state>
                 <onentry>
+                    <log label="sending event" />
                     <send event="e1" target="#_scxml_session1"  />
                 </onentry>
+                <transition event="e2" target="f" />
             </state>
+            <final id="f" />
         </scxml>
         '''
-        xml1 = '''
-            <scxml>
-                <state>
-                    <transition event="e1">
-                        <log label="event fired" expr="_event" />
-                    </transition>
-                </state>
-            </scxml>
-        '''
         
-        ms = MultiSession(session1=xml1, session2=xml2)
+        ms = MultiSession(session1=listener, session2=sender)
+        ms.start()
         time.sleep(1)
-        self.assert_(sm.isFinished())
+        self.assert_(all(map(lambda x: x.isFinished(), ms)))
         
         
         sessionid = "session1"
