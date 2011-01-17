@@ -57,7 +57,7 @@ class StateMachine(object):
         self.doc.datamodel["_x"] = {"self" : self}
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
-        self.sessionid = self.doc.datamodel["_sessionid"]
+#        self.sessionid = self.doc.datamodel["_sessionid"]
         
         
         
@@ -80,20 +80,27 @@ class MultiSession(object):
     
     def __init__(self, default_scxml_doc=None, init_sessions={}):
         '''
-        @param kwargs: the optional keyword arguments run 
-        make_session(key, value) on each kwarg pair, thus initalizing 
-        a set of sessions. 
+        @param init_sessions: the optional keyword arguments run 
+        make_session(key, value) on each init_sessions pair, thus initalizing 
+        a set of sessions. Set value to None as a shorthand for deferring to the 
+        default xml for that session. 
         '''
         self.default_scxml_doc = default_scxml_doc
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
-        self.__getitem__ = self.sm_mapping.__getitem__
+#        self.__getitem__ = self.sm_mapping.__getitem__
 #        self.__setitem__ = self.sm_mapping.__setitem__
         for sessionid, xml in init_sessions.items():
             self.make_session(sessionid, xml)
             
     def __iter__(self):
         return self.sm_mapping.itervalues()
+    
+    def __delitem__(self, val):
+        self._unregister_session(val)
+    
+    def __getitem__(self, val):
+        return self.sm_mapping[val]
     
     def __setitem__(self, i, y):
         self.sm_mapping[i] = y
@@ -108,9 +115,10 @@ class MultiSession(object):
             self[sm.datamodel["_sessionid"]] = sm
             sm.datamodel["_x"]["sessions"][sessionid] = session
             
-    def _unregister_session(self, sm):
-        for session in self.sm_mapping.values():
-            del session.datamodel["_x"]["sessions"][sm.datamodel["_sessionid"]]
+    def _unregister_session(self, session):
+        del self[session]
+#        for session in self.sm_mapping.values():
+ #           del session.datamodel["_x"]["sessions"][sm.datamodel["_sessionid"]]
         del sm
               
     
@@ -133,8 +141,8 @@ class MultiSession(object):
         
     
     def on_sm_exit(self, sender):
-        if sender.datamodel["_sessionid"] in self.sm_mapping:
-            self._unregister_session(sender)
+        if sender.datamodel["_sessionid"] in self:
+            del self[sender.datamodel["_sessionid"]]
 
 
 

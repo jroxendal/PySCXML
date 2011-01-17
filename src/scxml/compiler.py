@@ -195,12 +195,12 @@ class Compiler(object):
                 self.interpreter.raiseFunction(event, data)
                 
             elif target.startswith("#_scxml_"): #sessionid
-                sessionid = target.split("_")[-1]
+                sessionid = target.split("#_scxml_")[-1]
                 try:
                     toQueue = self.doc.datamodel["_x"]["sessions"][sessionid].interpreter.externalQueue
                     self.interpreter.send(event, sendNode.get("id"), delay, data, toQueue=toQueue)
                 except KeyError:
-                    self.logger.error("The session %s is inaccessible." % sessionid)
+                    self.logger.error("The session '%s' is inaccessible." % sessionid)
                     self.raiseError("error.send.target")
                 
             elif target[0] == "#" and target[1] != "_": # invokeid
