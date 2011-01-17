@@ -63,7 +63,7 @@
             <assign location="json_request" expr="get_json()" />
             
             <if cond="json_request.get('session')">
-                <pyscxml:start_session sessionidexpr="json_request.get('session')" />
+                <pyscxml:start_session sessionidexpr="get_session_target()" />
             <else />
                 <send eventexpr="parseEvent()" targetexpr="get_session_target()" >
                     <param name="json_data" expr="json_request" />
@@ -72,10 +72,11 @@
             
         </transition>
         
-        <send event="respond" target="#_response">
-            <param name="content" expr="build_response()" />
-        </send>
-
+        <transition event="respond">
+            <send target="#_response">
+                <param name="content" expr="build_response()" />
+            </send>
+        </transition>
     </state>
     
 <!--    <state id="processing">-->
