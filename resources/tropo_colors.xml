@@ -15,9 +15,9 @@
         ]]>
     </script>
     
-    <state id="init">
+    <!--<state id="init">
        <transition event="tropo.init" target="greeting" />
-    </state>
+    </state>-->
     
     <state id="greeting">
         <onentry>
@@ -152,7 +152,9 @@
                     "say": {
                         "value" : "Ok, thank you and goodbye!"
                     }
-                }
+                    
+                },
+                {"hangup" : null}
            </content>
            </send>
         </transition>

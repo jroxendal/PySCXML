@@ -52,7 +52,7 @@
                     ]
                 }
                 
-            ''' % _event.data['response']
+            ''' % _event.data['content']
             
         
     ]]></script>
