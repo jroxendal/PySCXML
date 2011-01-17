@@ -45,7 +45,7 @@
                 {"tropo" : [
                     %s,
                         { "on": {
-                                "next": "/session1/basichttp",
+                                "next": "/tropo_server/basichttp",
                                 "event": "continue" 
                             }
                         }
@@ -73,6 +73,7 @@
         </transition>
         
         <transition event="respond">
+            <log label="respond caught" expr="_x['sessions'].sm_mapping" />
             <send target="#_response">
                 <param name="content" expr="build_response()" />
             </send>
