@@ -141,7 +141,7 @@ class RegressionTest(unittest.TestCase):
         </scxml>
         '''
         
-        ms = MultiSession(session1=listener, session2=sender)
+        ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
         ms.start()
         time.sleep(0.1)
         self.assert_(all(map(lambda x: x.isFinished(), ms)))
@@ -159,7 +159,7 @@ class RegressionTest(unittest.TestCase):
             </scxml>
         '''
         
-        server1 = PySCXMLServer("localhost", 8081, xml1, init_sessions=("session1",), server_type=TYPE_RESPONSE)
+        server1 = PySCXMLServer("localhost", 8081, init_sessions={"session1" : xml1}, server_type=TYPE_RESPONSE)
         t = threading.Thread(target=server1.serve_forever)
         t.start()
         time.sleep(0.1)
@@ -179,7 +179,7 @@ class RegressionTest(unittest.TestCase):
             </scxml>    
         '''
         #TODO: fix this -- can't make assertions when the servers are running. 
-        server2 = PySCXMLServer("localhost", 8082, xml2, init_sessions=("session2",), server_type=TYPE_RESPONSE)
+        server2 = PySCXMLServer("localhost", 8082, init_sessions={"session2" : xml2}, server_type=TYPE_RESPONSE)
         t2 = threading.Thread(target=server2.serve_forever)
         t2.start()
         time.sleep(0.1)

@@ -88,8 +88,6 @@ class MultiSession(object):
         self.default_scxml_doc = default_scxml_doc
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
-#        self.__getitem__ = self.sm_mapping.__getitem__
-#        self.__setitem__ = self.sm_mapping.__setitem__
         for sessionid, xml in init_sessions.items():
             self.make_session(sessionid, xml)
             
@@ -117,8 +115,6 @@ class MultiSession(object):
             
     def _unregister_session(self, session):
         del self[session]
-#        for session in self.sm_mapping.values():
- #           del session.datamodel["_x"]["sessions"][sm.datamodel["_sessionid"]]
         del sm
               
     

@@ -39,14 +39,11 @@ class PySCXMLServer(object):
         self.host = host
         self.port = port
         self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
-#        self.sm_mapping.make_session = lambda self, sessionid : MultiSession.make_session(self, sessionid, xml)
         
         self.sm_mapping.start()
         self.server_type = server_type
         self.httpd = make_server(host, port, self.request_handler)
         self.handler_mapping = {}
-#        for session in init_sessions:
-#            self.init_session(session)
         
     
     def register_handler(self, type, input_handler, output_handler=str.strip):

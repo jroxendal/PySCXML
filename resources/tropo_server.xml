@@ -58,7 +58,7 @@
     ]]></script>
 
     <state id="listening">
-
+    
         <transition event="http.post">
             <assign location="json_request" expr="get_json()" />
             
@@ -72,26 +72,16 @@
             
         </transition>
         
+        <!-- the dialog sessions respond to their events using 
+         the 'respond' event. In turn, this server responds to a 
+         HTTP POST request using the special target '#_response'. 
+         For more information, consult the PySCXML documentation. -->
         <transition event="respond">
-            <log label="respond caught" expr="_x['sessions'].sm_mapping" />
             <send target="#_response">
                 <param name="content" expr="build_response()" />
             </send>
         </transition>
     </state>
-    
-<!--    <state id="processing">-->
-<!--        <invoke id="i" type="x-pyscxml-responseserver" srcexpr="get_session_target()" /> -->
-<!--        -->
-<!--        <transition event="init.invoke.i">-->
-<!--        </transition>-->
-<!--        <transition event="result.invoke.i" target="listening">-->
-<!--            <send target="#_response">-->
-<!--                <param name="content" expr="build_response()" />-->
-<!--            </send>-->
-<!--        </transition>-->
-<!--        -->
-<!--    </state>-->
 
 
 <!--
