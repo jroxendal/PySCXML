@@ -1,4 +1,4 @@
-<scxml initial="init">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" initial="init">
   <parallel id="init" initial="Pinger">
     <state id="Pinger">
       <onentry>

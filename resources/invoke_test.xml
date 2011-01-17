@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<scxml version="1.0" initial="s1" xmlns="http://www.w3.org/2005/07/scxml"
+<scxml xmlns="http://www.w3.org/2005/07/scxml" version="1.0" initial="s1" xmlns="http://www.w3.org/2005/07/scxml"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://scxml-schema.googlecode.com/svn/SCXML-Schema/ecma/scxml-profile-ecma.xsd">
 	<datamodel>

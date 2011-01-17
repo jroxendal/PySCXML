@@ -1,4 +1,4 @@
-<scxml initial="s2">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" initial="s2">
 	<datamodel>
 		<data id="result1" expr="11" /> 
 		<data id="result2" expr="22" />

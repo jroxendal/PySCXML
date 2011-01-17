@@ -1,11 +1,11 @@
-<scxml>
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
     <datamodel>
         <data id="num_list" expr="range(2)" />
     </datamodel>
     <state>
         <invoke>
             <content><![CDATA[
-                <scxml>
+                <scxml xmlns="http://www.w3.org/2005/07/scxml">
                     <parallel id="p">
                         #for $n in $num_list
                         <state id="s$n">

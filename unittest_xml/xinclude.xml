@@ -1,4 +1,4 @@
-<scxml xmlns:xi="http://www.w3.org/2001/XInclude">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:xi="http://www.w3.org/2001/XInclude">
 	<state>
 		<transition target="f" />
 	</state>

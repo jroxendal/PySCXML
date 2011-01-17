@@ -1,8 +1,8 @@
-<scxml>
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
 	<state>
 		<invoke id="i" type="scxml">
 			<content><![CDATA[
-				<scxml>
+				<scxml xmlns="http://www.w3.org/2005/07/scxml">
 					<datamodel>
 						<data id="x" />
 						<data id="fac" expr="1" />

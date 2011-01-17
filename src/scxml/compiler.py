@@ -32,12 +32,22 @@ from urllib2 import urlopen
 import Queue
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import InvokeSCXML, InvokeSOAP, InvokePySCXMLServer, InvokeWrapper
-from Cheetah.Template import Template 
 from xml.parsers.expat import ExpatError
 
+try: 
+    from Cheetah.Template import Template
+except ImportError:
+    def Template(tmpl, namespace):
+        return tmpl % namespace
 
 
+def prepend_ns(tag):
+    return ns + tag
+
+ns = "{http://www.w3.org/2005/07/scxml}"
+pyscxml_ns = "{http://code.google.com/p/pyscxml}"
 tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit"]
+tagsForTraversal = map(prepend_ns, tagsForTraversal)
 
 
 class Compiler(object):
@@ -66,16 +76,16 @@ class Compiler(object):
         '''
         for node in parent:
             
-            if node.tag == "log":
+            if node.tag == prepend_ns("log"):
                 self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
-            elif node.tag == "raise":
+            elif node.tag == prepend_ns("raise"):
                 eventName = node.get("event").split(".")
                 self.interpreter.raiseFunction(eventName, self.parseData(node))
-            elif node.tag == "send":
+            elif node.tag == prepend_ns("send"):
                 self.parseSend(node)
-            elif node.tag == "cancel":
+            elif node.tag == prepend_ns("cancel"):
                 self.interpreter.cancel(self.parseAttr(node, "sendid"))
-            elif node.tag == "assign":
+            elif node.tag == prepend_ns("assign"):
                 
                 if node.get("location") not in self.doc.datamodel:
                     self.logger.error("The location expression %s was not instantiated in the datamodel." % node.get("location"))
@@ -84,14 +94,36 @@ class Compiler(object):
                 
                 expression = node.get("expr") or node.text.strip()
                 self.doc.datamodel[node.get("location")] = self.getExprValue(expression)
-            elif node.tag == "script":
+            elif node.tag == prepend_ns("script"):
                 if node.get("src"):
                     self.execExpr(urlopen(node.get("src")).read())
                 else:
                     self.execExpr(node.text)
                     
-            elif node.tag == "if":
+            elif node.tag == prepend_ns("if"):
                 self.parseIf(node)
+                
+            elif node.tag == pyscxml_ns + "start_session":
+                xml = None
+                if node.text:
+                    xml = str(Template(node.text))
+                elif node.get("expr"):
+                    xml = self.getExprValue(node.get("expr"))
+                elif self.parseAttr(node, "src"):
+                    xml = urlopen(self.parseAttr(node, "src")).read()
+                try:
+                    multisession = self.doc.datamodel["_x"]["sessions"]
+                    sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
+                    sm.start()
+                except AssertionError:
+                    self.logger.error("You supplied no xml for <pyscxml:start_session /> " 
+                                        "and no default has been declared.")
+                except KeyError:
+                    self.logger.error("You can only use the pyscxml:start_session " 
+                                      "element for documents in a MultiSession enviroment")
+                    
+                
+                
             else:
                 if self.strict_parse: 
                     raise Exception("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
@@ -100,19 +132,19 @@ class Compiler(object):
     def parseIf(self, node):
         def gen_prefixExec(itr):
             for elem in itr:
-                if elem.tag not in ["elseif", "else"]:
+                if elem.tag not in map(prepend_ns, ["elseif", "else"]):
                     yield elem
                 else:
                     break
 
         def gen_ifblock(ifnode):
             yield (ifnode, gen_prefixExec(ifnode))
-            for elem in (x for x in ifnode if x.tag == "elseif" or x.tag == "else"):
+            for elem in (x for x in ifnode if x.tag == prepend_ns("elseif") or x.tag == prepend_ns("else")):
                 elemIndex = list(ifnode).index(elem)
                 yield (elem, gen_prefixExec(ifnode[elemIndex+1:]))
         
         for ifNode, execList in gen_ifblock(node):
-            if ifNode.tag == "else":
+            if ifNode.tag == prepend_ns("else"):
                 self.do_execute_content(execList)
             elif self.getExprValue(ifNode.get("cond")):
                 self.do_execute_content(execList)
@@ -124,7 +156,7 @@ class Compiler(object):
         its param child nodes, namelist attribute or content child element.
         '''
         output = {}
-        for p in child.findall("param"):
+        for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("name"))
             
             output[p.get("name")] = self.getExprValue(expr)
@@ -134,19 +166,19 @@ class Compiler(object):
             for name in child.get("namelist").split(" "):
                 output[name] = self.getExprValue(name)
         
-        if child.find("content") != None:
-            output["content"] = str(Template(child.find("content").text, self.doc.datamodel))
+        if child.find(prepend_ns("content")) != None:
+            output["content"] = str(Template(child.find(prepend_ns("content")).text, self.doc.datamodel))
                     
         return output
     
     def parseSend(self, sendNode):
 
         type = self.parseAttr(sendNode, "type", "scxml")
-        delay = int(self.parseAttr(sendNode, "delay", 0))
+        delay = float(self.parseAttr(sendNode, "delay", 0))
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
         target = self.parseAttr(sendNode, "target")
         data = self.parseData(sendNode)
-        hints = self.parseAttr(sendNode, "hints")
+        hints = self.parseAttr(sendNode, "hints", "")
         
         
         if type == "scxml":
@@ -168,7 +200,7 @@ class Compiler(object):
                     toQueue = self.doc.datamodel["_x"]["sessions"][sessionid].interpreter.externalQueue
                     self.interpreter.send(event, sendNode.get("id"), delay, data, toQueue=toQueue)
                 except KeyError:
-                    self.logger.error("The session %s is unaccessible." % sessionid)
+                    self.logger.error("The session %s is inaccessible." % sessionid)
                     self.raiseError("error.send.target")
                 
             elif target[0] == "#" and target[1] != "_": # invokeid
@@ -186,7 +218,7 @@ class Compiler(object):
                     origin = self.doc.datamodel["_ioprocessors"]["scxml"]
                 except KeyError:
                     origin = ""
-                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id"), hints)
+                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id", ""), hints)
                 
                 getter = self.getUrlGetter(target)
                 
@@ -232,10 +264,6 @@ class Compiler(object):
         self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
         self.raiseError("error.communication")
 
-#        if error_code == 403: # this seems to have changed, it's all error.communication
-#        elif error_code == 404: 
-#            self.raiseError("error.send.targetunavailable")
-        
     def onURLError(self, signal, sender):
         self.logger.error("The address %s is currently unavailable" % sender.url)
         self.raiseError("error.communication")
@@ -248,7 +276,8 @@ class Compiler(object):
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef
-        xmlStr = removeDefaultNamespace(xmlStr)
+#        xmlStr = removeDefaultNamespace(xmlStr)
+        xmlStr = self.addDefaultNamespace(xmlStr)
         try:
             tree = ElementTree.fromstring(xmlStr)
         except ExpatError:
@@ -265,44 +294,44 @@ class Compiler(object):
             if parent != None and parent.get("id"):
                 parentState = self.doc.getState(parent.get("id"))
             
-            if node.tag == "scxml":
+            if node.tag == prepend_ns("scxml"):
                 s = State(node.get("id"), None, n)
                 s.initial = self.parseInitial(node)
                 self.doc.name = node.get("name", "")
                     
-                if node.find("script") != None:
-                    self.execExpr(node.find("script").text)
+                if node.find(prepend_ns("script")) != None:
+                    self.execExpr(node.find(prepend_ns("script")).text)
                 self.doc.rootState = s    
                 
-            elif node.tag == "state":
+            elif node.tag == prepend_ns("state"):
                 s = State(node.get("id"), parentState, n)
                 s.initial = self.parseInitial(node)
                 
                 self.doc.addNode(s)
                 parentState.addChild(s)
                 
-            elif node.tag == "parallel":
+            elif node.tag == prepend_ns("parallel"):
                 s = Parallel(node.get("id"), parentState, n)
                 self.doc.addNode(s)
                 parentState.addChild(s)
                 
-            elif node.tag == "final":
+            elif node.tag == prepend_ns("final"):
                 s = Final(node.get("id"), parentState, n)
                 self.doc.addNode(s)
                 
-                if node.find("donedata") != None:
-                    s.donedata = partial(self.parseData, node.find("donedata"))
+                if node.find(prepend_ns("donedata")) != None:
+                    s.donedata = partial(self.parseData, node.find(prepend_ns("donedata")))
                 else:
                     s.donedata = lambda:{}
                 
                 parentState.addFinal(s)
                 
-            elif node.tag == "history":
+            elif node.tag == prepend_ns("history"):
                 h = History(node.get("id"), parentState, node.get("type"), n)
                 self.doc.addNode(h)
                 parentState.addHistory(h)
                 
-            elif node.tag == "transition":
+            elif node.tag == prepend_ns("transition"):
                 t = Transition(parentState)
                 if node.get("target"):
                     t.target = node.get("target").split(" ")
@@ -314,16 +343,16 @@ class Compiler(object):
                 t.exe = partial(self.do_execute_content, node)
                 parentState.addTransition(t)
     
-            elif node.tag == "invoke":
+            elif node.tag == prepend_ns("invoke"):
 #                inv = self.parseInvoke(node, parentState.id)
 #                inv_func = partial(self.parseInvoke, node, parentState.id)
                 parentState.addInvoke(self.make_invoke_wrapper(node, parentState))
-            elif node.tag == "onentry":
+            elif node.tag == prepend_ns("onentry"):
                 s = Onentry()
                 s.exe = partial(self.do_execute_content, node)
                 parentState.addOnentry(s)
             
-            elif node.tag == "onexit":
+            elif node.tag == prepend_ns("onexit"):
                 s = Onexit()
                 s.exe = partial(self.do_execute_content, node)
                 parentState.addOnexit(s)
@@ -399,8 +428,8 @@ class Compiler(object):
             if src:
                 #TODO:this should be asynchronous
                 inv.content = urlopen(src).read()
-            elif node.find("content") != None:
-                inv.content = str(Template(node.find("content").text, self.doc.datamodel))
+            elif node.find(prepend_ns("content")) != None:
+                inv.content = str(Template(node.find(prepend_ns("content")).text, self.doc.datamodel))
             
         
         elif node.get("type") == "x-pyscxml-soap":
@@ -413,10 +442,10 @@ class Compiler(object):
         inv.autoforward = node.get("autoforward", "false").lower() == "true"
         inv.type = type    
         
-        if node.find("finalize") != None and len(node.find("finalize")) > 0:
-            inv.finalize = partial(self.do_execute_content, node.find("finalize"))
-        elif node.find("finalize") != None and node.find("param") != None:
-            paramList = node.findall("param")
+        if node.find(prepend_ns("finalize")) != None and len(node.find(prepend_ns("finalize"))) > 0:
+            inv.finalize = partial(self.do_execute_content, node.find(prepend_ns("finalize")))
+        elif node.find(prepend_ns("finalize")) != None and node.find(prepend_ns("param")) != None:
+            paramList = node.findall(prepend_ns("param"))
             def f():
                 for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
                     if param.get("name") in self.doc.datamodel["_event"].data:
@@ -427,21 +456,21 @@ class Compiler(object):
     def parseInitial(self, node):
         if node.get("initial"):
             return Initial(node.get("initial").split(" "))
-        elif node.find("initial") is not None:
-            transitionNode = node.find("initial")[0]
+        elif node.find(prepend_ns("initial")) is not None:
+            transitionNode = node.find(prepend_ns("initial"))[0]
             assert transitionNode.get("target")
             initial = Initial(transitionNode.get("target").split(" "))
             initial.exe = partial(self.do_execute_content, transitionNode)
             return initial
         else: # has neither initial tag or attribute, so we'll make the first valid state a target instead.
-            childNodes = filter(lambda x: x.tag in ["state", "parallel", "final"], list(node)) 
+            childNodes = filter(lambda x: x.tag in map(prepend_ns, ["state", "parallel", "final"]), list(node)) 
             if childNodes:
                 return Initial([childNodes[0].get("id")])
             return None # leaf nodes have no initial 
     
     def setDatamodel(self, tree):
         
-        for node in tree.getiterator("data"):
+        for node in tree.getiterator(prepend_ns("data")):
             self.doc.datamodel[node.get("id")] = None
             if node.get("expr"):
                 self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
@@ -452,14 +481,20 @@ class Compiler(object):
                     self.logger.error("Data src not found : '%s'\n" % node.get("src"))
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
                     raise e
-
-    
+                
+    def addDefaultNamespace(self, xmlStr):
+        if not "xmlns=" in re.search(r"<scxml.*?>", xmlStr, re.DOTALL).group():
+            self.logger.warn("Your document lacks the correct "
+                "default namespace declaration. It has been added for you, for parsing purposes.")
+            return xmlStr.replace("<scxml", "<scxml xmlns='http://www.w3.org/2005/07/scxml'", 1)
+        return xmlStr
+        
 
 def preprocess(tree):
     tree.set("id", "__main__")
     
     for n, parent, node in iter_elems(tree):
-        if node.tag in ["state", "parallel", "final", "invoke", "history"] and not node.get("id"):
+        if node.tag in map(prepend_ns, ["state", "parallel", "final", "invoke", "history"]) and not node.get("id"):
             id = parent.get("id") + "_%s_child_%s" % (node.tag, n)
             node.set('id',id)
             
@@ -479,6 +514,7 @@ def normalizeExpr(expr):
 
 def removeDefaultNamespace(xmlStr):
     return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
+
 
 def iter_elems(tree):
     queue = [(None, tree)]

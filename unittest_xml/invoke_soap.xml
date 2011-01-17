@@ -1,4 +1,4 @@
-<scxml>
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
 	<state>
 		<!-- invoke the webservice. since this is done asynchronously, we'll have to wait for the init event before continuing -->
 		<invoke id="i" type="x-pyscxml-soap" src="http://mssoapinterop.org/asmx/simple.asmx?WSDL" />

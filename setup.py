@@ -1,8 +1,8 @@
 
 from setuptools import setup
 
-version = "0.6.2"
-filename = "0.6.2-20110111"
+version = "0.6.3"
+filename = "0.6.3-20110115"
 
 setup(name="pyscxml",
       version=filename,
@@ -14,5 +14,5 @@ setup(name="pyscxml",
       packages=["scxml"],
       package_dir={"" : "src"},
       license="LGPLv3",
-      install_requires=["Louie", "suds"]
+      install_requires=["Louie", "suds", "Cheetah"]
      )

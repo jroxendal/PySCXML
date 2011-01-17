@@ -60,8 +60,6 @@ class BaseInvoke(object):
     
     def cancel(self):
         pass
-        #self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)
-    
          
     def __str__(self):
         return '<Invoke id="%s">' % self.invokeid
@@ -80,6 +78,9 @@ class InvokeSCXML(BaseInvoke):
         self.send = self.sm.send
         self.sm.start(parentQueue, self.invokeid)
         dispatcher.send("init.invoke." + self.invokeid, self)
+        
+    def cancel(self):
+        self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)
     
 
 class InvokeSOAP(BaseInvoke):

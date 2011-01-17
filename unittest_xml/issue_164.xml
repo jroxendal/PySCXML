@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<scxml initial="super">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" initial="super">
 	<state id="super" initial="first">
 		<onentry>
 			<log expr="'Entering super'"/>

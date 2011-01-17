@@ -1,4 +1,4 @@
-<scxml initial="loop" >
+<scxml xmlns="http://www.w3.org/2005/07/scxml" initial="loop" >
 	<datamodel>
 		<data id="x" expr="6"/>
 		<data id="fac" expr="1"/>

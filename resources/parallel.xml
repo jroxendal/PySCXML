@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<scxml initial="p">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" initial="p">
 
 	<parallel id="p" initial="s1 s2">
 	

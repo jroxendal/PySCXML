@@ -19,18 +19,14 @@ Created on Dec 15, 2010
 @author: Johan Roxendal
 '''
 
-from pprint import pprint
-from wsgiref.simple_server import make_server
-from scxml.pyscxml import StateMachine, MultiSession
-from scxml import logger
-from time import sleep, time
-import logging
 from eventprocessor import SCXMLEventProcessor as Processor
-import threading
-import cgi
 from interpreter import Event
-from functools import partial
+from scxml.pyscxml import StateMachine, MultiSession
+from wsgiref.simple_server import make_server
 from xml.parsers.expat import ExpatError
+import cgi
+import logging
+import threading, time
 
 TYPE_RESPONSE = "type_response"
 TYPE_DEFAULT = "type_default"
@@ -38,22 +34,27 @@ TYPE_DEFAULT = "type_default"
 
 class PySCXMLServer(object):
     
-    def __init__(self, host, port, scxml_doc, server_type=TYPE_DEFAULT, **kwargs):
+    def __init__(self, host, port, default_scxml_doc=None, server_type=TYPE_DEFAULT, init_sessions={}):
         self.logger = logging.getLogger("pyscxml.pyscxml_server.PySCXMLServer")
         self.host = host
         self.port = port
-        self.scxml_doc = scxml_doc
-        self.sm_mapping = {}
+        self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
+#        self.sm_mapping.make_session = lambda self, sessionid : MultiSession.make_session(self, sessionid, xml)
+        
+        self.sm_mapping.start()
         self.server_type = server_type
         self.httpd = make_server(host, port, self.request_handler)
         self.handler_mapping = {}
+#        for session in init_sessions:
+#            self.init_session(session)
+        
     
     def register_handler(self, type, input_handler, output_handler=str.strip):
         self.handler_mapping[type] = (input_handler, output_handler)
     
     def serve_forever(self):
         """Start the server."""
-        self.logger.info("Starting the server")
+        self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
         try:
             self.httpd.serve_forever()
         except KeyboardInterrupt:
@@ -61,10 +62,9 @@ class PySCXMLServer(object):
             sys.exit("KeyboardInterrupt")
         
     def init_session(self, sessionid):
-        sm = StateMachine(self.scxml_doc)
-        sm.datamodel["_sessionid"] = sessionid
-        self.sm_mapping[sessionid] = sm
-        sm.datamodel["_ioprocessors"].update( (k, "http://%s:%s/%s/%s" % (self.host, self.port, sessionid, k) )  
+        sm = self.sm_mapping.make_session(sessionid, self.scxml_doc)
+            
+        sm.datamodel["_ioprocessors"] = dict( (k, "http://%s:%s/%s/%s" % (self.host, self.port, sessionid, k) )  
                                               for k in list(self.handler_mapping) + ["basichttp", "scxml"] )
         sm.start()
         return sm
@@ -88,10 +88,10 @@ class PySCXMLServer(object):
             headers = [('Content-type', 'text/plain')]
             pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
             session = pathlist[0]
-            sm = self.sm_mapping.get(session) or self.init_session(session)
             type = pathlist[1]
 
             try:
+                sm = self.sm_mapping.get(session) or self.init_session(session)
                 status = '200 OK'
                 if type == "basichttp":
             
@@ -120,7 +120,7 @@ class PySCXMLServer(object):
 
                     output = output["content"].strip()
                 
-            except KeyError:
+            except AssertionError: # no default xml is declared, so sessions can't be dynamically initialized.
                 status = '403 FORBIDDEN'
             except ExpatError, e:
                 self.logger.error("Parsing of incoming scxml message failed for message %s" % fs.getvalue("_content") )
@@ -143,8 +143,19 @@ class PySCXMLServer(object):
 
 
 if __name__ == "__main__":
-#    xml = open("../../resources/tropo_server.xml").read()
-
+    server_xml = open("../../resources/tropo_server.xml").read()
+    dialog_xml = open("../../resources/tropo_colors.xml").read()
+    
+    server = PySCXMLServer("localhost", 8081, 
+                            default_scxml_doc=dialog_xml, 
+                            server_type=TYPE_RESPONSE,
+                            init_sessions={"tropo_server" : server_xml})
+    
+    server.serve_forever()
+    
+    
+    
+    import sys;sys.exit()
     xml = '''\
         <scxml>
             <state>
@@ -167,53 +178,44 @@ if __name__ == "__main__":
 #    t.start()
     
     
-    sessionid = "session1"
     xml1 = '''\
         <scxml name="session1">
             <state id="s1">
-                <transition event="e1" target="f">
-                    <log label="e1 transition taken" expr="_event.data" />
-                    <log label="origin" expr="_event.origin" />
-                    <send event="ok" targetexpr="_event.origin" />
+                <transition event="e1">
+                    <send event="ok" targetexpr="'#_scxml_' + _event.origin" />
                 </transition>
             </state>
             
-            <final id="f">
-                <onentry>
-                    <log label="session1 final state reached" />
-                </onentry>
-            </final>
+            <final id="f" />
         </scxml>
     '''
     
-#    t = threading.Thread(target=start_server, args=("localhost", 8081, xml1, sessionid))
-#    t.start()
-#    sleep(1)
     
-    
-    sessionid = "session2"
     xml2 = '''\
         <scxml name="session2">
             <state id="s1">
                 <onentry>
-                    <send event="e1" target="http://localhost:8081/session1/scxml">
+                    <send event="e1" target="#_scxml_session1">
                         <param name="name" expr="132" />
                     </send> 
                 </onentry>
                 <transition event="ok" target="f" />
             </state>
             
-            <final id="f">
-                <onentry>
-                    <log label="session2 final state reached" />
-                </onentry>
-            </final>
-        </scxml>
+            <final id="f" />
+        </scxml>    
     '''
+    server1 = PySCXMLServer("localhost", 8081, default_scxml_doc=xml2, init_sessions={"session1" : xml1, "session2" : xml2})
+    t = threading.Thread(target=server1.serve_forever)
+    t.start()
+    time.sleep(0.1)
     
-#    t = threading.Thread(target=start_server, args=("localhost", 8082, xml2, sessionid))
-#    t.start()
-#    sleep(1)
+    from urllib2 import urlopen
+    urlopen("http://localhost:8081/session3/basichttp", "hello?")
+    #TODO: fix this -- can't make assertions when the servers are running. 
+#    server2 = PySCXMLServer("localhost", 8082, xml2, init_sessions=("session2",))
+#    t2 = threading.Thread(target=server2.serve_forever)
+#    t2.start()
     
     
     

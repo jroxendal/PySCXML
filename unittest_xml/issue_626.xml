@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<scxml initial="test" >
+<scxml xmlns="http://www.w3.org/2005/07/scxml" initial="test" >
   <datamodel>
     <data id="x" expr="1"/>
     <data id="i" expr="1"/>

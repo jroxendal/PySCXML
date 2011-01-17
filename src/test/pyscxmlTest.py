@@ -40,22 +40,22 @@ class RegressionTest(unittest.TestCase):
         
         sm = StateMachine(open(xmlDir + "colors.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
     
         sm = StateMachine(open(xmlDir + "parallel.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
         
         sm = StateMachine(open(xmlDir + "factorial.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assertEquals(sm.datamodel['fac'], 720)
 
         sm = StateMachine(open(xmlDir + "issue_164.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "all_configs.xml").read())
@@ -68,53 +68,53 @@ class RegressionTest(unittest.TestCase):
         sm.send("f")
         sm.send("g")
         sm.send("h")
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
         
         sm = StateMachine(open(xmlDir + "issue_626.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assertEquals(sm.datamodel["x"], 584346861767418750)
 
         sm = StateMachine(open(xmlDir + "twolock_door.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
         '''
         sm = StateMachine(open(xmlDir + "xinclude.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
         '''
         
         sm = StateMachine(open(xmlDir + "if_block.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "donedata.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "invoke.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.5) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "error_management.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "history.xml").read())
         sm.start()
-        time.sleep(6) #lets us avoid asynchronous errors
+        time.sleep(4) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "cheetah.xml").read())
         sm.start()
-        time.sleep(1) #lets us avoid asynchronous errors
+        time.sleep(0.1) #lets us avoid asynchronous errors
         self.assert_(sm.isFinished())
         
         
@@ -143,11 +143,10 @@ class RegressionTest(unittest.TestCase):
         
         ms = MultiSession(session1=listener, session2=sender)
         ms.start()
-        time.sleep(1)
+        time.sleep(0.1)
         self.assert_(all(map(lambda x: x.isFinished(), ms)))
         
         
-        sessionid = "session1"
         xml1 = '''\
             <scxml name="session1">
                 <state id="s1">
@@ -160,13 +159,11 @@ class RegressionTest(unittest.TestCase):
             </scxml>
         '''
         
-        server = PySCXMLServer("localhost", 8081, xml1)
-        t = threading.Thread(target=server.serve_forever)
+        server1 = PySCXMLServer("localhost", 8081, xml1, init_sessions=("session1",), server_type=TYPE_RESPONSE)
+        t = threading.Thread(target=server1.serve_forever)
         t.start()
-        time.sleep(1)
+        time.sleep(0.1)
         
-        
-        sessionid2 = "session2"
         xml2 = '''\
             <scxml name="session2">
                 <state id="s1">
@@ -179,20 +176,19 @@ class RegressionTest(unittest.TestCase):
                 </state>
                 
                 <final id="f" />
-            </scxml>
+            </scxml>    
         '''
-
-        server = PySCXMLServer("localhost", 8081, xml, server_type=TYPE_RESPONSE)
-        t = threading.Thread(target=server.serve_forever)
-        t.start()
-        time.sleep(1)
-        self.assert_(pyscxml_server.sm_mapping[sessionid].isFinished() and pyscxml_server.sm_mapping[sessionid2].isFinished())
-            
+        #TODO: fix this -- can't make assertions when the servers are running. 
+        server2 = PySCXMLServer("localhost", 8082, xml2, init_sessions=("session2",), server_type=TYPE_RESPONSE)
+        t2 = threading.Thread(target=server2.serve_forever)
+        t2.start()
+        time.sleep(0.1)
+        self.assert_(server1.sm_mapping["session1"].isFinished() and server2.sm_mapping["session2"].isFinished())
         
         # change xml to be able to make assertions about exited and entered states.
 #        sm = StateMachine(open(xmlDir + "cross_parallel.xml").read())
 #        sm.start()
-#        time.sleep(1) #lets us avoid asynchronous errors
+#        time.sleep(0.1) #lets us avoid asynchronous errors
 #        self.assertEquals(sm.datamodel['fac'], 720)
         
 

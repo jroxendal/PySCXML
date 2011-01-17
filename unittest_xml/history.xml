@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
-<scxml>
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
 	<script>
 		from random import random
 	</script>
 	<state>
 		<initial>
 			<transition target="process">
-				<send event="pause" delayexpr="int(random()*4)+1" />
+				<send event="pause" delayexpr="int(random()*2)+1" />
 			</transition>
 		</initial>
 		<state id="process" initial="s1">
@@ -16,14 +16,14 @@
 			
 			<state id="s1">
 				<onentry>
-					<send event="e1" delay="1" />
+					<send event="e1" delay="0.5" />
 				</onentry>
 				<transition target="s2" event="e1" />
 			</state>
 			
 			<state id="s2">
 				<onentry>
-					<send event="e2" delay="1" />
+					<send event="e2" delay="0.5" />
 				</onentry>
 				<transition event="e2" target="s1" />
 			</state>
@@ -36,7 +36,7 @@
 			</onentry>
 			<transition event="resume" target="h" />
 			<onexit>
-				<send event="terminate" delay="1" />
+				<send event="terminate" delay="0.5" />
 			</onexit>
 		</state>
 

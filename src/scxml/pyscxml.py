@@ -57,6 +57,7 @@ class StateMachine(object):
         self.doc.datamodel["_x"] = {"self" : self}
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
+        self.sessionid = self.doc.datamodel["_sessionid"]
         
         
         
@@ -77,26 +78,34 @@ class StateMachine(object):
 
 class MultiSession(object):
     
-    def __init__(self, **kwargs):
+    def __init__(self, default_scxml_doc=None, init_sessions={}):
         '''
         @param kwargs: the optional keyword arguments run 
         make_session(key, value) on each kwarg pair, thus initalizing 
         a set of sessions. 
         '''
+        self.default_scxml_doc = default_scxml_doc
         self.sm_mapping = {}
-        for sessionid, xml in kwargs.items():
+        self.get = self.sm_mapping.get
+        self.__getitem__ = self.sm_mapping.__getitem__
+#        self.__setitem__ = self.sm_mapping.__setitem__
+        for sessionid, xml in init_sessions.items():
             self.make_session(sessionid, xml)
             
     def __iter__(self):
         return self.sm_mapping.itervalues()
     
+    def __setitem__(self, i, y):
+        self.sm_mapping[i] = y
+    
     def start(self):
+        ''' launches the sessions by calling start() on each sm'''
         for sm in self:
             sm.start()
     
     def _register_session(self, sm):
         for sessionid, session in self.sm_mapping.items():
-            session.datamodel["_x"]["sessions"][sm.datamodel["_sessionid"]] = sm
+            self[sm.datamodel["_sessionid"]] = sm
             sm.datamodel["_x"]["sessions"][sessionid] = session
             
     def _unregister_session(self, sm):
@@ -107,13 +116,18 @@ class MultiSession(object):
     
     def make_session(self, sessionid, xml):
         '''initalizes and starts a new StateMachine 
-        session at the provided sessionid. '''
-        sm = StateMachine(xml)
+        session at the provided sessionid.
+        @param xml: if None, the statemachine at this sesssionid will run the 
+        document specified as default_scxml_doc in the constructor.
+         '''
+        assert xml or self.default_scxml_doc
+        sm = StateMachine(xml or self.default_scxml_doc)
         self.sm_mapping[sessionid] = sm
-        sm.datamodel["_x"]["sessions"] = {}
+        sm.datamodel["_x"]["sessions"] = self
         sm.datamodel["_sessionid"] = sessionid
         self._register_session(sm)
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
+        return sm
 #        sm.start()
         
         
@@ -129,13 +143,13 @@ if __name__ == "__main__":
 #    xml = open("../../resources/colors.xml").read()
 #    xml = open("../../resources/history_variant.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
-    xml = open("../../unittest_xml/invoke.xml").read()
+#    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
-#    xml = open("../../unittest_xml/factorial.xml").read()
+    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     
-    xml = '''
+    xml2 = '''
         <scxml>
             <datamodel>
                 <data id="num_list" expr="range(2)" />
@@ -162,9 +176,6 @@ if __name__ == "__main__":
             <final id="f" />
         </scxml>
     '''
-    from Cheetah.Template import Template
-    xml = str(Template(xml, searchList=[{"num_list" : range(3)}]))
-    print xml
 #    from xml.etree import ElementTree as etree
 #    print etree.tostring(etree.fromstring(xml))
     sm = StateMachine(xml)

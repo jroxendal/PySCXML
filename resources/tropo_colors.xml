@@ -21,7 +21,7 @@
     
     <state id="greeting">
         <onentry>
-            <send target="#_response">
+            <send event="respond" target="#_scxml_tropo_server">
                 <content>
                     {"say":{"value": "Welcome to the our simple dialog."}}
                 </content>
@@ -33,7 +33,7 @@
     <state id="error">
         <state id="nomatch">
             <onentry>
-                <send target="#_response">
+                <send event="respond" target="#_scxml_tropo_server">
                     <content>
                         {"say": {"value" : "I'm afraid I didn't quite get that."}}
                     </content>
@@ -42,7 +42,7 @@
         </state>
         <state id="timeout">
             <onentry>
-                <send target="#_response">
+                <send event="respond" target="#_scxml_tropo_server">
                     <content>
                         {"say": {"value" : "I can't hear you."}}
                     </content>
@@ -63,7 +63,7 @@
         <state id="colors">
             <state id="color_q" >
                 <onentry>
-                    <send target="#_response">
+                    <send event="respond" target="#_scxml_tropo_server">
                     <content>
                         {
                             "ask": {
@@ -89,7 +89,7 @@
                         interpretation = get_actions_attr('interpretation')
                         confidence = get_actions_attr('confidence')                     
                     </script>   
-                    <send target="#_response">
+                    <send event="respond" target="#_scxml_tropo_server">
                     <content>
                         {
                         "say": [
@@ -110,7 +110,7 @@
         <state id="sizes">
             <state id="size_q">
                 <onentry>
-                <send target="#_response">
+                <send event="respond" target="#_scxml_tropo_server">
                     <content>
                         {
                             "ask": {
@@ -132,7 +132,7 @@
                             cond="get_actions_attr('interpretation') != 'quit'" 
                             target="size_a" >
                     <script>confidence = get_actions_attr("confidence")</script>
-                    <send target="#_response">
+                    <send event="respond" target="#_scxml_tropo_server">
                     <content>
                         {"say": {"value": "You answered with a confidence of %(confidence)s"}}
                    </content>
@@ -146,7 +146,7 @@
         </state>
         <transition event="tropo.answer.ask"
             cond="get_actions_attr('interpretation') == 'quit'" target="f">
-            <send target="#_response">
+            <send event="respond" target="#_scxml_tropo_server">
             <content>
                 {
                     "say": {
