@@ -35,12 +35,46 @@ TYPE_DEFAULT = "type_default"
 class PySCXMLServer(object):
     
     def __init__(self, host, port, default_scxml_doc=None, server_type=TYPE_DEFAULT, init_sessions={}):
+        '''
+        @param host: the hostname on which to serve.
+        @param port: the port on which to serve.
+        @param default_scxml_doc: an scxml document expressed as a string.
+        If one is provided, each call to a sessionid will initialize a new 
+        StateMachine instance at that session, running the default document.
+        If default_scxml_doc is None, a call to an address that hasn't been 
+        pre-initialized will fail with HTTP error 403 FORBIDDEN.
+        @param server_type: define the server as TYPE_DEFAULT or TYPE_RESPONSE.
+        TYPE_DEFAULT corresponds to the type of server that the W3C standard prefers,
+        use TYPE_RESPONSE for responding only if you explicetly need to include data 
+        in the HTTP response.
+        @param init_sessions: a mapping where the keys correspond to sesssionids you 
+        would like the server to be initialized with and the values to scxml document 
+        strings you want those sessions to run. These will be constructed in the server 
+        constructor and started as serve_forever() is called. Any key with the value of None 
+        will instead execute the default_scxml_doc. If default_scxml_doc is None and a value 
+        in init_sessions is None, AssertionError will be raised.    
+        
+        Example:
+        # when queried with a POST at http://localhost:8081/any_legal_url_string/basichttp,
+        # this server will initialize a new StateMachine instance at that location, as well as
+        # send it the http.post event.  
+        server = PySCXMLServer("localhost", 8081, default_scxml_doc=myStateMachine)
+        server.serve_forever()
+        
+        # when queried with a POST at http://localhost:8081/any_legal_url_string/basichttp,
+        # this server will respond with 403 FORBIDDEN if 
+        # any_legal_url_string != "session1" and any_legal_url_string != "session2" 
+        server = PySCXMLServer("localhost", 8081, 
+                                init_sessions={"session1" : myStateMachine, "session2" : myStateMachine})
+        server.serve_forever()
+        
+        
+        '''
         self.logger = logging.getLogger("pyscxml.pyscxml_server.PySCXMLServer")
         self.host = host
         self.port = port
         self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
         
-        self.sm_mapping.start()
         self.server_type = server_type
         self.httpd = make_server(host, port, self.request_handler)
         self.handler_mapping = {}
@@ -52,6 +86,7 @@ class PySCXMLServer(object):
     def serve_forever(self):
         """Start the server."""
         self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
+        self.sm_mapping.start()
         try:
             self.httpd.serve_forever()
         except KeyboardInterrupt:

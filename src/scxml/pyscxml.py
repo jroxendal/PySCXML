@@ -57,8 +57,6 @@ class StateMachine(object):
         self.doc.datamodel["_x"] = {"self" : self}
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
-#        self.sessionid = self.doc.datamodel["_sessionid"]
-        
         
         
     def start(self, parentQueue=None, invokeId=None):
@@ -80,6 +78,12 @@ class MultiSession(object):
     
     def __init__(self, default_scxml_doc=None, init_sessions={}):
         '''
+        MultiSession is a local runtime for multiple StateMachine sessions. Use 
+        this class for supporting the send target="_scxml_sessionid" syntax described
+        in the W3C standard. Note that  
+        @param default_scxml_doc: an scxml document expressed as a string.
+        If one is provided, each call to a sessionid will initialize a new 
+        StateMachine instance at that session, running the default document.
         @param init_sessions: the optional keyword arguments run 
         make_session(key, value) on each init_sessions pair, thus initalizing 
         a set of sessions. Set value to None as a shorthand for deferring to the 
@@ -95,46 +99,40 @@ class MultiSession(object):
         return self.sm_mapping.itervalues()
     
     def __delitem__(self, val):
-        self._unregister_session(val)
+        del self.sm_mapping[val]
     
     def __getitem__(self, val):
         return self.sm_mapping[val]
     
-    def __setitem__(self, i, y):
-        self.sm_mapping[i] = y
+    #TODO:remove this
+#    def __setitem__(self, key, val):
+#        self.make_session(key, valu)
+#        for sessionid, session in self.sm_mapping.items():
+#            self[sm.datamodel["_sessionid"]] = sm
+#            sm.datamodel["_x"]["sessions"][sessionid] = session
     
     def start(self):
-        ''' launches the sessions by calling start() on each sm'''
+        ''' launches the initialized sessions by calling start() on each sm'''
         for sm in self:
             sm.start()
-    
-    def _register_session(self, sm):
-        for sessionid, session in self.sm_mapping.items():
-            self[sm.datamodel["_sessionid"]] = sm
-            sm.datamodel["_x"]["sessions"][sessionid] = session
             
-    def _unregister_session(self, session):
-        del self[session]
-        del sm
-              
     
     def make_session(self, sessionid, xml):
         '''initalizes and starts a new StateMachine 
         session at the provided sessionid.
-        @param xml: if None, the statemachine at this sesssionid will run the 
-        document specified as default_scxml_doc in the constructor.
+        @param xml: A string. if None or empty, the statemachine at this 
+        sesssionid will run the document specified as default_scxml_doc 
+        in the constructor. Otherwise, the xml will be run. 
+        @return: the resulting scxml.pyscxml.StateMachine instance. It has 
+        not been started, only initialized.
          '''
         assert xml or self.default_scxml_doc
         sm = StateMachine(xml or self.default_scxml_doc)
         self.sm_mapping[sessionid] = sm
         sm.datamodel["_x"]["sessions"] = self
         sm.datamodel["_sessionid"] = sessionid
-        self._register_session(sm)
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
         return sm
-#        sm.start()
-        
-        
     
     def on_sm_exit(self, sender):
         if sender.datamodel["_sessionid"] in self:
