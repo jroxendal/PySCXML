@@ -62,7 +62,7 @@ class PySCXMLServer(object):
             sys.exit("KeyboardInterrupt")
         
     def init_session(self, sessionid):
-        sm = self.sm_mapping.make_session(sessionid, self.scxml_doc)
+        sm = self.sm_mapping.make_session(sessionid, None)
             
         sm.datamodel["_ioprocessors"] = dict( (k, "http://%s:%s/%s/%s" % (self.host, self.port, sessionid, k) )  
                                               for k in list(self.handler_mapping) + ["basichttp", "scxml"] )
