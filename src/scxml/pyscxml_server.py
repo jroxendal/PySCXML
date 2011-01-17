@@ -146,7 +146,7 @@ if __name__ == "__main__":
     server_xml = open("../../resources/tropo_server.xml").read()
     dialog_xml = open("../../resources/tropo_colors.xml").read()
     
-    server = PySCXMLServer("localhost", 8081, 
+    server = PySCXMLServer("cling.gu.se", 8081, 
                             default_scxml_doc=dialog_xml, 
                             server_type=TYPE_RESPONSE,
                             init_sessions={"tropo_server" : server_xml})
@@ -210,8 +210,8 @@ if __name__ == "__main__":
     t.start()
     time.sleep(0.1)
     
-    from urllib2 import urlopen
-    urlopen("http://localhost:8081/session3/basichttp", "hello?")
+#    from urllib2 import urlopen
+#    urlopen("http://localhost:8081/session3/basichttp", "hello?")
     #TODO: fix this -- can't make assertions when the servers are running. 
 #    server2 = PySCXMLServer("localhost", 8082, xml2, init_sessions=("session2",))
 #    t2 = threading.Thread(target=server2.serve_forever)
