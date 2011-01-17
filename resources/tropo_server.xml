@@ -17,7 +17,7 @@
                 session = json_request['session']['callId']
             else:
                 session = json_request["result"]["callId"]
-            return '#_scxml_%s' % session
+            return session
         
         def get_json():
             return json.loads(_event.data["request"])
@@ -65,7 +65,7 @@
             <if cond="json_request.get('session')">
                 <pyscxml:start_session sessionidexpr="get_session_target()" />
             <else />
-                <send eventexpr="parseEvent()" targetexpr="get_session_target()" >
+                <send eventexpr="parseEvent()" targetexpr="'#_scxml_' + get_session_target()" >
                     <param name="json_data" expr="json_request" />
                 </send>
             </if>
