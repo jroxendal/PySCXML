@@ -105,8 +105,8 @@ class Compiler(object):
                 
             elif node.tag == pyscxml_ns + "start_session":
                 xml = None
-                if node.text:
-                    xml = str(Template(node.text))
+                if node.find(prepend_ns("content")) != None:
+                    xml = str(Template(node.find(prepend_ns("content")).text))
                 elif node.get("expr"):
                     xml = self.getExprValue(node.get("expr"))
                 elif self.parseAttr(node, "src"):
