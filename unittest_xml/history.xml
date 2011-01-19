@@ -6,7 +6,7 @@
 	<state>
 		<initial>
 			<transition target="process">
-				<send event="pause" delayexpr="int(random()*2)+1" />
+				<send event="pause" delayexpr="str(int(random()*2)+1) + 's'" />
 			</transition>
 		</initial>
 		<state id="process" initial="s1">
@@ -16,14 +16,14 @@
 			
 			<state id="s1">
 				<onentry>
-					<send event="e1" delay="0.5" />
+					<send event="e1" delay="500ms" />
 				</onentry>
 				<transition target="s2" event="e1" />
 			</state>
 			
 			<state id="s2">
 				<onentry>
-					<send event="e2" delay="0.5" />
+					<send event="e2" delay="500ms" />
 				</onentry>
 				<transition event="e2" target="s1" />
 			</state>
@@ -36,7 +36,7 @@
 			</onentry>
 			<transition event="resume" target="h" />
 			<onexit>
-				<send event="terminate" delay="0.5" />
+				<send event="terminate" delay="500ms" />
 			</onexit>
 		</state>
 

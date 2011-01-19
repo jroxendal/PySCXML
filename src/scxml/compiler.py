@@ -35,10 +35,20 @@ from invoke import InvokeSCXML, InvokeSOAP, InvokePySCXMLServer, InvokeWrapper
 from xml.parsers.expat import ExpatError
 
 try: 
-    from Cheetah.Template import Template
+    from Cheetah.Template import Template as Tmpl
+    def template(tmpl, namespace):
+        return str(Tmpl(tmpl, namespace))
 except ImportError:
-    def Template(tmpl, namespace):
-        return tmpl % namespace
+    try:
+        from django.template import Context, Template
+        def template(tmpl, namespace):
+            t = Template(tmpl)
+            c = Context(namespace)
+            return t.render(c)
+    except ImportError:
+        def template(tmpl, namespace):
+            return tmpl % namespace
+        
 
 
 def prepend_ns(tag):
@@ -174,12 +184,18 @@ class Compiler(object):
     def parseSend(self, sendNode):
 
         type = self.parseAttr(sendNode, "type", "scxml")
-        delay = float(self.parseAttr(sendNode, "delay", 0))
+        delay = self.parseAttr(sendNode, "delay", "0s")
+        n, unit = re.search("(\d+)(\w+)", delay).groups()
+        delay = float(n) if unit == "s" else float(n) / 1000
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
         target = self.parseAttr(sendNode, "target")
         data = self.parseData(sendNode)
-        hints = self.parseAttr(sendNode, "hints", "")
-        
+        try:
+            hints = eval(self.parseAttr(sendNode, "hints", "{}"))
+            assert isinstance(hints, dict)
+        except:
+            self.logger.error("hints or hintsexpr malformed: %s" % hints)
+            self.raiseError("error.execution.hints")
         
         if type == "scxml":
             if not target:
@@ -211,7 +227,7 @@ class Compiler(object):
                     inv.send(event, sendNode.get("id"), delay, data)
             elif target[0] == "#" and target[1:] == "_response":
                 self.logger.debug("sending to _response")
-                self.doc.datamodel["_response"].put(self.parseData(sendNode))
+                self.doc.datamodel["_response"].put((self.parseData(sendNode), hints))
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
@@ -362,12 +378,12 @@ class Compiler(object):
         return self.doc
 
     def execExpr(self, expr):
-        expr = normalizeExpr(expr)
-
+        if not expr or not expr.strip(): return 
         try:
+            expr = normalizeExpr(expr)
             exec expr in self.doc.datamodel
         except Exception, e:
-            self.logger.error("Exception while executing expression in a script block: '%s'" % expr.strip())
+            self.logger.error("Exception while executing expression in a script block: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
             self.raiseError("error.execution." + type(e).__name__.lower())
                 
@@ -426,7 +442,7 @@ class Compiler(object):
                      
             inv = InvokeSCXML()
             if src:
-                #TODO:this should be asynchronous
+                #TODO : should this should be asynchronous?
                 inv.content = urlopen(src).read()
             elif node.find(prepend_ns("content")) != None:
                 inv.content = str(Template(node.find(prepend_ns("content")).text, self.doc.datamodel))

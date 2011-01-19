@@ -21,7 +21,7 @@ Created on Dec 15, 2010
 
 from eventprocessor import SCXMLEventProcessor as Processor
 from interpreter import Event
-from scxml.pyscxml import StateMachine, MultiSession
+from scxml.pyscxml import MultiSession
 from wsgiref.simple_server import make_server
 from xml.parsers.expat import ExpatError
 import cgi
@@ -102,74 +102,71 @@ class PySCXMLServer(object):
         return sm
         
     def request_handler(self, environ, start_response):
-        if environ['REQUEST_METHOD'] == 'POST':
             
-            fs = cgi.FieldStorage(fp=environ['wsgi.input'],
-                                   environ=environ,
-                                   keep_blank_values=True)
-            
-            try:
-                data = dict([(key, fs.getvalue(key)) for key in fs.keys()])
-            except TypeError:
-                data = {"request" : fs.value }
-            
-            if environ["QUERY_STRING"]:
-                data.update(x.split("=") for x in environ["QUERY_STRING"].split("&"))
+        fs = cgi.FieldStorage(fp=environ['wsgi.input'],
+                               environ=environ,
+                               keep_blank_values=True)
+        
+        try:
+            data = dict([(key, fs.getvalue(key)) for key in fs.keys()])
+        except TypeError:
+            data = {"request" : fs.value }
+        
+        if environ["QUERY_STRING"]:
+            data.update(x.split("=") for x in environ["QUERY_STRING"].split("&"))
 
-            output = ""
-            headers = [('Content-type', 'text/plain')]
-            pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
-            session = pathlist[0]
-            type = pathlist[1]
+        output = ""
+        headers = {'Content-type' : 'text/plain'}
+        pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+        session = pathlist[0]
+        type = pathlist[1]
 
-            try:
-                sm = self.sm_mapping.get(session) or self.init_session(session)
-                status = '200 OK'
-                if type == "basichttp":
-            
-                    if "_content" in data:
-                        event = Processor.fromxml(data["_content"], "unknown")
-                    else:
-                        event = Event(["http", "post"], data=data)
-                    
-                elif type == "scxml":
-                    if "_content" in data:
-                        event = Processor.fromxml(data["_content"])
-                    else:
-                        event = Processor.fromxml(data["request"])
-                        
-                elif type in self.handler_mapping:
-                    #picks out the input handler and executes it.
-                    event = self.handler_mapping[type](session, data, sm, fs)
-                    
-                
-                if self.server_type == TYPE_DEFAULT:
-                    timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
-                    timer.start()
-                elif self.server_type == TYPE_RESPONSE:
-                    sm.interpreter.externalQueue.put(event)
-                    output = sm.datamodel["_response"].get() #blocks
-
-                    output = output["content"].strip()
-                
-            except AssertionError: # no default xml is declared, so sessions can't be dynamically initialized.
-                status = '403 FORBIDDEN'
-            except ExpatError, e:
-                self.logger.error("Parsing of incoming scxml message failed for message %s" % fs.getvalue("_content") )
-                status = '400 BAD REQUEST'
-                output = str(e)
-    
-            start_response(status, headers)
-            
-            return [output]
-        else:
-            pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
-            session = pathlist[0]
+        try:
             sm = self.sm_mapping.get(session) or self.init_session(session)
             status = '200 OK'
-            headers = [('Content-type', 'text/plain')]
-            start_response(status, headers)
-            return ["configuration : %s" % sm.interpreter.configuration]
+            if type == "basichttp":
+        
+                if "_content" in data:
+                    event = Processor.fromxml(data["_content"], "unknown")
+                else:
+                    event = Event(["http", environ['REQUEST_METHOD'].lower()], data=data)
+                
+            elif type == "scxml":
+                if "_content" in data:
+                    event = Processor.fromxml(data["_content"])
+                else:
+                    event = Processor.fromxml(data["request"])
+                    
+            elif type in self.handler_mapping:
+                #picks out the input handler and executes it.
+                event = self.handler_mapping[type](session, data, sm, fs)
+                
+            
+            if self.server_type == TYPE_DEFAULT:
+                timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
+                timer.start()
+            elif self.server_type == TYPE_RESPONSE:
+                sm.interpreter.externalQueue.put(event)
+                output, hints = sm.datamodel["_response"].get() #blocks
+
+                output = output["content"].strip()
+                if type == "scxml":
+                    headers["Content-type"] = "text/xml"
+                    
+                headers.update(hints)
+                
+            
+        except AssertionError:
+            self.logger.error("No default xml is declared, so sessions can't be dynamically initialized.")
+            status = '403 FORBIDDEN'
+        except ExpatError, e:
+            self.logger.error("Parsing of incoming scxml message failed for message %s" % fs.getvalue("_content") )
+            status = '400 BAD REQUEST'
+            output = str(e)
+
+        start_response(status, headers.items())
+        
+        return [output]
 
 
 
@@ -178,10 +175,32 @@ if __name__ == "__main__":
     server_xml = open("../../resources/tropo_server.xml").read()
     dialog_xml = open("../../resources/tropo_colors.xml").read()
     
-    server = PySCXMLServer("cling.gu.se", 8081, 
-                            default_scxml_doc=dialog_xml, 
+    
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <script></script>
+        <state>
+            
+            <transition event="http.get">
+              <send target="#_response" hints='{"Content-type" : "text/html"}'>
+                <content><![CDATA[
+                  <html><body>this is my <b>body</b> with variables $_event.data.</body></html>
+                ]]></content>
+              </send>
+            </transition>
+            
+            <transition event="http.post">
+            </transition>
+        </state>
+    </scxml>
+    '''
+    
+    
+    server = PySCXMLServer("localhost", 8081, 
+                            default_scxml_doc=xml, 
                             server_type=TYPE_RESPONSE,
-                            init_sessions={"tropo_server" : server_xml})
+#                            init_sessions={"tropo_server" : server_xml}
+                            )
     
     server.serve_forever()
     

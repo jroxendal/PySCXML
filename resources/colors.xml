@@ -16,7 +16,7 @@
 	<state id="red">
 		<onentry>
 			<log label="sq" expr="square(1)" />
-			<send event="quit" delay="3">
+			<send event="quit" delay="3s">
 				<content>
 					my test content with value: %(variable)s
 				</content>
