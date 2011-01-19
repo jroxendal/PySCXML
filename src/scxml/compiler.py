@@ -116,7 +116,7 @@ class Compiler(object):
             elif node.tag == pyscxml_ns + "start_session":
                 xml = None
                 if node.find(prepend_ns("content")) != None:
-                    xml = str(Template(node.find(prepend_ns("content")).text))
+                    xml = template(node.find(prepend_ns("content")).text)
                 elif node.get("expr"):
                     xml = self.getExprValue(node.get("expr"))
                 elif self.parseAttr(node, "src"):
@@ -177,7 +177,7 @@ class Compiler(object):
                 output[name] = self.getExprValue(name)
         
         if child.find(prepend_ns("content")) != None:
-            output["content"] = str(Template(child.find(prepend_ns("content")).text, self.doc.datamodel))
+            output["content"] = template(child.find(prepend_ns("content")).text, self.doc.datamodel)
                     
         return output
     
@@ -445,7 +445,7 @@ class Compiler(object):
                 #TODO : should this should be asynchronous?
                 inv.content = urlopen(src).read()
             elif node.find(prepend_ns("content")) != None:
-                inv.content = str(Template(node.find(prepend_ns("content")).text, self.doc.datamodel))
+                inv.content = template(node.find(prepend_ns("content")).text, self.doc.datamodel)
             
         
         elif node.get("type") == "x-pyscxml-soap":
