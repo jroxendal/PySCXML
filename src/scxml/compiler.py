@@ -70,6 +70,7 @@ class Compiler(object):
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
         self.log_function = None
         self.strict_parse = False
+        self.early_eval = True
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -225,9 +226,9 @@ class Compiler(object):
                     inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
                 else:
                     inv.send(event, sendNode.get("id"), delay, data)
-            elif target[0] == "#" and target[1:] == "_response":
+            elif target == "#_response":
                 self.logger.debug("sending to _response")
-                self.doc.datamodel["_response"].put((self.parseData(sendNode), hints))
+                self.doc.datamodel["_response"].put((data, hints))
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
@@ -252,7 +253,7 @@ class Compiler(object):
             getter.get_sync(target, data)
             
         elif type == "x-pyscxml-soap":
-            self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, self.parseData(sendNode))
+            self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, data)
         elif type == "x-pyscxml-statemachine":
             try:
                 evt_obj = Event(event, data)
@@ -292,17 +293,16 @@ class Compiler(object):
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef
-#        xmlStr = removeDefaultNamespace(xmlStr)
         xmlStr = self.addDefaultNamespace(xmlStr)
         try:
             tree = ElementTree.fromstring(xmlStr)
         except ExpatError:
-            
             xmlStr = "\n".join("%s %s" % (n, line) for n, line in enumerate(xmlStr.split("\n")))
             self.logger.error(xmlStr)
             raise
         ElementInclude.include(tree)
         self.strict_parse = tree.get("exmode", "lax") == "strict"
+        self.early_eval = tree.get("binding", "early") == "early"
         preprocess(tree)
         self.setDatamodel(tree)
         
@@ -360,20 +360,23 @@ class Compiler(object):
                 parentState.addTransition(t)
     
             elif node.tag == prepend_ns("invoke"):
-#                inv = self.parseInvoke(node, parentState.id)
-#                inv_func = partial(self.parseInvoke, node, parentState.id)
                 parentState.addInvoke(self.make_invoke_wrapper(node, parentState))
             elif node.tag == prepend_ns("onentry"):
                 s = Onentry()
-                s.exe = partial(self.do_execute_content, node)
+                
+                def onentry(node):
+                    if not self.early_eval and parent.find(prepend_ns("datamodel")) != None:
+                        dataList = parent.find(prepend_ns("datamodel")).findall(prepend_ns("data"))
+                        self.setDataList(dataList) 
+                    self.do_execute_content(node)
+                
+                s.exe = partial(onentry, node)
                 parentState.addOnentry(s)
             
             elif node.tag == prepend_ns("onexit"):
                 s = Onexit()
                 s.exe = partial(self.do_execute_content, node)
                 parentState.addOnexit(s)
-#            elif node.tag == "data":
-                
     
         return self.doc
 
@@ -485,8 +488,15 @@ class Compiler(object):
             return None # leaf nodes have no initial 
     
     def setDatamodel(self, tree):
-        
-        for node in tree.getiterator(prepend_ns("data")):
+        if self.early_eval:
+            self.setDataList(tree.getiterator(prepend_ns("data")))
+        else:
+            if tree.find(self.prepend_ns("datamodel")):
+                self.setDataList(tree.find(self.prepend_ns("datamodel")))
+            
+    
+    def setDataList(self, datalist):
+        for node in datalist:
             self.doc.datamodel[node.get("id")] = None
             if node.get("expr"):
                 self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
@@ -497,7 +507,9 @@ class Compiler(object):
                     self.logger.error("Data src not found : '%s'\n" % node.get("src"))
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
                     raise e
-                
+            elif node.text:
+                self.doc.datamodel[node.get("id")] = template(node.text)
+            
     def addDefaultNamespace(self, xmlStr):
         if not "xmlns=" in re.search(r"<scxml.*?>", xmlStr, re.DOTALL).group():
             self.logger.warn("Your document lacks the correct "
