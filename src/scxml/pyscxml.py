@@ -21,6 +21,7 @@ from interpreter import Interpreter
 from louie import dispatcher
 
 import time
+from threading import Thread
 
 
 def default_logfunction(label, msg):
@@ -59,10 +60,15 @@ class StateMachine(object):
         self.name = self.doc.name
         
         
-    def start(self, parentQueue=None, invokeId=None):
+    def start(self, parentQueue=None, invokeid=None):
         '''Takes the statemachine to its initial state'''
-        self.interpreter.interpret(self.doc, parentQueue, invokeId)
-        
+        self.interpreter.interpret(self.doc, parentQueue, invokeid)
+        self.interpreter.mainEventLoop()
+    
+    def start_threaded(self, parentQueue=None, invokeid=None):
+        self.interpreter.interpret(self.doc, parentQueue, invokeid)
+        t = Thread(target=self.interpreter.mainEventLoop)
+        t.start()     
         
     def isFinished(self):
         '''Returns True if the statemachine has reached it top-level final state'''
@@ -114,7 +120,7 @@ class MultiSession(object):
     def start(self):
         ''' launches the initialized sessions by calling start() on each sm'''
         for sm in self:
-            sm.start()
+            sm.start_threaded()
             
     
     def make_session(self, sessionid, xml):

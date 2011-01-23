@@ -27,6 +27,7 @@ from messaging import exec_async
 from functools import partial
 from scxml.messaging import UrlGetter
 import logging
+from threading import Thread
 
 
 class InvokeWrapper(object):
@@ -76,7 +77,7 @@ class InvokeSCXML(BaseInvoke):
         from pyscxml import StateMachine
         self.sm = StateMachine(self.content)
         self.send = self.sm.send
-        self.sm.start(parentQueue, self.invokeid)
+        self.sm.start_threaded(parentQueue, self.invokeid)
         dispatcher.send("init.invoke." + self.invokeid, self)
         
     def cancel(self):

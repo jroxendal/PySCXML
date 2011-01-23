@@ -94,7 +94,7 @@ class Interpreter(object):
                     enabledTransitions = self.selectTransitions(internalEvent)
             if enabledTransitions:
                 self.microstep(list(enabledTransitions))
-        threading.Thread(target=self.mainEventLoop).start()
+#        self.mainEventLoop()
     
     
     

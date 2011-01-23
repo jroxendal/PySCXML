@@ -216,9 +216,9 @@ class Compiler(object):
                 try:
                     toQueue = self.doc.datamodel["_x"]["sessions"][sessionid].interpreter.externalQueue
                     self.interpreter.send(event, sendNode.get("id"), delay, data, toQueue=toQueue)
-                except KeyError:
+                except KeyError, e:
                     self.logger.error("The session '%s' is inaccessible." % sessionid)
-                    self.raiseError("error.send.target")
+                    self.raiseError("error.send.target", e)
                 
             elif target[0] == "#" and target[1] != "_": # invokeid
                 inv = self.doc.datamodel[target[1:]]
@@ -261,12 +261,12 @@ class Compiler(object):
             except Exception, e:
                 self.logger.error("Exception while executing function at target: '%s'" % target)
                 self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
-                self.raiseError("error.execution." + type(e).__name__.lower()) 
+                self.raiseError("error.execution." + type(e).__name__.lower(), e) 
         
         # this is where to add parsing for more send types. 
         else:
             self.logger.error("The send type %s is invalid or unsupported by the platform" % type)
-            self.raiseError("error.send.event")
+            self.raiseError("error.send.type")
     
     def getUrlGetter(self, target):
         getter = UrlGetter()
@@ -288,8 +288,8 @@ class Compiler(object):
     def onHttpResult(self, signal, **named):
         self.logger.info("onHttpResult " + str(named))
     
-    def raiseError(self, err):
-        self.interpreter.raiseFunction(err.split("."), {}, type="platform")
+    def raiseError(self, err, exception):
+        self.interpreter.raiseFunction(err.split("."), {"exception" : exception}, type="platform")
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef
@@ -360,7 +360,12 @@ class Compiler(object):
                 parentState.addTransition(t)
     
             elif node.tag == prepend_ns("invoke"):
-                parentState.addInvoke(self.make_invoke_wrapper(node, parentState))
+                try:
+                    parentState.addInvoke(self.make_invoke_wrapper(node, parentState))
+                except NotImplementedError, e:
+                    self.logger.error("The invoke type %s is not supported by the platform. "  
+                    "As a result, the invoke was not instantiated." % type )
+                    self.raiseError("error.execution.invoke.type", e)
             elif node.tag == prepend_ns("onentry"):
                 s = Onentry()
                 
@@ -388,7 +393,7 @@ class Compiler(object):
         except Exception, e:
             self.logger.error("Exception while executing expression in a script block: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
-            self.raiseError("error.execution." + type(e).__name__.lower())
+            self.raiseError("error.execution." + type(e).__name__.lower(), e)
                 
     
     def getExprValue(self, expr):
@@ -402,7 +407,7 @@ class Compiler(object):
         except Exception, e:
             self.logger.error("Exception while executing expression: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
-            self.raiseError("error.execution." + type(e).__name__.lower())
+            self.raiseError("error.execution." + type(e).__name__.lower(), e)
             return None
     
     
@@ -416,6 +421,7 @@ class Compiler(object):
         
         def start_invoke(wrapper):
             inv = self.parseInvoke(node)
+                
             wrapper.set_invoke(inv)
             self.doc.datamodel[inv.invokeid] = inv
             dispatcher.connect(self.onInvokeSignal, "init.invoke." + wrapper.invokeid, inv)
@@ -451,12 +457,15 @@ class Compiler(object):
                 inv.content = template(node.find(prepend_ns("content")).text, self.doc.datamodel)
             
         
-        elif node.get("type") == "x-pyscxml-soap":
+        elif type == "x-pyscxml-soap":
             inv = InvokeSOAP()
             inv.content = src
-        elif node.get("type") == "x-pyscxml-responseserver":
+        elif type == "x-pyscxml-responseserver":
             inv = InvokePySCXMLServer()
             inv.content = src
+        else:
+            raise NotImplementedError, "Invoke type %s not implemented by the platform." % type
+            
         
         inv.autoforward = node.get("autoforward", "false").lower() == "true"
         inv.type = type    

@@ -98,7 +98,7 @@ class PySCXMLServer(object):
             
         sm.datamodel["_ioprocessors"] = dict( (k, "http://%s:%s/%s/%s" % (self.host, self.port, sessionid, k) )  
                                               for k in list(self.handler_mapping) + ["basichttp", "scxml"] )
-        sm.start()
+        sm.start_threaded()
         return sm
         
     def request_handler(self, environ, start_response):
