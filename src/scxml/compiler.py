@@ -213,10 +213,9 @@ class Compiler(object):
         
         if type == "scxml":
             if not target:
-                self.interpreter.send(event, sendNode.get("id"), data)
+                self.interpreter.send(event, data)
             elif target == "#_parent":
                 self.interpreter.send(event, 
-                                      sendNode.get("id"), 
                                       data, 
                                       self.interpreter.invokeId, 
                                       toQueue=self.doc.datamodel["_parent"])
@@ -227,7 +226,7 @@ class Compiler(object):
                 sessionid = target.split("#_scxml_")[-1]
                 try:
                     toQueue = self.doc.datamodel["_x"]["sessions"][sessionid].interpreter.externalQueue
-                    self.interpreter.send(event, sendNode.get("id"), data, toQueue=toQueue)
+                    self.interpreter.send(event, data, toQueue=toQueue)
                 except KeyError, e:
                     self.logger.error("The session '%s' is inaccessible." % sessionid)
                     self.raiseError("error.send.target", e)
@@ -237,7 +236,7 @@ class Compiler(object):
                 if isinstance(inv, InvokePySCXMLServer):
                     inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
                 else:
-                    inv.send(event, sendNode.get("id"), data)
+                    inv.send(event, data)
             elif target == "#_response":
                 self.logger.debug("sending to _response")
                 self.doc.datamodel["_response"].put((data, hints))
@@ -270,7 +269,7 @@ class Compiler(object):
             getter.get_sync(target, data)
             
         elif type == "x-pyscxml-soap":
-            self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), data)
+            self.doc.datamodel[target[1:]].send(event, data)
         elif type == "x-pyscxml-statemachine":
             try:
                 evt_obj = Event(event, data)

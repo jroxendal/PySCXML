@@ -357,10 +357,9 @@ class Interpreter(object):
         return name in map(lambda x: x.id, self.configuration)
     
     
-    def send(self, name, sendid="", data={}, invokeid = None, toQueue = None):
+    def send(self, name, data={}, invokeid = None, toQueue = None):
         """Send an event to the statemachine 
         @param name: a dot delimited string, the event name
-        @param sendid: the id of the send, to be used with <cancel sendid="" />
         @param data: the data associated with the event
         @param invokeid: if specified, the id of sending invoked process
         @param toQueue: if specified, the target queue on which to add the event
