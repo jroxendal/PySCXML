@@ -27,9 +27,16 @@ from xml.parsers.expat import ExpatError
 import cgi
 import logging
 import threading, time
+from functools import partial
+try:
+    from eventlet import wsgi, websocket
+    import eventlet
+except ImportError:
+    pass
 
-TYPE_RESPONSE = "type_response"
-TYPE_DEFAULT = "type_default"
+TYPE_DEFAULT = 1
+TYPE_RESPONSE = 2
+TYPE_WEBSOCKET = 4
 
 
 class PySCXMLServer(object):
@@ -70,39 +77,96 @@ class PySCXMLServer(object):
         
         
         '''
+        self.server_type = server_type
+        assert not (self.is_type(TYPE_DEFAULT) and self.is_type(TYPE_RESPONSE))
         self.logger = logging.getLogger("pyscxml.pyscxml_server.PySCXMLServer")
         self.host = host
         self.port = port
         self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
         
-        self.server_type = server_type
-        self.httpd = make_server(host, port, self.request_handler)
         self.handler_mapping = {}
+        self.default_types = [("basichttp", "http"), ("scxml", "http")]
+        if self.is_type(TYPE_WEBSOCKET):
+            self.default_types.append(("websocket", "ws"))
+        #the connected websocket clients
+        self.clients = []
         
     
-    def register_handler(self, type, input_handler, output_handler=str.strip):
-        self.handler_mapping[type] = (input_handler, output_handler)
+    def is_type(self, type):
+        return self.server_type & type == type 
+    
+    def register_handler(self, type, input_handler, protocol="http"):
+        '''
+        Using this method, you can register a handler for an IO processor, so that 
+        your server may be accessed at protocol://example.com:1234/mysession/type,
+        where protocol defaults to http, type has to be distinct from 'scxml', 'basichttp'
+        and 'websocket' (support for these types is built in).
+        @param input_handler: a function with the signature f(session, data, sm, fs),
+        where session is a string (corresponding to 'mysession' in the example url above),
+        data is the request data payload as a dict, sm the target StateMachine instance at that
+        session and fs the FieldStorage instance with more detailed request information. 
+        This function must return an object of type scxml.eventprocessor.Event.   
+        '''
+        assert (type, protocol) not in self.default_types
+        self.handler_mapping[(type, protocol)] = input_handler
     
     def serve_forever(self):
         """Start the server."""
         self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
         self.sm_mapping.start()
         try:
-            self.httpd.serve_forever()
+            if self.is_type(TYPE_WEBSOCKET):
+                wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
+            else:
+                self.httpd = make_server(self.host, self.port, self.request_handler)
+                self.httpd.serve_forever()
+                
+            
         except KeyboardInterrupt:
             import sys
             sys.exit("KeyboardInterrupt")
         
     def init_session(self, sessionid):
         sm = self.sm_mapping.make_session(sessionid, None)
-            
-        sm.datamodel["_ioprocessors"] = dict( (k, "http://%s:%s/%s/%s" % (self.host, self.port, sessionid, k) )  
-                                              for k in list(self.handler_mapping) + ["basichttp", "scxml"] )
+        
+        sm.datamodel["_ioprocessors"] = dict( (type, "%s://%s:%s/%s/%s" % (protocol, self.host, self.port, sessionid, type) )  
+                                              for type, protocol in list(self.handler_mapping) + self.default_types )
         sm.start_threaded()
         return sm
-        
+    
+    def websocket_handler(self, ws):
+        self.clients.append(ws)
+        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
+        session = pathlist[0]
+        sm = self.sm_mapping.get(session) or self.init_session(session)
+        threading.Thread(target=self.websocket_response, args=(sm,)).start()
+        while True:
+            message = ws.wait()
+            if message is None:
+                break
+            evt = Processor.fromxml(message, origintype="javascript")
+            sm.interpreter.externalQueue.put(evt)
+        self.clients.remove(ws)
+
+    def websocket_response(self, sm):
+        while self.clients:
+            evt_xml = sm.datamodel["_websocket"].get() # blocks
+            for ws in self.clients:
+                ws.send(evt_xml)
+    
     def request_handler(self, environ, start_response):
-            
+        status = '200 OK'
+        try:
+            pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+            session = pathlist[0]
+            type = pathlist[1]
+        except:
+            status = "403 FORBIDDEN"
+            start_response(status, ('Content-type', 'text/plain'))
+            return [""]
+        if self.is_type(TYPE_WEBSOCKET) and type == "websocket":
+            handler = websocket.WebSocketWSGI(partial(PySCXMLServer.websocket_handler, self))
+            return handler(environ, start_response)
         fs = cgi.FieldStorage(fp=environ['wsgi.input'],
                                environ=environ,
                                keep_blank_values=True)
@@ -117,13 +181,9 @@ class PySCXMLServer(object):
 
         output = ""
         headers = {'Content-type' : 'text/plain'}
-        pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
-        session = pathlist[0]
-        type = pathlist[1]
 
         try:
             sm = self.sm_mapping.get(session) or self.init_session(session)
-            status = '200 OK'
             if type == "basichttp":
         
                 if "_content" in data:
@@ -137,15 +197,15 @@ class PySCXMLServer(object):
                 else:
                     event = Processor.fromxml(data["request"])
                     
-            elif type in self.handler_mapping:
+            elif type in map(lambda x:x[0], self.handler_mapping):
                 #picks out the input handler and executes it.
                 event = self.handler_mapping[type](session, data, sm, fs)
                 
             
-            if self.server_type == TYPE_DEFAULT:
+            if self.is_type(TYPE_DEFAULT):
                 timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
                 timer.start()
-            elif self.server_type == TYPE_RESPONSE:
+            elif self.is_type(TYPE_RESPONSE):
                 sm.interpreter.externalQueue.put(event)
                 output, hints = sm.datamodel["_response"].get() #blocks
 
@@ -172,6 +232,55 @@ class PySCXMLServer(object):
 
 
 if __name__ == "__main__":
+    import sys
+    
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <script></script>
+        <state>
+            
+            <transition event="http.get">
+              <send target="#_websocket" hints='{"Content-type" : "text/html"}'>
+                <content><![CDATA[
+                  <html><body>this is my <b>body</b> with variables $_event.data.</body></html>
+                ]]></content>
+              </send>
+            </transition>
+            
+            <transition event="http.get">
+            </transition>
+        </state>
+    </scxml>
+    '''
+    
+    xml = '''
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <state id="s1">
+        <transition event="e1" >
+            <log label="event e1 caught" />
+            <send event="firstEvent" target="#_websocket">
+                <content>this is my response.</content>
+            </send>
+            <send event="delayedEvent" delay="2s" target="#_websocket">
+                <content>this is my delayed response.</content>
+            </send>
+        </transition>
+         <transition event="http.get">
+             <log label="get!" />
+        </transition>
+    </state>
+</scxml>
+'''
+    
+    server = PySCXMLServer("localhost", 8081, 
+                        default_scxml_doc=xml, 
+                        server_type=TYPE_DEFAULT|TYPE_WEBSOCKET,
+                        )
+    
+    server.serve_forever()
+    
+    
+    sys.exit()
     server_xml = open("../../resources/tropo_server.xml").read()
     dialog_xml = open("../../resources/tropo_colors.xml").read()
     
@@ -199,7 +308,6 @@ if __name__ == "__main__":
     server = PySCXMLServer("localhost", 8081, 
                             default_scxml_doc=xml, 
                             server_type=TYPE_RESPONSE,
-#                            init_sessions={"tropo_server" : server_xml}
                             )
     
     server.serve_forever()

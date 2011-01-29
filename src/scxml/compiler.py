@@ -1,7 +1,7 @@
 '''
 This file is part of pyscxml.
 
-    pyscxml is free software: you can redistribute it and/or modify
+    PySCXML is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -33,6 +33,7 @@ import Queue
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import InvokeSCXML, InvokeSOAP, InvokePySCXMLServer, InvokeWrapper
 from xml.parsers.expat import ExpatError
+from threading import Timer
 
 try: 
     from Cheetah.Template import Template as Tmpl
@@ -66,11 +67,13 @@ class Compiler(object):
         self.doc = SCXMLDocument()
         self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time())
         self.doc.datamodel["_response"] = Queue.Queue() 
+        self.doc.datamodel["_websocket"] = Queue.Queue() 
         self.doc.datamodel["_x"] = {} 
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
         self.log_function = None
         self.strict_parse = False
         self.early_eval = True
+        self.timer_mapping = {}
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -95,7 +98,10 @@ class Compiler(object):
             elif node.tag == prepend_ns("send"):
                 self.parseSend(node)
             elif node.tag == prepend_ns("cancel"):
-                self.interpreter.cancel(self.parseAttr(node, "sendid"))
+                sendid = self.parseAttr(node, "sendid")
+                if sendid in self.timer_mapping:
+                    self.timer_mapping[sendid].cancel()
+                    del self.timer_mapping[sendid]
             elif node.tag == prepend_ns("assign"):
                 
                 if node.get("location") not in self.doc.datamodel:
@@ -182,12 +188,19 @@ class Compiler(object):
                     
         return output
     
-    def parseSend(self, sendNode):
-
+    def parseSend(self, sendNode, skip_delay=False):
+        if not skip_delay:
+            delay = self.parseAttr(sendNode, "delay", "0s")
+            n, unit = re.search("(\d+)(\w+)", delay).groups()
+            delay = float(n) if unit == "s" else float(n) / 1000
+            if delay:
+                t = Timer(delay, self.parseSend, args=(sendNode, True))
+                if sendNode.get("id"):
+                    self.timer_mapping[sendNode.get("id")] = t
+                t.run()
+                return 
+        
         type = self.parseAttr(sendNode, "type", "scxml")
-        delay = self.parseAttr(sendNode, "delay", "0s")
-        n, unit = re.search("(\d+)(\w+)", delay).groups()
-        delay = float(n) if unit == "s" else float(n) / 1000
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
         target = self.parseAttr(sendNode, "target")
         data = self.parseData(sendNode)
@@ -200,11 +213,10 @@ class Compiler(object):
         
         if type == "scxml":
             if not target:
-                self.interpreter.send(event, sendNode.get("id"), delay, data)
+                self.interpreter.send(event, sendNode.get("id"), data)
             elif target == "#_parent":
                 self.interpreter.send(event, 
                                       sendNode.get("id"), 
-                                      delay, 
                                       data, 
                                       self.interpreter.invokeId, 
                                       toQueue=self.doc.datamodel["_parent"])
@@ -215,7 +227,7 @@ class Compiler(object):
                 sessionid = target.split("#_scxml_")[-1]
                 try:
                     toQueue = self.doc.datamodel["_x"]["sessions"][sessionid].interpreter.externalQueue
-                    self.interpreter.send(event, sendNode.get("id"), delay, data, toQueue=toQueue)
+                    self.interpreter.send(event, sendNode.get("id"), data, toQueue=toQueue)
                 except KeyError, e:
                     self.logger.error("The session '%s' is inaccessible." % sessionid)
                     self.raiseError("error.send.target", e)
@@ -225,10 +237,15 @@ class Compiler(object):
                 if isinstance(inv, InvokePySCXMLServer):
                     inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
                 else:
-                    inv.send(event, sendNode.get("id"), delay, data)
+                    inv.send(event, sendNode.get("id"), data)
             elif target == "#_response":
                 self.logger.debug("sending to _response")
                 self.doc.datamodel["_response"].put((data, hints))
+            elif target == "#_websocket":
+                self.logger.debug("sending to _websocket")
+                evt = ".".join(event) if event else ""
+                eventXML = Processor.toxml(evt, target, data, "", sendNode.get("id", ""), hints, language="json")
+                self.doc.datamodel["_websocket"].put(eventXML)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
@@ -253,7 +270,7 @@ class Compiler(object):
             getter.get_sync(target, data)
             
         elif type == "x-pyscxml-soap":
-            self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), delay, data)
+            self.doc.datamodel[target[1:]].send(event, sendNode.get("id"), data)
         elif type == "x-pyscxml-statemachine":
             try:
                 evt_obj = Event(event, data)
@@ -288,8 +305,9 @@ class Compiler(object):
     def onHttpResult(self, signal, **named):
         self.logger.info("onHttpResult " + str(named))
     
-    def raiseError(self, err, exception):
-        self.interpreter.raiseFunction(err.split("."), {"exception" : exception}, type="platform")
+    def raiseError(self, err, exception=None):
+        data = {"exception" : exception} if exception else {}
+        self.interpreter.raiseFunction(err.split("."), data, type="platform")
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef

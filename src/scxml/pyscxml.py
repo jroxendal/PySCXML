@@ -148,47 +148,27 @@ class MultiSession(object):
 
 if __name__ == "__main__":
     
-#    xml = open("../../resources/colors.xml").read()
+    xml = open("../../resources/colors.xml").read()
 #    xml = open("../../resources/history_variant.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
-    xml = open("../../unittest_xml/factorial.xml").read()
+#    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     
-    xml2 = '''
-        <scxml>
-            <datamodel>
-                <data id="num_list" expr="range(2)" />
-            </datamodel>
-            <state>
-                <invoke>
-                    <content><![CDATA[
-                        <scxml>
-                            <parallel id="p">
-                                #for $n in $num_list
-                                <state id="s$str($n)">
-                                    <onentry><log label="entered state" expr="'$n'" /></onentry>
-                                    <final id="local_final$n" />
-                                </state>
-                                #end for
-                                <transition event="done.state.p" target="final" />
-                            </parallel>
-                            <final id="final" />
-                        </scxml>
-                    ]]></content>
-                </invoke>
-                <transition event="done.invoke" target="f" />
-            </state>
-            <final id="f" />
-        </scxml>
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <state>
+            <transition event="e1">
+                <log label="transition taken" />
+            </transition>
+        </state>
+    </scxml>
     '''
-#    from xml.etree import ElementTree as etree
-#    print etree.tostring(etree.fromstring(xml))
+    
     sm = StateMachine(xml)
-    sm.start()
-    time.sleep(1)
-#    sm.send("http.post")
+    sm.start_threaded()
+    sm.send(u"e1")
     
 

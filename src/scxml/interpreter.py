@@ -1,7 +1,7 @@
 ''' 
 This file is part of pyscxml.
 
-    pyscxml is free software: you can redistribute it and/or modify
+    PySCXML is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -357,37 +357,22 @@ class Interpreter(object):
         return name in map(lambda x: x.id, self.configuration)
     
     
-    def send(self, name, sendid="", delay=0, data={}, invokeid = None, toQueue = None):
+    def send(self, name, sendid="", data={}, invokeid = None, toQueue = None):
         """Send an event to the statemachine 
         @param name: a dot delimited string, the event name
         @param sendid: the id of the send, to be used with <cancel sendid="" />
-        @param delay: the delay in seconds before sending the event
         @param data: the data associated with the event
         @param invokeid: if specified, the id of sending invoked process
         @param toQueue: if specified, the target queue on which to add the event
         
         """
-        if type(name) == str: name = name.split(".")
+        if isinstance(name, basestring): name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
-        def sendFunction(name, data, invid):
-            evt = Event(name, data, invid)
-            evt.origin = self.dm["_sessionid"]
-            evt.origintype = "scxml"
-            toQueue.put(evt)
+        evt = Event(name, data, invokeid)
+        evt.origin = self.dm["_sessionid"]
+        evt.origintype = "scxml"
+        toQueue.put(evt)
         
-        if not delay: 
-            sendFunction(name, data, invokeid)
-            return
-        timer = threading.Timer(delay, sendFunction, args=(name, data, invokeid))
-        if sendid:
-            self.timerDict[sendid] = timer
-        timer.start()
-        
-    
-    def cancel(self, sendid):
-        if sendid in self.timerDict:
-            self.timerDict[sendid].cancel()
-            del self.timerDict[sendid]
             
     def raiseFunction(self, event, data, type="internal"):
         self.internalQueue.put(Event(event, data, type=type))

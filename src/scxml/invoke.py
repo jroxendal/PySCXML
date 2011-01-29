@@ -81,7 +81,7 @@ class InvokeSCXML(BaseInvoke):
         dispatcher.send("init.invoke." + self.invokeid, self)
         
     def cancel(self):
-        self.sm.send(["cancel", "invoke", self.invokeid], None, None, {}, self.invokeid)
+        self.sm.send(["cancel", "invoke", self.invokeid], None, {}, self.invokeid)
     
 
 class InvokeSOAP(BaseInvoke):
@@ -98,7 +98,7 @@ class InvokeSOAP(BaseInvoke):
         self.client = Client(self.content)
         dispatcher.send("init.invoke." + self.invokeid, self)
         
-    def send(self, name, sendid="", delay=0, data={}, invokeid = None, toQueue = None):
+    def send(self, name, sendid="", data={}, invokeid = None, toQueue = None):
         exec_async(partial(self.soap_send_sync, ".".join(name), data))
         
     def soap_send_sync(self, method, data):

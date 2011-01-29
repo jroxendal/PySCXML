@@ -12,11 +12,13 @@ import pickle
 
 class SCXMLEventProcessor(object):
     @staticmethod
-    def toxml(event, target, data, origin="", sendid="", hints=""):
+    def toxml(event, target, data, origin="", sendid="", hints="", language="python"):
         '''
         takes a send element and a dictionary corresponding to its 
         param and namelist attributes and outputs the equivalient 
         SCXML message XML structure. 
+        @param language: may be of value "python" or "json", and will result in 
+        data being either written to the xml using pickle.dumps or json.dumps.
         '''
         b = etree.TreeBuilder()
         b.start("scxml:message", {"xmlns:scxml" : "http://www.w3.org/2005/07/scxml", 
@@ -27,7 +29,7 @@ class SCXMLEventProcessor(object):
                                   "type" : "scxml",
                                   "name" : event,
                                   "sendid" : sendid,
-                                  "language" : "python"
+                                  "language" : language
         })
         
         b.start("scxml:payload", {})
@@ -39,7 +41,11 @@ class SCXMLEventProcessor(object):
         for k, v in data.items():
             b.start("scxml:property", {"name" : k})
             if k != "content":
-                b.data(pickle.dumps(v))
+                if language == "python":
+                    b.data(pickle.dumps(v))
+                elif language == "json":
+                    import json
+                    b.data(json.dumps(v))
             else:
                 b.data(v)
                 
@@ -56,7 +62,8 @@ class SCXMLEventProcessor(object):
     @staticmethod
     def fromxml(xmlstr, origintype="scxml"):
         '''
-        takes an SCXML message xml stucture and outputs the equivalent interpreter Event
+        Takes an SCXML message xml stucture and outputs the equivalent 
+        scxml.eventprocessor.Event object.
         '''
 
         xml = etree.fromstring(xmlstr)
