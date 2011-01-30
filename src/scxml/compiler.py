@@ -67,13 +67,14 @@ class Compiler(object):
         self.doc = SCXMLDocument()
         self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time())
         self.doc.datamodel["_response"] = Queue.Queue() 
-        self.doc.datamodel["_websocket"] = Queue.Queue() 
-        self.doc.datamodel["_x"] = {} 
+        self.doc.datamodel["_websocket"] = Queue.Queue()
+#        self.doc.datamodel["get"] = self.doc.datamodel.get
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
         self.log_function = None
         self.strict_parse = False
         self.early_eval = True
         self.timer_mapping = {}
+        self.instantiate_datamodel = None
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -305,8 +306,8 @@ class Compiler(object):
         self.logger.info("onHttpResult " + str(named))
     
     def raiseError(self, err, exception=None):
-        data = {"exception" : exception} if exception else {}
-        self.interpreter.raiseFunction(err.split("."), data, type="platform")
+        self.interpreter.raiseFunction(err.split("."), {"exception" : exception}, type="platform")
+    
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef
@@ -321,7 +322,7 @@ class Compiler(object):
         self.strict_parse = tree.get("exmode", "lax") == "strict"
         self.early_eval = tree.get("binding", "early") == "early"
         preprocess(tree)
-        self.setDatamodel(tree)
+        self.instantiate_datamodel = partial(self.setDatamodel, tree)
         
         for n, parent, node in iter_elems(tree):
             if parent != None and parent.get("id"):
@@ -529,6 +530,11 @@ class Compiler(object):
             elif node.get("src"):
                 try:
                     self.doc.datamodel[node.get("id")] = urlopen(node.get("src")).read()
+                except ValueError:
+#                    try:
+                    self.doc.datamodel[node.get("id")] = open(node.get("src")).read()
+#                    except IOError:
+#                        raise "The document could not be fetched through http or locally."
                 except Exception, e:
                     self.logger.error("Data src not found : '%s'\n" % node.get("src"))
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )

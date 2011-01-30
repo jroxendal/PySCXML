@@ -139,6 +139,7 @@ class PySCXMLServer(object):
         pathlist = filter(lambda x: bool(x), ws.path.split("/"))
         session = pathlist[0]
         sm = self.sm_mapping.get(session) or self.init_session(session)
+        sm.send("websocket.connect")
         threading.Thread(target=self.websocket_response, args=(sm,)).start()
         while True:
             message = ws.wait()
@@ -146,6 +147,7 @@ class PySCXMLServer(object):
                 break
             evt = Processor.fromxml(message, origintype="javascript")
             sm.interpreter.externalQueue.put(evt)
+        sm.send("websocket.disconnect")
         self.clients.remove(ws)
 
     def websocket_response(self, sm):
@@ -160,9 +162,10 @@ class PySCXMLServer(object):
             pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
             session = pathlist[0]
             type = pathlist[1]
+            assert type in map(lambda x:x[0], list(self.handler_mapping) + self.default_types)
         except:
             status = "403 FORBIDDEN"
-            start_response(status, ('Content-type', 'text/plain'))
+            start_response(status, [('Content-type', 'text/plain')])
             return [""]
         if self.is_type(TYPE_WEBSOCKET) and type == "websocket":
             handler = websocket.WebSocketWSGI(partial(PySCXMLServer.websocket_handler, self))
@@ -189,7 +192,8 @@ class PySCXMLServer(object):
                 if "_content" in data:
                     event = Processor.fromxml(data["_content"], "unknown")
                 else:
-                    event = Event(["http", environ['REQUEST_METHOD'].lower()], data=data)
+                    pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
+                    event = Event(["http", environ['REQUEST_METHOD'].lower()] + pth, data=data)
                 
             elif type == "scxml":
                 if "_content" in data:
@@ -201,7 +205,6 @@ class PySCXMLServer(object):
                 #picks out the input handler and executes it.
                 event = self.handler_mapping[type](session, data, sm, fs)
                 
-            
             if self.is_type(TYPE_DEFAULT):
                 timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
                 timer.start()

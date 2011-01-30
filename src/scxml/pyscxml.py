@@ -59,14 +59,18 @@ class StateMachine(object):
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
         
-        
+    
+    def _start(self, parentQueue=None, invokeid=None):
+        self.compiler.instantiate_datamodel()
+        self.interpreter.interpret(self.doc, parentQueue, invokeid)
+            
     def start(self, parentQueue=None, invokeid=None):
         '''Takes the statemachine to its initial state'''
-        self.interpreter.interpret(self.doc, parentQueue, invokeid)
+        self._start(parentQueue, invokeid)
         self.interpreter.mainEventLoop()
     
     def start_threaded(self, parentQueue=None, invokeid=None):
-        self.interpreter.interpret(self.doc, parentQueue, invokeid)
+        self._start(parentQueue, invokeid)
         t = Thread(target=self.interpreter.mainEventLoop)
         t.start()     
         
@@ -148,7 +152,7 @@ class MultiSession(object):
 
 if __name__ == "__main__":
     
-    xml = open("../../resources/colors.xml").read()
+    xml = open("/Users/johan/Development/workspace_helios/pyscxml/examples/websockets/websocket_server.xml").read()
 #    xml = open("../../resources/history_variant.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
@@ -157,18 +161,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     
-    xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-        <state>
-            <transition event="e1">
-                <log label="transition taken" />
-            </transition>
-        </state>
-    </scxml>
-    '''
-    
     sm = StateMachine(xml)
-    sm.start_threaded()
-    sm.send(u"e1")
+    sm.start()
     
 

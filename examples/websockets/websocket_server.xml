@@ -1,0 +1,33 @@
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <datamodel>
+        <data id="console" src="console.html" />
+        <data id="SCXMLEventProcessor" src="SCXMLEventProcessor.js" />
+        <data id="get" expr="_x['self'].datamodel.get" />
+    </datamodel>
+
+    <parallel>
+
+        <state id="webserver">
+            <transition event="http.get">
+                <script>
+                    filename, ext = _event.name[2].split(".")
+                </script>
+                <send target="#_response" hints="{'Content-type' : 'text/html'}">
+                    <param name="content" expr="get(filename)" />
+                </send>
+            </transition>
+        </state>
+    
+        <state id="websocket_server">
+            <transition event="hello" >
+                <send event="and_hello_to_you" target="#_websocket" /> 
+            </transition>
+            
+            <transition event="echo">
+                <send event="echo" target="#_websocket" /> 
+            </transition>
+            
+        </state>
+    
+    </parallel>
+</scxml>
