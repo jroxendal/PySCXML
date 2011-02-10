@@ -6,13 +6,13 @@ This file is part of pyscxml.
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    pyscxml is distributed in the hope that it will be useful,
+    PySCXML is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    along with PySCXML.  If not, see <http://www.gnu.org/licenses/>.
     
     @author Johan Roxendal
     @contact: johan@roxendal.com
@@ -21,7 +21,7 @@ This file is part of pyscxml.
 
 
 from node import *
-import sys, re, time
+import re, time
 from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
@@ -31,7 +31,7 @@ from louie import dispatcher
 from urllib2 import urlopen
 import Queue
 from eventprocessor import Event, SCXMLEventProcessor as Processor
-from invoke import InvokeSCXML, InvokeSOAP, InvokePySCXMLServer, InvokeWrapper
+from invoke import *
 from xml.parsers.expat import ExpatError
 from threading import Timer
 
@@ -53,13 +53,17 @@ except ImportError:
 
 
 def prepend_ns(tag):
-    return ns + tag
+    return ("{%s}" % ns) + tag
 
-ns = "{http://www.w3.org/2005/07/scxml}"
+def split_ns(node):
+    return node.tag[1:].split("}")
+
+ns = "http://www.w3.org/2005/07/scxml"
 pyscxml_ns = "{http://code.google.com/p/pyscxml}"
 tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit"]
 tagsForTraversal = map(prepend_ns, tagsForTraversal)
-
+custom_exec_mapping = {}
+preprocess_mapping = {}
 
 class Compiler(object):
     '''The class responsible for compiling the statemachine'''
@@ -90,56 +94,59 @@ class Compiler(object):
         elements, but can also be any iterator of executable elements. 
         '''
         for node in parent:
-            
-            if node.tag == prepend_ns("log"):
-                self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
-            elif node.tag == prepend_ns("raise"):
-                eventName = node.get("event").split(".")
-                self.interpreter.raiseFunction(eventName, self.parseData(node))
-            elif node.tag == prepend_ns("send"):
-                self.parseSend(node)
-            elif node.tag == prepend_ns("cancel"):
-                sendid = self.parseAttr(node, "sendid")
-                if sendid in self.timer_mapping:
-                    self.timer_mapping[sendid].cancel()
-                    del self.timer_mapping[sendid]
-            elif node.tag == prepend_ns("assign"):
-                
-                if node.get("location") not in self.doc.datamodel:
-                    self.logger.error("The location expression %s was not instantiated in the datamodel." % node.get("location"))
-                    self.raiseError("error.execution.nameerror")
-                    continue
-                
-                expression = node.get("expr") or node.text.strip()
-                self.doc.datamodel[node.get("location")] = self.getExprValue(expression)
-            elif node.tag == prepend_ns("script"):
-                if node.get("src"):
-                    self.execExpr(urlopen(node.get("src")).read())
-                else:
-                    self.execExpr(node.text)
+            node_ns, node_name = split_ns(node)  
+            if node_ns == ns: 
+                if node_name == "log":
+                    self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
+                elif node_name == "raise":
+                    eventName = node.get("event").split(".")
+                    self.interpreter.raiseFunction(eventName, self.parseData(node))
+                elif node_name == "send":
+                    self.parseSend(node)
+                elif node_name == "cancel":
+                    sendid = self.parseAttr(node, "sendid")
+                    if sendid in self.timer_mapping:
+                        self.timer_mapping[sendid].cancel()
+                        del self.timer_mapping[sendid]
+                elif node_name == "assign":
                     
-            elif node.tag == prepend_ns("if"):
-                self.parseIf(node)
-                
-            elif node.tag == pyscxml_ns + "start_session":
-                xml = None
-                if node.find(prepend_ns("content")) != None:
-                    xml = template(node.find(prepend_ns("content")).text)
-                elif node.get("expr"):
-                    xml = self.getExprValue(node.get("expr"))
-                elif self.parseAttr(node, "src"):
-                    xml = urlopen(self.parseAttr(node, "src")).read()
-                try:
-                    multisession = self.doc.datamodel["_x"]["sessions"]
-                    sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
-                    sm.start()
-                except AssertionError:
-                    self.logger.error("You supplied no xml for <pyscxml:start_session /> " 
-                                        "and no default has been declared.")
-                except KeyError:
-                    self.logger.error("You can only use the pyscxml:start_session " 
-                                      "element for documents in a MultiSession enviroment")
+                    if node.get("location") not in self.doc.datamodel:
+                        self.logger.error("The location expression %s was not instantiated in the datamodel." % node.get("location"))
+                        self.raiseError("error.execution.nameerror")
+                        continue
                     
+                    expression = node.get("expr") or node.text.strip()
+                    self.doc.datamodel[node.get("location")] = self.getExprValue(expression)
+                elif node_name == "script":
+                    if node.get("src"):
+                        self.execExpr(urlopen(node.get("src")).read())
+                    else:
+                        self.execExpr(node.text)
+                        
+                elif node_name == "if":
+                    self.parseIf(node)
+                
+            elif node_ns == pyscxml_ns:
+                if node_name == "start_session":
+                    xml = None
+                    if node.find(prepend_ns("content")) != None:
+                        xml = template(node.find(prepend_ns("content")).text)
+                    elif node.get("expr"):
+                        xml = self.getExprValue(node.get("expr"))
+                    elif self.parseAttr(node, "src"):
+                        xml = urlopen(self.parseAttr(node, "src")).read()
+                    try:
+                        multisession = self.doc.datamodel["_x"]["sessions"]
+                        sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
+                        sm.start()
+                    except AssertionError:
+                        self.logger.error("You supplied no xml for <pyscxml:start_session /> " 
+                                            "and no default has been declared.")
+                    except KeyError:
+                        self.logger.error("You can only use the pyscxml:start_session " 
+                                          "element for documents in a MultiSession enviroment")
+            elif node_ns in custom_exec_mapping:
+                custom_exec_mapping[node_ns](node)
                 
                 
             else:
@@ -236,6 +243,8 @@ class Compiler(object):
                 inv = self.doc.datamodel[target[1:]]
                 if isinstance(inv, InvokePySCXMLServer):
                     inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
+                if isinstance(inv, InvokeHTTP):
+                    inv.send(".".join(event), data, hints=hints)
                 else:
                     inv.send(event, data)
             elif target == "#_response":
@@ -328,7 +337,9 @@ class Compiler(object):
             if parent != None and parent.get("id"):
                 parentState = self.doc.getState(parent.get("id"))
             
-            if node.tag == prepend_ns("scxml"):
+            node_ns, node_tag = split_ns(node)
+            
+            if node_tag == "scxml":
                 s = State(node.get("id"), None, n)
                 s.initial = self.parseInitial(node)
                 self.doc.name = node.get("name", "")
@@ -337,19 +348,19 @@ class Compiler(object):
                     self.execExpr(node.find(prepend_ns("script")).text)
                 self.doc.rootState = s    
                 
-            elif node.tag == prepend_ns("state"):
+            elif node_tag == "state":
                 s = State(node.get("id"), parentState, n)
                 s.initial = self.parseInitial(node)
                 
                 self.doc.addNode(s)
                 parentState.addChild(s)
                 
-            elif node.tag == prepend_ns("parallel"):
+            elif node_tag == "parallel":
                 s = Parallel(node.get("id"), parentState, n)
                 self.doc.addNode(s)
                 parentState.addChild(s)
                 
-            elif node.tag == prepend_ns("final"):
+            elif node_tag == "final":
                 s = Final(node.get("id"), parentState, n)
                 self.doc.addNode(s)
                 
@@ -360,12 +371,12 @@ class Compiler(object):
                 
                 parentState.addFinal(s)
                 
-            elif node.tag == prepend_ns("history"):
+            elif node_tag == "history":
                 h = History(node.get("id"), parentState, node.get("type"), n)
                 self.doc.addNode(h)
                 parentState.addHistory(h)
                 
-            elif node.tag == prepend_ns("transition"):
+            elif node_tag == "transition":
                 t = Transition(parentState)
                 if node.get("target"):
                     t.target = node.get("target").split(" ")
@@ -377,14 +388,14 @@ class Compiler(object):
                 t.exe = partial(self.do_execute_content, node)
                 parentState.addTransition(t)
     
-            elif node.tag == prepend_ns("invoke"):
+            elif node_tag == "invoke":
                 try:
                     parentState.addInvoke(self.make_invoke_wrapper(node, parentState))
                 except NotImplementedError, e:
                     self.logger.error("The invoke type %s is not supported by the platform. "  
                     "As a result, the invoke was not instantiated." % type )
                     self.raiseError("error.execution.invoke.type", e)
-            elif node.tag == prepend_ns("onentry"):
+            elif node_tag == "onentry":
                 s = Onentry()
                 
                 def onentry(node):
@@ -396,7 +407,7 @@ class Compiler(object):
                 s.exe = partial(onentry, node)
                 parentState.addOnentry(s)
             
-            elif node.tag == prepend_ns("onexit"):
+            elif node_tag == "onexit":
                 s = Onexit()
                 s.exe = partial(self.do_execute_content, node)
                 parentState.addOnexit(s)
@@ -478,6 +489,9 @@ class Compiler(object):
         elif type == "x-pyscxml-soap":
             inv = InvokeSOAP()
             inv.content = src
+        elif type == "x-pyscxml-httpserver":
+            inv = InvokeHTTP()
+            inv.content = src
         elif type == "x-pyscxml-responseserver":
             inv = InvokePySCXMLServer()
             inv.content = src
@@ -548,15 +562,27 @@ class Compiler(object):
                 "default namespace declaration. It has been added for you, for parsing purposes.")
             return xmlStr.replace("<scxml", "<scxml xmlns='http://www.w3.org/2005/07/scxml'", 1)
         return xmlStr
+    
         
 
 def preprocess(tree):
     tree.set("id", "__main__")
     
+    for parent in tree.getiterator():
+        for child in parent:
+            node_ns, node_tag = split_ns(child)
+            if node_ns in preprocess_mapping:
+                print "preprocess"
+                xmlstr = preprocess_mapping[node_ns](child)
+                i = list(parent).index(child)
+                parent[i] = ElementTree.fromstring(xmlstr)
+            
+    
     for n, parent, node in iter_elems(tree):
         if node.tag in map(prepend_ns, ["state", "parallel", "final", "invoke", "history"]) and not node.get("id"):
             id = parent.get("id") + "_%s_child_%s" % (node.tag, n)
             node.set('id',id)
+            
             
 
 def normalizeExpr(expr):
@@ -571,10 +597,6 @@ def normalizeExpr(expr):
     
     return code
     
-
-def removeDefaultNamespace(xmlStr):
-    return re.sub(r" xmlns=['\"].+?['\"]", "", xmlStr)
-
 
 def iter_elems(tree):
     queue = [(None, tree)]

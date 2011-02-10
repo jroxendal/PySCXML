@@ -266,16 +266,13 @@ class Interpreter(object):
                         self.addStatesToEnter(child,LCA,statesToEnter,statesForDefaultEntry)
                 for s in self.getTargetStates(t.target):
                     self.addStatesToEnter(s,LCA,statesToEnter,statesForDefaultEntry)
-                    
         for s in statesToEnter:
             self.statesToInvoke.add(s)
-                    
         statesToEnter.sort(key=enterOrder)
         for s in statesToEnter:
             self.configuration.add(s)
             for content in s.onentry:
                 self.executeContent(content)
-                
             if s in statesForDefaultEntry:
                 self.executeContent(s.initial)
             if isFinalState(s):
@@ -291,11 +288,10 @@ class Interpreter(object):
     
     
     def addStatesToEnter(self, s,root,statesToEnter,statesForDefaultEntry):
-        
         if isHistoryState(s):
-            if self.historyValue.has_key(s.id):
+            if s.id in self.historyValue:
                 for s0 in self.historyValue[s.id]:
-                    self.addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
+                    self.addStatesToEnter(s0, root, statesToEnter, statesForDefaultEntry)
             else:
                 for t in s.transition:
                     for s0 in self.getTargetStates(t.target):

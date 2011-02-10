@@ -19,6 +19,8 @@ This file is part of pyscxml.
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+ 
+
 
 class SCXMLNode(object):
     def __init__(self, id, parent, n):
@@ -194,5 +196,5 @@ class SCXMLDocument(object):
         return iter(self.rootState)
     
     
-            
-    
+__all__ = ['Final', 'History', 'Initial', 'Onentry', 'Onexit', 'Parallel', 'SCXMLDocument', 'State', 'Transition', "SCXMLNode"]
+

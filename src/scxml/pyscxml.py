@@ -16,7 +16,8 @@ This file is part of pyscxml.
 '''
 
 import logger
-from compiler import Compiler
+#from compiler import Compiler
+import compiler
 from interpreter import Interpreter
 from louie import dispatcher
 
@@ -49,8 +50,9 @@ class StateMachine(object):
 
         self.is_finished = False
         self.interpreter = Interpreter()
+        # makes sure the scxml done event reaches this class. 
         dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
-        self.compiler = Compiler()
+        self.compiler = compiler.Compiler()
         self.compiler.log_function = log_function
         self.send = self.interpreter.send
         self.In = self.interpreter.In
@@ -82,7 +84,9 @@ class StateMachine(object):
         if sender is self.interpreter:
             self.is_finished = True
             dispatcher.send("signal_exit", self)
-        
+    
+    def register_custom_executable(self, namespace, function):
+        compiler.custom_exec_mapping[namespace] = function
 
 class MultiSession(object):
     
@@ -114,13 +118,6 @@ class MultiSession(object):
     def __getitem__(self, val):
         return self.sm_mapping[val]
     
-    #TODO:remove this
-#    def __setitem__(self, key, val):
-#        self.make_session(key, valu)
-#        for sessionid, session in self.sm_mapping.items():
-#            self[sm.datamodel["_sessionid"]] = sm
-#            sm.datamodel["_x"]["sessions"][sessionid] = session
-    
     def start(self):
         ''' launches the initialized sessions by calling start() on each sm'''
         for sm in self:
@@ -149,19 +146,47 @@ class MultiSession(object):
             del self[sender.datamodel["_sessionid"]]
 
 
+class custom_executable(object):
+    
+    def __init__(self, namespace):
+        self.namespace = namespace
+    
+    def __call__(self, f):
+        compiler.custom_exec_mapping[self.namespace] = f
+        return f
+    
+    
+class preprocessor(object):
+    def __init__(self, namespace):
+        self.namespace = namespace
+    
+    def __call__(self, f):
+        compiler.preprocess_mapping[self.namespace] = f
+        return f
+    
 
 if __name__ == "__main__":
     
-    xml = open("/Users/johan/Development/workspace_helios/pyscxml/examples/websockets/websocket_server.xml").read()
-#    xml = open("../../resources/history_variant.xml").read()
+#    xml = open("../../examples/websockets/websocket_server.xml").read()
+#    xml = open("../../resources/history_bug.xml").read()
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <state>
+            <invoke id="i" type="x-pyscxml-httpserver" src="http://localhost:8081/session1/basichttp" />  
+            <transition event="init.invoke">
+                <send event="PUT" target="#i" >
+                    <param name="p" expr="'val'" />
+                </send>
+            </transition>
+        </state>
+    </scxml>
+    '''
     
     sm = StateMachine(xml)
     sm.start()
-    
-

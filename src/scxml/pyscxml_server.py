@@ -280,54 +280,23 @@ if __name__ == "__main__":
                         server_type=TYPE_DEFAULT|TYPE_WEBSOCKET,
                         )
     
-    server.serve_forever()
+#    server.serve_forever()
     
     
-    sys.exit()
+#    sys.exit()
     server_xml = open("../../resources/tropo_server.xml").read()
     dialog_xml = open("../../resources/tropo_colors.xml").read()
     
     
-    xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-        <script></script>
-        <state>
-            
-            <transition event="http.get">
-              <send target="#_response" hints='{"Content-type" : "text/html"}'>
-                <content><![CDATA[
-                  <html><body>this is my <b>body</b> with variables $_event.data.</body></html>
-                ]]></content>
-              </send>
-            </transition>
-            
-            <transition event="http.post">
-            </transition>
-        </state>
-    </scxml>
-    '''
     
     
-    server = PySCXMLServer("localhost", 8081, 
-                            default_scxml_doc=xml, 
-                            server_type=TYPE_RESPONSE,
-                            )
-    
-    server.serve_forever()
-    
-    
-    
-    import sys;sys.exit()
+#    import sys;sys.exit()
     xml = '''\
         <scxml>
             <state>
-                <transition event="update">
-                    <log label="server update" expr="_event.data" />
-                    <send target="#_response" >
-                        <content>
-                            hello!
-                        </content>
-                    </send>
+                <transition event="http">
+                    <log label="http" expr="_event.name" />
+                    <log label="data" expr="_event.data" />
                 </transition>
             </state>
         </scxml>
@@ -335,9 +304,8 @@ if __name__ == "__main__":
     
 #    xml = open("../../resources/tropo_server.xml").read()
 #    
-#    server = PySCXMLServer("localhost", 8081, xml, server_type=TYPE_RESPONSE)
-#    t = threading.Thread(target=server.serve_forever)
-#    t.start()
+    server = PySCXMLServer("localhost", 8081, xml)
+    server.serve_forever()
     
     
     xml1 = '''\

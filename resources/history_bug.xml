@@ -10,6 +10,9 @@
 		<onentry>
 			<log expr="'Entered outer'" />
 		</onentry>
+		<onexit>
+			<log expr="'exited outer'" />
+		</onexit>
 		<state id="process" initial="s1">
 			<history id="h" type="shallow" />
 			<state id="s1">

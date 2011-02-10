@@ -19,19 +19,21 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
     HTTP_ERROR = "HTTP_ERROR"
     URL_ERROR = "URL_ERROR"
     
-    def __init__(self):
-        self.url = None
+    
+    def get_async(self, url, data, type=None):
+        exec_async(partial(self.get_sync, url, data, type=type))
+    
+    def get_sync(self, url, data, type=None):
         
-    
-    def get_async(self, url, data):
-        self.url = url
-        exec_async(partial(self.get_sync, url, data))
-    
-    def get_sync(self, url, data):
-        self.url = url
+        if type and type.upper() not in ("POST", "GET"):
+            from restlib import RestfulRequest
+            req = RestfulRequest(url, data=urlencode({"lol" : "lolvalue"}), method=type.upper())
+        else:
+            req = url
+        
         opener = urllib2.build_opener(self)
         try:
-            f = opener.open(url, data=urlencode(data))
+            f = opener.open(req, data=urlencode(data))
             
             if str(f.code)[0] == "2":
                 dispatcher.send(UrlGetter.HTTP_RESULT, self, result=f.read(), source=url)
