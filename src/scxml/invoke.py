@@ -125,8 +125,8 @@ class InvokeHTTP(BaseInvoke):
         self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
         dispatcher.send("error.communication.invoke." + self.invokeid, self, data={"error_code" : error_code})
 
-    def onURLError(self, signal, sender):
-        self.logger.error("The address %s is currently unavailable" % sender.url)
+    def onURLError(self, signal, sender, **named):
+        self.logger.error("The address %s is currently unavailable" % named["source"])
         dispatcher.send("error.communication.invoke." + self.invokeid, self)
         
     def onHttpResult(self, signal, result, **named):
@@ -135,7 +135,7 @@ class InvokeHTTP(BaseInvoke):
     
         
     
-
+'''
 class InvokePySCXMLServer(BaseInvoke):
     
     def __init__(self):
@@ -166,5 +166,5 @@ class InvokePySCXMLServer(BaseInvoke):
         self.logger.info("onHttpResult " + str(named))
         dispatcher.send("result.invoke.%s" % (self.invokeid), self, data={"response" : result})
     
-
-__all__ = ["InvokeSCXML", "InvokeSOAP", "InvokePySCXMLServer", "InvokeWrapper", "InvokeHTTP"]
+'''
+__all__ = ["InvokeSCXML", "InvokeSOAP", "InvokeWrapper", "InvokeHTTP"]

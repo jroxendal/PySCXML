@@ -50,8 +50,6 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
         return result        
 
     
-
-
 if __name__ == '__main__':
     
 

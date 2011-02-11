@@ -241,8 +241,8 @@ class Compiler(object):
                 
             elif target[0] == "#" and target[1] != "_": # invokeid
                 inv = self.doc.datamodel[target[1:]]
-                if isinstance(inv, InvokePySCXMLServer):
-                    inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
+#                if isinstance(inv, InvokePySCXMLServer):
+#                    inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
                 if isinstance(inv, InvokeHTTP):
                     inv.send(".".join(event), data, hints=hints)
                 else:
@@ -492,9 +492,9 @@ class Compiler(object):
         elif type == "x-pyscxml-httpserver":
             inv = InvokeHTTP()
             inv.content = src
-        elif type == "x-pyscxml-responseserver":
-            inv = InvokePySCXMLServer()
-            inv.content = src
+#        elif type == "x-pyscxml-responseserver":
+#            inv = InvokePySCXMLServer()
+#            inv.content = src
         else:
             raise NotImplementedError, "Invoke type %s not implemented by the platform." % type
             

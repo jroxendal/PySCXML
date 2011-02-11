@@ -178,8 +178,11 @@ if __name__ == "__main__":
     xml = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml">
         <state>
-            <invoke id="i" type="x-pyscxml-httpserver" src="http://localhost:8081/session1/basichttp" />  
-            <transition event="init.invoke">
+            <invoke id="i" type="x-pyscxml-httpserver" src="http://localhost:8081/session1/basichttp" />
+            <onentry>
+                <send event="start_event" />
+            </onentry>  
+            <transition event="start_event">
                 <send event="PUT" target="#i" >
                     <param name="p" expr="'val'" />
                 </send>
@@ -190,3 +193,5 @@ if __name__ == "__main__":
     
     sm = StateMachine(xml)
     sm.start()
+    
+    
