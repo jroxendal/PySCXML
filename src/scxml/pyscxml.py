@@ -22,7 +22,7 @@ from interpreter import Interpreter
 from louie import dispatcher
 
 import time
-from threading import Thread
+from threading import Thread, RLock
 
 
 def default_logfunction(label, msg):
@@ -49,13 +49,12 @@ class StateMachine(object):
             logger.addHandler(logger.NullHandler())
 
         self.is_finished = False
+        self._lock = RLock()
         self.interpreter = Interpreter()
         # makes sure the scxml done event reaches this class. 
         dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
         self.compiler = compiler.Compiler()
         self.compiler.log_function = log_function
-        self.send = self.interpreter.send
-        self.In = self.interpreter.In
         self.doc = self.compiler.parseXML(xml, self.interpreter)
         self.doc.datamodel["_x"] = {"self" : self}
         self.datamodel = self.doc.datamodel
@@ -68,6 +67,8 @@ class StateMachine(object):
             
     def start(self, parentQueue=None, invokeid=None):
         '''Takes the statemachine to its initial state'''
+        if not self.interpreter.g_continue:
+            raise RuntimeError("The StateMachine instance may only be started once.")
         self._start(parentQueue, invokeid)
         self.interpreter.mainEventLoop()
     
@@ -80,10 +81,19 @@ class StateMachine(object):
         '''Returns True if the statemachine has reached it top-level final state'''
         return self.is_finished
     
+    def send(self, name, data={}, invokeid = None, toQueue = None):
+        with self._lock:
+            self.interpreter.send(name, data, invokeid, toQueue)
+        
+    def In(self, name):
+        with self._lock:
+            self.interpreter.In(name)
+    
     def on_exit(self, sender):
-        if sender is self.interpreter:
-            self.is_finished = True
-            dispatcher.send("signal_exit", self)
+        with self._lock:
+            if sender is self.interpreter:
+                self.is_finished = True
+                dispatcher.send("signal_exit", self)
     
     def register_custom_executable(self, namespace, function):
         compiler.custom_exec_mapping[namespace] = function
@@ -172,10 +182,10 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
-#    xml = open("../../unittest_xml/factorial.xml").read()
+    xml = open("../../unittest_xml/factorial.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
-    xml = '''
+    xml2 = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml">
         <state>
             <invoke id="i" type="x-pyscxml-httpserver" src="http://localhost:8081/session1/basichttp" />
@@ -191,7 +201,9 @@ if __name__ == "__main__":
     </scxml>
     '''
     
-    sm = StateMachine(xml)
-    sm.start()
+    sm = StateMachine(xml2)
+    t = Thread(target=sm.start)
+    t.start()
+    sm.send("anyEvent")
     
     

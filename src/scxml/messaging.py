@@ -40,7 +40,7 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
             else:
                 dispatcher.send(UrlGetter.HTTP_ERROR, self, error_code=f.code, source=url)
         except urllib2.URLError:
-            dispatcher.send(UrlGetter.URL_ERROR, self)
+            dispatcher.send(UrlGetter.URL_ERROR, self, source=url)
         
     
     def http_error_default(self, req, fp, code, msg, headers):
