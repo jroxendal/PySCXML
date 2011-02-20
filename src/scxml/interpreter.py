@@ -222,9 +222,12 @@ class Interpreter(object):
         statesToExit = OrderedSet()
         for t in enabledTransitions:
             if t.target:
-                LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
+                if t.type == "internal" and map(lambda s: isDescendant(s,t.source), self.getTargetStates(t.target)):
+                    ancestor = t.source
+                else:
+                    ancestor = self.findLCA([t.source] + self.getTargetStates(t.target))
                 for s in self.configuration:
-                    if isDescendant(s,LCA):
+                    if isDescendant(s,ancestor):
                         statesToExit.add(s)
         
         for s in statesToExit:
@@ -271,6 +274,10 @@ class Interpreter(object):
         statesToEnter.sort(key=enterOrder)
         for s in statesToEnter:
             self.configuration.add(s)
+            if self.doc.binding == "late" and s.isFirstEntry:
+                s.initDatamodel()
+                s.isFirstEntry = False
+
             for content in s.onentry:
                 self.executeContent(content)
             if s in statesForDefaultEntry:

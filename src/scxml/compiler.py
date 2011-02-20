@@ -60,7 +60,7 @@ def split_ns(node):
 
 ns = "http://www.w3.org/2005/07/scxml"
 pyscxml_ns = "{http://code.google.com/p/pyscxml}"
-tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit"]
+tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit", "datamodel"]
 tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
 preprocess_mapping = {}
@@ -76,7 +76,6 @@ class Compiler(object):
         self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
         self.log_function = None
         self.strict_parse = False
-        self.early_eval = True
         self.timer_mapping = {}
         self.instantiate_datamodel = None
     
@@ -193,7 +192,7 @@ class Compiler(object):
         
         if child.find(prepend_ns("content")) != None:
             output["content"] = template(child.find(prepend_ns("content")).text, self.doc.datamodel)
-                    
+        
         return output
     
     def parseSend(self, sendNode, skip_delay=False):
@@ -329,7 +328,7 @@ class Compiler(object):
             raise
         ElementInclude.include(tree)
         self.strict_parse = tree.get("exmode", "lax") == "strict"
-        self.early_eval = tree.get("binding", "early") == "early"
+        self.doc.binding = tree.get("binding", "early")
         preprocess(tree)
         self.instantiate_datamodel = partial(self.setDatamodel, tree)
         
@@ -383,7 +382,8 @@ class Compiler(object):
                 if node.get("event"):
                     t.event = map(lambda x: re.sub(r"(.*)\.\*$", r"\1", x).split("."), node.get("event").split(" "))
                 if node.get("cond"):
-                    t.cond = partial(self.getExprValue, node.get("cond"))    
+                    t.cond = partial(self.getExprValue, node.get("cond"))
+                t.type = node.get("type", "external") 
                 
                 t.exe = partial(self.do_execute_content, node)
                 parentState.addTransition(t)
@@ -399,9 +399,9 @@ class Compiler(object):
                 s = Onentry()
                 
                 def onentry(node):
-                    if not self.early_eval and parent.find(prepend_ns("datamodel")) != None:
-                        dataList = parent.find(prepend_ns("datamodel")).findall(prepend_ns("data"))
-                        self.setDataList(dataList) 
+#                    if not self.early_eval and parent.find(prepend_ns("datamodel")) != None:
+#                        dataList = parent.find(prepend_ns("datamodel")).findall(prepend_ns("data"))
+#                        self.setDataList(dataList) 
                     self.do_execute_content(node)
                 
                 s.exe = partial(onentry, node)
@@ -411,6 +411,9 @@ class Compiler(object):
                 s = Onexit()
                 s.exe = partial(self.do_execute_content, node)
                 parentState.addOnexit(s)
+                
+            elif node_tag == "datamodel":
+                parentState.initDatamodel = partial(self.setDataList, node.findall(prepend_ns("data")))
     
         return self.doc
 
@@ -529,15 +532,18 @@ class Compiler(object):
             return None # leaf nodes have no initial 
     
     def setDatamodel(self, tree):
-        if self.early_eval:
+        for data in tree.getiterator(prepend_ns("data")):
+            self.doc.datamodel[data.get("id")] = None
+        if self.doc.binding == "early":
             self.setDataList(tree.getiterator(prepend_ns("data")))
         else:
-            if tree.find(self.prepend_ns("datamodel")):
-                self.setDataList(tree.find(self.prepend_ns("datamodel")))
+            if tree.find(prepend_ns("datamodel")):
+                self.setDataList(tree.find(prepend_ns("datamodel")))
             
     
     def setDataList(self, datalist):
-        for node in datalist:
+        # we only set the data if such a field is undefined in the datamodel
+        for node in filter(lambda nd : self.doc.datamodel[nd.get("id")] is None, datalist):
             self.doc.datamodel[node.get("id")] = None
             if node.get("expr"):
                 self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
@@ -572,7 +578,6 @@ def preprocess(tree):
         for child in parent:
             node_ns, node_tag = split_ns(child)
             if node_ns in preprocess_mapping:
-                print "preprocess"
                 xmlstr = preprocess_mapping[node_ns](child)
                 i = list(parent).index(child)
                 parent[i] = ElementTree.fromstring(xmlstr)

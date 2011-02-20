@@ -182,7 +182,8 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/history.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
-    xml = open("../../unittest_xml/factorial.xml").read()
+#    xml = open("../../unittest_xml/factorial.xml").read()
+    xml = open("../../unittest_xml/early_binding.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     xml2 = '''
@@ -201,9 +202,11 @@ if __name__ == "__main__":
     </scxml>
     '''
     
-    sm = StateMachine(xml2)
+    
+    
+    sm = StateMachine(xml)
     t = Thread(target=sm.start)
     t.start()
-    sm.send("anyEvent")
+#    sm.send("anyEvent")
     
     

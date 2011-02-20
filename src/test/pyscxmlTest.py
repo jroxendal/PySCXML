@@ -106,6 +106,13 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         self.assert_(sm.isFinished())
         
+        sm = StateMachine(open(xmlDir + "internal_transition.xml").read())
+        sm.start()
+        self.assert_(sm.isFinished())
+        sm = StateMachine(open(xmlDir + "binding.xml").read())
+        sm.start()
+        self.assert_(sm.isFinished())
+        
         
         listener = '''
             <scxml>

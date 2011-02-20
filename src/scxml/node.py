@@ -35,9 +35,10 @@ class SCXMLNode(object):
         self.parent = parent
         self.n = n
         self.initial = []
+        self.isFirstEntry = True
+        self.initDatamodel = lambda:None
         
     def addChild(self, child):
-#        assert type(child) == State
         self.state.append(child)
         
     def addHistory(self, child):
@@ -121,6 +122,7 @@ class Transition(Executable):
         self.target = []
         self.event = []
         self.cond = None
+        self.type = "external"
         
     def __str__(self):
         attrs = 'source="%s" ' % self.source.id
@@ -158,6 +160,7 @@ class SCXMLDocument(object):
         self._rootState = None
         self.datamodel = {}
         self.name = ""
+        self.binding = None
     
     def setRoot(self, state):
         self._rootState = state

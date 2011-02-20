@@ -1,0 +1,24 @@
+<scxml>
+    <state id="outer">
+        <onexit>
+            <raise event="no_quit" />
+        </onexit>
+        <state id="inner">
+            <onentry>
+                <raise event="check" />
+            </onentry>
+        </state>
+        
+        <state id="check">
+            <onentry>
+                <send event="quit" />
+            </onentry>
+            <transition event="quit" target="f" />
+        </state>
+        <transition event="check" target="check" type="internal" />
+        <transition event="no_quit" target="noquit" />
+    </state>
+    
+    <state id="noquit" />
+    <final id="f" />
+</scxml>
