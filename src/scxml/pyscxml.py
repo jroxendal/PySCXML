@@ -16,12 +16,9 @@ This file is part of pyscxml.
 '''
 
 import logger
-#from compiler import Compiler
 import compiler
 from interpreter import Interpreter
 from louie import dispatcher
-
-import time
 from threading import Thread, RLock
 
 
@@ -183,7 +180,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-    xml = open("../../unittest_xml/early_binding.xml").read()
+    xml = open("../../unittest_xml/binding.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     xml2 = '''

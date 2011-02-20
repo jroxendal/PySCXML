@@ -584,8 +584,9 @@ def preprocess(tree):
             
     
     for n, parent, node in iter_elems(tree):
-        if node.tag in map(prepend_ns, ["state", "parallel", "final", "invoke", "history"]) and not node.get("id"):
-            id = parent.get("id") + "_%s_child_%s" % (node.tag, n)
+        node_ns, node_tag = split_ns(node)
+        if node_tag in ["state", "parallel", "final", "invoke", "history"] and not node.get("id"):
+            id = parent.get("id") + "_%s_child_%s" % (node_tag, n)
             node.set('id',id)
             
             
