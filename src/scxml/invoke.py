@@ -74,12 +74,13 @@ class InvokeSCXML(BaseInvoke):
     def start(self, parentQueue):
         from pyscxml import StateMachine
         self.sm = StateMachine(self.content)
-        self.send = self.sm.send
+        self.send = self.sm._send
         self.sm.start_threaded(parentQueue, self.invokeid)
         dispatcher.send("init.invoke." + self.invokeid, self)
         
     def cancel(self):
-        self.sm.send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
+        self.sm.interpreter.g_continue = False
+        self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
     
 
 class InvokeSOAP(BaseInvoke):

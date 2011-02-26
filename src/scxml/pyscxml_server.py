@@ -79,7 +79,7 @@ class PySCXMLServer(object):
         '''
         self.server_type = server_type
         assert not (self.is_type(TYPE_DEFAULT) and self.is_type(TYPE_RESPONSE))
-        self.logger = logging.getLogger("pyscxml.pyscxml_server.PySCXMLServer")
+        self.logger = logging.getLogger("pyscxml.pyscxml_server")
         self.host = host
         self.port = port
         self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
@@ -114,17 +114,13 @@ class PySCXMLServer(object):
         """Start the server."""
         self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
         self.sm_mapping.start()
-        try:
-            if self.is_type(TYPE_WEBSOCKET):
-                wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
-            else:
-                self.httpd = make_server(self.host, self.port, self.request_handler)
-                self.httpd.serve_forever()
+        
+        if self.is_type(TYPE_WEBSOCKET):
+            wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
+        else:
+            self.httpd = make_server(self.host, self.port, self.request_handler)
+            self.httpd.serve_forever()
                 
-            
-        except KeyboardInterrupt:
-            import sys
-            sys.exit("KeyboardInterrupt")
         
     def init_session(self, sessionid):
         sm = self.sm_mapping.make_session(sessionid, None)

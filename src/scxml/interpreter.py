@@ -53,7 +53,7 @@ class Interpreter(object):
         self.invokeId = None
         
         self.timerDict = {}
-        self.logger = logging.getLogger("pyscxml.interpreter.Interpreter." + str(id(self)))
+        self.logger = None
         
     
     def interpret(self, document, optionalParentExternalQueue=None, invokeId=None):
@@ -65,6 +65,10 @@ class Interpreter(object):
         self.dm["_parent"] = optionalParentExternalQueue
         if invokeId:
             self.dm["_invokeid"] = invokeId
+            self.logger = logging.getLogger("pyscxml.%s.interpreter.invoke.%s" % (self.dm["_sessionid"], self.invokeId) )
+        else:
+            self.logger = logging.getLogger("pyscxml.%s.interpreter" % self.dm["_sessionid"] )
+
         self.invokeId = invokeId
         
         transition = Transition(document.rootState)

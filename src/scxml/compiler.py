@@ -69,11 +69,12 @@ class Compiler(object):
     '''The class responsible for compiling the statemachine'''
     def __init__(self):
         self.doc = SCXMLDocument()
-        self.doc.datamodel["_sessionid"] = "pyscxml_session_" + str(time.time())
-        self.doc.datamodel["_response"] = Queue.Queue() 
-        self.doc.datamodel["_websocket"] = Queue.Queue()
-#        self.doc.datamodel["get"] = self.doc.datamodel.get
-        self.logger = logging.getLogger("pyscxml.Compiler." + str(id(self)))
+        self.dm = self.doc.datamodel
+        self.dm["_sessionid"] = "pyscxml_session_" + str(int(time.time() * 1000))
+        self.dm["_response"] = Queue.Queue() 
+        self.dm["_websocket"] = Queue.Queue()
+
+        self.logger = logging.getLogger("pyscxml.%s.compiler" % self.dm["_sessionid"] )
         self.log_function = None
         self.strict_parse = False
         self.timer_mapping = {}
@@ -109,13 +110,14 @@ class Compiler(object):
                         del self.timer_mapping[sendid]
                 elif node_name == "assign":
                     
-                    if node.get("location") not in self.doc.datamodel:
-                        self.logger.error("The location expression %s was not instantiated in the datamodel." % node.get("location"))
-                        self.raiseError("error.execution.nameerror")
+                    if node.get("location") not in self.dm:
+                        msg = "The location expression %s was not instantiated in the datamodel." % node.get("location")
+                        self.logger.error(msg)
+                        self.raiseError("error.execution.nameerror", NameError(msg))
                         continue
                     
                     expression = node.get("expr") or node.text.strip()
-                    self.doc.datamodel[node.get("location")] = self.getExprValue(expression)
+                    self.dm[node.get("location")] = self.getExprValue(expression)
                 elif node_name == "script":
                     if node.get("src"):
                         self.execExpr(urlopen(node.get("src")).read())
@@ -135,16 +137,17 @@ class Compiler(object):
                     elif self.parseAttr(node, "src"):
                         xml = urlopen(self.parseAttr(node, "src")).read()
                     try:
-                        multisession = self.doc.datamodel["_x"]["sessions"]
+                        multisession = self.dm["_x"]["sessions"]
                         sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
                         sm.start()
                     except AssertionError:
-                        self.logger.error("You supplied no xml for <pyscxml:start_session /> " 
+                        raise ParseError("You supplied no xml for <pyscxml:start_session /> " 
                                             "and no default has been declared.")
                     except KeyError:
-                        self.logger.error("You can only use the pyscxml:start_session " 
+                        raise ParseError("You can only use the pyscxml:start_session " 
                                           "element for documents in a MultiSession enviroment")
             elif node_ns in custom_exec_mapping:
+                # here's where the functions registered using scxml.pyscxml.custom_executable are executed
                 custom_exec_mapping[node_ns](node)
                 
                 
@@ -191,7 +194,7 @@ class Compiler(object):
                 output[name] = self.getExprValue(name)
         
         if child.find(prepend_ns("content")) != None:
-            output["content"] = template(child.find(prepend_ns("content")).text, self.doc.datamodel)
+            output["content"] = template(child.find(prepend_ns("content")).text, self.dm)
         
         return output
     
@@ -225,39 +228,39 @@ class Compiler(object):
                 self.interpreter.send(event, 
                                       data, 
                                       self.interpreter.invokeId, 
-                                      toQueue=self.doc.datamodel["_parent"])
+                                      toQueue=self.dm["_parent"])
             elif target == "#_internal":
                 self.interpreter.raiseFunction(event, data)
                 
             elif target.startswith("#_scxml_"): #sessionid
                 sessionid = target.split("#_scxml_")[-1]
                 try:
-                    toQueue = self.doc.datamodel["_x"]["sessions"][sessionid].interpreter.externalQueue
+                    toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
                     self.interpreter.send(event, data, toQueue=toQueue)
                 except KeyError, e:
                     self.logger.error("The session '%s' is inaccessible." % sessionid)
                     self.raiseError("error.send.target", e)
                 
-            elif target[0] == "#" and target[1] != "_": # invokeid
-                inv = self.doc.datamodel[target[1:]]
+            elif target == "#_response":
+                self.logger.debug("sending to _response")
+                self.dm["_response"].put((data, hints))
+            elif target == "#_websocket":
+                self.logger.debug("sending to _websocket")
+                evt = ".".join(event) if event else ""
+                eventXML = Processor.toxml(evt, target, data, "", sendNode.get("id", ""), hints, language="json")
+                self.dm["_websocket"].put(eventXML)
+            elif target.startswith("#_"): # invokeid
+                inv = self.dm[target[2:]]
 #                if isinstance(inv, InvokePySCXMLServer):
 #                    inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
                 if isinstance(inv, InvokeHTTP):
                     inv.send(".".join(event), data, hints=hints)
                 else:
                     inv.send(event, data)
-            elif target == "#_response":
-                self.logger.debug("sending to _response")
-                self.doc.datamodel["_response"].put((data, hints))
-            elif target == "#_websocket":
-                self.logger.debug("sending to _websocket")
-                evt = ".".join(event) if event else ""
-                eventXML = Processor.toxml(evt, target, data, "", sendNode.get("id", ""), hints, language="json")
-                self.doc.datamodel["_websocket"].put(eventXML)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
-                    origin = self.doc.datamodel["_ioprocessors"]["scxml"]
+                    origin = self.dm["_ioprocessors"]["scxml"]
                 except KeyError:
                     origin = ""
                 eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id", ""), hints)
@@ -278,11 +281,11 @@ class Compiler(object):
             getter.get_sync(target, data)
             
         elif type == "x-pyscxml-soap":
-            self.doc.datamodel[target[1:]].send(event, data)
+            self.dm[target[1:]].send(event, data)
         elif type == "x-pyscxml-statemachine":
             try:
                 evt_obj = Event(event, data)
-                self.doc.datamodel[target].send(evt_obj)
+                self.dm[target].send(evt_obj)
             except Exception, e:
                 self.logger.error("Exception while executing function at target: '%s'" % target)
                 self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
@@ -421,7 +424,7 @@ class Compiler(object):
         if not expr or not expr.strip(): return 
         try:
             expr = normalizeExpr(expr)
-            exec expr in self.doc.datamodel
+            exec expr in self.dm
         except Exception, e:
             self.logger.error("Exception while executing expression in a script block: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
@@ -435,7 +438,7 @@ class Compiler(object):
         expr = unescape(expr)
         
         try:
-            return eval(expr, self.doc.datamodel)
+            return eval(expr, self.dm)
         except Exception, e:
             self.logger.error("Exception while executing expression: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
@@ -447,15 +450,15 @@ class Compiler(object):
     def make_invoke_wrapper(self, node, parentId):
         invokeid = node.get("id")
         if not invokeid:
-            invokeid = parentId + "." + self.doc.datamodel["_sessionid"]
-            self.doc.datamodel[node.get("idlocation")] = invokeid
+            invokeid = parentId + "." + self.dm["_sessionid"]
+            self.dm[node.get("idlocation")] = invokeid
         
         
         def start_invoke(wrapper):
             inv = self.parseInvoke(node)
                 
             wrapper.set_invoke(inv)
-            self.doc.datamodel[inv.invokeid] = inv
+            self.dm[inv.invokeid] = inv
             dispatcher.connect(self.onInvokeSignal, "init.invoke." + wrapper.invokeid, inv)
             dispatcher.connect(self.onInvokeSignal, "result.invoke." + wrapper.invokeid, inv)
             dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + wrapper.invokeid, inv)
@@ -486,7 +489,7 @@ class Compiler(object):
                 #TODO : should this should be asynchronous?
                 inv.content = urlopen(src).read()
             elif node.find(prepend_ns("content")) != None:
-                inv.content = template(node.find(prepend_ns("content")).text, self.doc.datamodel)
+                inv.content = template(node.find(prepend_ns("content")).text, self.dm)
             
         
         elif type == "x-pyscxml-soap":
@@ -511,8 +514,8 @@ class Compiler(object):
             paramList = node.findall(prepend_ns("param"))
             def f():
                 for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
-                    if param.get("name") in self.doc.datamodel["_event"].data:
-                        self.doc.datamodel[param.get("name")] = self.doc.datamodel["_event"].data[param.get("name")]
+                    if param.get("name") in self.dm["_event"].data:
+                        self.dm[param.get("name")] = self.dm["_event"].data[param.get("name")]
             inv.finalize = f
         return inv
 
@@ -533,7 +536,7 @@ class Compiler(object):
     
     def setDatamodel(self, tree):
         for data in tree.getiterator(prepend_ns("data")):
-            self.doc.datamodel[data.get("id")] = None
+            self.dm[data.get("id")] = None
         if self.doc.binding == "early":
             self.setDataList(tree.getiterator(prepend_ns("data")))
         else:
@@ -543,16 +546,16 @@ class Compiler(object):
     
     def setDataList(self, datalist):
         # we only set the data if such a field is undefined in the datamodel
-        for node in filter(lambda nd : self.doc.datamodel[nd.get("id")] is None, datalist):
-            self.doc.datamodel[node.get("id")] = None
+        for node in filter(lambda nd : self.dm[nd.get("id")] is None, datalist):
+            self.dm[node.get("id")] = None
             if node.get("expr"):
-                self.doc.datamodel[node.get("id")] = self.getExprValue(node.get("expr"))
+                self.dm[node.get("id")] = self.getExprValue(node.get("expr"))
             elif node.get("src"):
                 try:
-                    self.doc.datamodel[node.get("id")] = urlopen(node.get("src")).read()
+                    self.dm[node.get("id")] = urlopen(node.get("src")).read()
                 except ValueError:
 #                    try:
-                    self.doc.datamodel[node.get("id")] = open(node.get("src")).read()
+                    self.dm[node.get("id")] = open(node.get("src")).read()
 #                    except IOError:
 #                        raise "The document could not be fetched through http or locally."
                 except Exception, e:
@@ -560,7 +563,7 @@ class Compiler(object):
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
                     raise e
             elif node.text:
-                self.doc.datamodel[node.get("id")] = template(node.text)
+                self.dm[node.get("id")] = template(node.text)
             
     def addDefaultNamespace(self, xmlStr):
         if not "xmlns=" in re.search(r"<scxml.*?>", xmlStr, re.DOTALL).group():
@@ -615,4 +618,5 @@ def iter_elems(tree):
             if elem.tag in tagsForTraversal:
                 queue.append((child, elem))
 
-    
+class ParseError(Exception):
+    pass

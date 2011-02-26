@@ -32,7 +32,7 @@
 			]]></content>
 		</invoke>
 		<transition event="init.invoke">
-			<send type="scxml" target="#i" event="calculate">
+			<send type="scxml" target="#_i" event="calculate">
 				<param name="val" expr="6" />
 			</send>
 		</transition>
