@@ -38,7 +38,7 @@ class RegressionTest(unittest.TestCase):
     
     def testInterpreter(self):
 
-        logging.basicConfig()
+        logging.basicConfig(level=logging.INFO)
         sm = StateMachine(open(xmlDir + "colors.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
@@ -111,6 +111,9 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         self.assert_(sm.isFinished())
         sm = StateMachine(open(xmlDir + "binding.xml").read())
+        sm.start()
+        self.assert_(sm.isFinished())
+        sm = StateMachine(open(xmlDir + "finalize.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
         

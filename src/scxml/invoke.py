@@ -51,7 +51,7 @@ class BaseInvoke(object):
         self.logger = logging.getLogger("pyscxml.invoke.%s" % type(self).__name__)
         self.invokeid = None
         self.autoforward = False
-        self.content = None
+        self.src = None
         self.finalize = lambda:None
         
     def start(self, parentQueue):
@@ -87,12 +87,12 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.sm = None
         self.send = None
         self.parentQueue = None
-        self.src = None
+        self.content = None
     
     def start(self, parentQueue):
         self.parentQueue = parentQueue
         if self.src:
-            self.getter.get_async(self.content, None)
+            self.getter.get_async(self.src, None)
         else:
             self._start(self.content)
     
@@ -110,6 +110,8 @@ class InvokeSCXML(BaseFetchingInvoke):
     def cancel(self):
         self.sm.interpreter.g_continue = False
         self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
+    
+    
 
         
 class InvokeHTTP(BaseFetchingInvoke):
@@ -147,4 +149,4 @@ class InvokeSOAP(BaseInvoke):
         result = getattr(self.client.service, method)(**data)
         dispatcher.send("result.invoke.%s.%s" % (self.invokeid, method), self, data=result)
 
-__all__ = ["InvokeSCXML", "InvokeSOAP", "InvokeWrapper", "InvokeHTTP"]
+__all__ = ["InvokeWrapper", "InvokeSCXML", "InvokeSOAP", "InvokeHTTP"]

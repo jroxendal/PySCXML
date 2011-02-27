@@ -26,7 +26,6 @@ This file is part of pyscxml.
 
 from node import *
 import Queue
-import threading
 from datastructures import OrderedSet
 import logging
 from eventprocessor import Event
@@ -168,7 +167,7 @@ class Interpreter(object):
             if self.invokeId and self.dm["_parent"]:
                 self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], doneData))
             self.logger.info("Exiting interpreter")
-            dispatcher.send("signal_exit", self)
+        dispatcher.send("signal_exit", self)
     
     def selectEventlessTransitions(self):
         enabledTransitions = OrderedSet()

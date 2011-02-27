@@ -32,12 +32,13 @@
 			]]></content>
 		</invoke>
 		<transition event="init.invoke">
+            <log label="init" />
 			<send type="scxml" target="#_i" event="calculate">
 				<param name="val" expr="6" />
 			</send>
 		</transition>
-		<transition event="done" target="f">
-			<log expr="_event.data" />
+		<transition event="done" target="f" cond="_event.data">
+			<log label="donedata" expr="_event.data" />
 		</transition>
 	</state>
 	<final id="f" />

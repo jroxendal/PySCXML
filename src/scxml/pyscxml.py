@@ -20,15 +20,12 @@ from interpreter import Interpreter
 from louie import dispatcher
 from threading import Thread, RLock
 import logging
-from logging.handlers import SocketHandler
-import sys
-import time
 
 
 def default_logfunction(label, msg):
-    if not label: label = ""
-    if label and msg: msg = ": " + str(msg)
-    print "%s%s" % (label, msg)
+    label = label or ""
+    msg = msg or ""
+    print "%s%s%s" % (label, ": " if label and msg else "", msg)
 
 
 class StateMachine(object):
@@ -73,10 +70,25 @@ class StateMachine(object):
         t.start()
         
     def isFinished(self):
-        '''Returns True if the statemachine has reached it top-level final state'''
+        '''Returns True if the statemachine has reached it 
+        top-level final state or was cancelled.'''
         return self.is_finished
     
+    def cancel(self, data):
+        '''
+        Stops the execution of the StateMachine, causing 
+        all the states in the current configuration to execute 
+        their onexit blocks. The StateMachine instance now no longer
+        accepts events. 
+        '''
+        self.sm.interpreter.g_continue = False
+    
     def send(self, name, data={}):
+        '''
+        Send an event to the running machine. 
+        @param name: the event name (string)
+        @param data: the data passed to the _event.data variable (dict)
+        '''
         self._send(name, data)
             
     def _send(self, name, data={}, invokeid = None, toQueue = None):
@@ -84,6 +96,10 @@ class StateMachine(object):
             self.interpreter.send(name, data, invokeid, toQueue)
         
     def In(self, statename):
+        '''
+        Checks if the state 'statename' is in the current configuration,
+        (i.e if the StateMachine instance is currently 'in' that state).
+        '''
         with self._lock:
             self.interpreter.In(statename)
             
@@ -201,7 +217,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-    xml = open("../../unittest_xml/all_configs.xml").read()
+    xml = open("../../unittest_xml/finalize.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     xml2 = '''
@@ -220,8 +236,7 @@ if __name__ == "__main__":
     </scxml>
     '''
     
-    logging.basicConfig(level=logging.INFO)
-    
+    logging.basicConfig(level=logging.NOTSET)
     listener = '''
         <scxml>
             <state>
@@ -245,13 +260,6 @@ if __name__ == "__main__":
     </scxml>
     '''
     
-    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
-    ms.start()
-    time.sleep(0.1)
-    print all(map(lambda x: x.isFinished(), ms))
-    
-    sys.exit()
-    
 #    logger = logging.getLogger("pyscxml")
 #    logger.setLevel(logging.INFO)
 #    handler = SocketHandler("0.0.0.0", 9020)
@@ -274,8 +282,6 @@ if __name__ == "__main__":
     
     
     sm = StateMachine(xml)
-    t = Thread(target=sm.start)
-    t.start()
-    sm.send("a")
+    sm.start()
     
     

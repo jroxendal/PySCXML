@@ -21,15 +21,13 @@ This file is part of pyscxml.
 
 
 from node import *
-import re, time
+import re, time, Queue, logging
 from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
-import logging
 from messaging import UrlGetter
 from louie import dispatcher
 from urllib2 import urlopen
-import Queue
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import *
 from xml.parsers.expat import ExpatError
@@ -392,7 +390,7 @@ class Compiler(object):
     
             elif node_tag == "invoke":
                 try:
-                    parentState.addInvoke(self.make_invoke_wrapper(node, parentState))
+                    parentState.addInvoke(self.make_invoke_wrapper(node, parentState.id))
                 except NotImplementedError, e:
                     self.logger.error("The invoke type %s is not supported by the platform. "  
                     "As a result, the invoke was not instantiated." % type )
@@ -400,13 +398,7 @@ class Compiler(object):
             elif node_tag == "onentry":
                 s = Onentry()
                 
-                def onentry(node):
-#                    if not self.early_eval and parent.find(prepend_ns("datamodel")) != None:
-#                        dataList = parent.find(prepend_ns("datamodel")).findall(prepend_ns("data"))
-#                        self.setDataList(dataList) 
-                    self.do_execute_content(node)
-                
-                s.exe = partial(onentry, node)
+                s.exe = partial(self.do_execute_content, node)
                 parentState.addOnentry(s)
             
             elif node_tag == "onexit":
@@ -444,23 +436,20 @@ class Compiler(object):
             self.raiseError("error.execution." + type(e).__name__.lower(), e)
             return None
     
-    
-        
     def make_invoke_wrapper(self, node, parentId):
         invokeid = node.get("id")
         if not invokeid:
             invokeid = parentId + "." + self.dm["_sessionid"]
             self.dm[node.get("idlocation")] = invokeid
         
-        
         def start_invoke(wrapper):
             inv = self.parseInvoke(node)
                 
             wrapper.set_invoke(inv)
             self.dm[inv.invokeid] = inv
-            dispatcher.connect(self.onInvokeSignal, "init.invoke." + wrapper.invokeid, inv)
-            dispatcher.connect(self.onInvokeSignal, "result.invoke." + wrapper.invokeid, inv)
-            dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + wrapper.invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "init.invoke." + invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "result.invoke." + invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + invokeid, inv)
             
             inv.start(self.interpreter.externalQueue)
             
@@ -468,50 +457,48 @@ class Compiler(object):
         wrapper.invoke = start_invoke
         
         return wrapper
-        
-        
-        
+    
     def onInvokeSignal(self, signal, sender, **kwargs):
         self.logger.debug("onInvokeSignal " + signal)
         if signal.startswith("error"):
-            self.raiseError(signal)
-        else:
-            self.interpreter.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)  
+            self.raiseError(signal, kwargs["exception"])
+            return
+        self.interpreter.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)  
     
     def parseInvoke(self, node):
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
+        contentNode = node.find(prepend_ns("content"))
         if type == "scxml": # here's where we add more invoke types. 
-                     
             inv = InvokeSCXML()
-            if src:
-                inv.src = src
-            elif node.find(prepend_ns("content")) != None:
-                inv.content = template(node.find(prepend_ns("content")).text, self.dm)
+            if contentNode != None and contentNode.text:
+                inv.content = template(contentNode.text, self.dm)
+                # TODO: support non-cdata content child, but fix datamodel init first. 
+#            else:
+#                inv.content = ElementTree.fromstring(contentNode[0])
             
-        
         elif type == "x-pyscxml-soap":
             inv = InvokeSOAP()
-            inv.content = src
         elif type == "x-pyscxml-httpserver":
             inv = InvokeHTTP()
-            inv.content = src
         else:
             raise NotImplementedError, "Invoke type %s not implemented by the platform." % type
             
-        
+        inv.src = src
         inv.autoforward = node.get("autoforward", "false").lower() == "true"
-        inv.type = type    
-        
-        if node.find(prepend_ns("finalize")) != None and len(node.find(prepend_ns("finalize"))) > 0:
-            inv.finalize = partial(self.do_execute_content, node.find(prepend_ns("finalize")))
-        elif node.find(prepend_ns("finalize")) != None and node.find(prepend_ns("param")) != None:
+        inv.type = type   
+         
+        finalizeNode = node.find(prepend_ns("finalize")) 
+        if finalizeNode != None and node.find(prepend_ns("param")) != None:
             paramList = node.findall(prepend_ns("param"))
             def f():
                 for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
                     if param.get("name") in self.dm["_event"].data:
                         self.dm[param.get("name")] = self.dm["_event"].data[param.get("name")]
             inv.finalize = f
+        elif finalizeNode != None:
+            inv.finalize = partial(self.do_execute_content, finalizeNode)
+            
         return inv
 
     def parseInitial(self, node):
@@ -558,7 +545,7 @@ class Compiler(object):
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
                     raise e
             elif node.text:
-                self.dm[node.get("id")] = template(node.text)
+                self.dm[node.get("id")] = template(node.text, self.dm)
             
     def addDefaultNamespace(self, xmlStr):
         if not "xmlns=" in re.search(r"<scxml.*?>", xmlStr, re.DOTALL).group():
