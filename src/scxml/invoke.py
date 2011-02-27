@@ -48,14 +48,13 @@ class InvokeWrapper(object):
     
 class BaseInvoke(object):
     def __init__(self):
+        self.logger = logging.getLogger("pyscxml.invoke.%s" % type(self).__name__)
         self.invokeid = None
         self.autoforward = False
         self.content = None
         self.finalize = lambda:None
         
-        
     def start(self, parentQueue):
-#        dispatcher.send("init.invoke." + self.invokeid, self)
         pass
     
     def cancel(self):
@@ -63,25 +62,69 @@ class BaseInvoke(object):
          
     def __str__(self):
         return '<Invoke id="%s">' % self.invokeid
-    
 
-class InvokeSCXML(BaseInvoke):
+class BaseFetchingInvoke(BaseInvoke):
     def __init__(self):
         BaseInvoke.__init__(self)
+        self.getter = UrlGetter()
+        
+        dispatcher.connect(self.onHttpResult, UrlGetter.HTTP_RESULT, self.getter)
+        dispatcher.connect(self.onFetchError, UrlGetter.HTTP_ERROR, self.getter)
+        dispatcher.connect(self.onFetchError, UrlGetter.URL_ERROR, self.getter)
+        
+    def onFetchError(self, signal, exception, **named ):
+        self.logger.error(str(exception))
+        dispatcher.send("error.communication.invoke." + self.invokeid, self, data={"exception" : exception})
+
+    def onHttpResult(self, signal, result, **named):
+        self.logger.debug("onHttpResult " + str(named))
+        dispatcher.send("result.invoke.%s" % (self.invokeid), self, data={"response" : result})
+    
+
+class InvokeSCXML(BaseFetchingInvoke):
+    def __init__(self):
+        BaseFetchingInvoke.__init__(self)
         self.sm = None
         self.send = None
+        self.parentQueue = None
+        self.src = None
     
     def start(self, parentQueue):
+        self.parentQueue = parentQueue
+        if self.src:
+            self.getter.get_async(self.content, None)
+        else:
+            self._start(self.content)
+    
+    def _start(self, doc):
         from pyscxml import StateMachine
-        self.sm = StateMachine(self.content)
+        self.sm = StateMachine(doc)
         self.send = self.sm._send
-        self.sm.start_threaded(parentQueue, self.invokeid)
+        self.sm.start_threaded(self.parentQueue, self.invokeid)
         dispatcher.send("init.invoke." + self.invokeid, self)
+    
+    def onHttpResult(self, signal, result, **named):
+        self.logger.debug("onHttpResult " + str(named))
+        self._start(result)
         
     def cancel(self):
         self.sm.interpreter.g_continue = False
         self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
+
+        
+class InvokeHTTP(BaseFetchingInvoke):
+    def __init__(self):
+        BaseFetchingInvoke.__init__(self)
+        
+    def send(self, event, data, hints):
+        self.getter.get_async(self.content, data, type=event)
     
+    def start(self, parentQueue):
+        dispatcher.send("init.invoke." + self.invokeid, self)
+        
+    def onHttpResult(self, signal, result, **named):
+        self.logger.debug("onHttpResult " + str(named))
+        dispatcher.send("result.invoke.%s" % (self.invokeid), self, data={"response" : result})
 
 class InvokeSOAP(BaseInvoke):
     
@@ -102,70 +145,6 @@ class InvokeSOAP(BaseInvoke):
         
     def soap_send_sync(self, method, data):
         result = getattr(self.client.service, method)(**data)
-        
         dispatcher.send("result.invoke.%s.%s" % (self.invokeid, method), self, data=result)
-        
-class InvokeHTTP(BaseInvoke):
-    def __init__(self):
-        BaseInvoke.__init__(self)
-        self.logger = logging.getLogger("pyscxml.invoke.InvokeHTTP")
-        self.getter = UrlGetter()
-        
-        dispatcher.connect(self.onHttpResult, UrlGetter.HTTP_RESULT, self.getter)
-        dispatcher.connect(self.onHttpError, UrlGetter.HTTP_ERROR, self.getter)
-        dispatcher.connect(self.onURLError, UrlGetter.URL_ERROR, self.getter)
-        
-        
-    def send(self, event, data, hints):
-        self.getter.get_async(self.content, data, type=event)
-    
-    def start(self, parentQueue):
-        dispatcher.send("init.invoke." + self.invokeid, self)
-    
-    def onHttpError(self, signal, error_code, source, **named ):
-        self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
-        dispatcher.send("error.communication.invoke." + self.invokeid, self, data={"error_code" : error_code})
 
-    def onURLError(self, signal, sender, **named):
-        self.logger.error("The address %s is currently unavailable" % named["source"])
-        dispatcher.send("error.communication.invoke." + self.invokeid, self)
-        
-    def onHttpResult(self, signal, result, **named):
-        self.logger.info("onHttpResult " + str(named))
-        dispatcher.send("result.invoke.%s" % (self.invokeid), self, data={"response" : result})
-    
-        
-    
-'''
-class InvokePySCXMLServer(BaseInvoke):
-    
-    def __init__(self):
-        BaseInvoke.__init__(self)
-        self.logger = logging.getLogger("pyscxml.invoke.InvokePySCXMLServer")
-        self.getter = UrlGetter()
-        
-        dispatcher.connect(self.onHttpResult, UrlGetter.HTTP_RESULT, self.getter)
-        dispatcher.connect(self.onHttpError, UrlGetter.HTTP_ERROR, self.getter)
-        dispatcher.connect(self.onURLError, UrlGetter.URL_ERROR, self.getter)
-        
-        
-    def send(self, messageXML):
-        self.getter.get_async(self.content, {"_content" : messageXML})
-    
-    def start(self, parentQueue):
-        dispatcher.send("init.invoke." + self.invokeid, self)
-    
-    def onHttpError(self, signal, error_code, source, **named ):
-        self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
-        dispatcher.send("error.communication.invoke." + self.invokeid, self, data={"error_code" : error_code})
-
-    def onURLError(self, signal, sender):
-        self.logger.error("The address %s is currently unavailable" % sender.url)
-        dispatcher.send("error.communication.invoke." + self.invokeid, self)
-        
-    def onHttpResult(self, signal, result, **named):
-        self.logger.info("onHttpResult " + str(named))
-        dispatcher.send("result.invoke.%s" % (self.invokeid), self, data={"response" : result})
-    
-'''
 __all__ = ["InvokeSCXML", "InvokeSOAP", "InvokeWrapper", "InvokeHTTP"]

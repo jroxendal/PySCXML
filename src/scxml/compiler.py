@@ -138,7 +138,7 @@ class Compiler(object):
                         xml = urlopen(self.parseAttr(node, "src")).read()
                     try:
                         multisession = self.dm["_x"]["sessions"]
-                        sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
+                        sm = multisession[self.parseAttr(node, "sessionid")] = xml
                         sm.start()
                     except AssertionError:
                         raise ParseError("You supplied no xml for <pyscxml:start_session /> " 
@@ -147,13 +147,12 @@ class Compiler(object):
                         raise ParseError("You can only use the pyscxml:start_session " 
                                           "element for documents in a MultiSession enviroment")
             elif node_ns in custom_exec_mapping:
-                # here's where the functions registered using scxml.pyscxml.custom_executable are executed
+                # execute functions registered using scxml.pyscxml.custom_executable
                 custom_exec_mapping[node_ns](node)
-                
                 
             else:
                 if self.strict_parse: 
-                    raise Exception("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
+                    raise ParseError("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
         
     
     def parseIf(self, node):
@@ -486,8 +485,7 @@ class Compiler(object):
                      
             inv = InvokeSCXML()
             if src:
-                #TODO : should this should be asynchronous?
-                inv.content = urlopen(src).read()
+                inv.src = src
             elif node.find(prepend_ns("content")) != None:
                 inv.content = template(node.find(prepend_ns("content")).text, self.dm)
             
@@ -498,9 +496,6 @@ class Compiler(object):
         elif type == "x-pyscxml-httpserver":
             inv = InvokeHTTP()
             inv.content = src
-#        elif type == "x-pyscxml-responseserver":
-#            inv = InvokePySCXMLServer()
-#            inv.content = src
         else:
             raise NotImplementedError, "Invoke type %s not implemented by the platform." % type
             

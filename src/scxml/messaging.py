@@ -9,6 +9,7 @@ import threading
 import urllib2
 from urllib import urlencode
 from functools import partial
+from urllib2 import HTTPError
 
 def exec_async(io_function):
     t = threading.Thread(target=io_function)
@@ -24,23 +25,24 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
         exec_async(partial(self.get_sync, url, data, type=type))
     
     def get_sync(self, url, data, type=None):
-        
+        data = urlencode(data) if data else None
         if type and type.upper() not in ("POST", "GET"):
             from restlib import RestfulRequest
-            req = RestfulRequest(url, data=urlencode({"lol" : "lolvalue"}), method=type.upper())
+            req = RestfulRequest(url, data=data, method=type.upper())
         else:
-            req = url
+            req = urllib2.Request(url, data)
         
         opener = urllib2.build_opener(self)
         try:
-            f = opener.open(req, data=urlencode(data))
+            f = opener.open(req, data=data)
             
             if str(f.code)[0] == "2":
                 dispatcher.send(UrlGetter.HTTP_RESULT, self, result=f.read(), source=url)
             else:
-                dispatcher.send(UrlGetter.HTTP_ERROR, self, error_code=f.code, source=url)
-        except urllib2.URLError:
-            dispatcher.send(UrlGetter.URL_ERROR, self, source=url)
+                e = HTTPError(url, f.code, "A code %s HTTP error has ocurred when trying to send to target %s" % (f.code, url), req.headers, f)
+                dispatcher.send(UrlGetter.HTTP_ERROR, self, exception=e)
+        except urllib2.URLError, e:
+            dispatcher.send(UrlGetter.URL_ERROR, self, exception=e)
         
     
     def http_error_default(self, req, fp, code, msg, headers):

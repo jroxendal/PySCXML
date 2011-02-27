@@ -20,6 +20,9 @@ from interpreter import Interpreter
 from louie import dispatcher
 from threading import Thread, RLock
 import logging
+from logging.handlers import SocketHandler
+import sys
+import time
 
 
 def default_logfunction(label, msg):
@@ -74,11 +77,11 @@ class StateMachine(object):
         return self.is_finished
     
     def send(self, name, data={}):
-        with self._lock:
-            self._send(name, data)
+        self._send(name, data)
             
     def _send(self, name, data={}, invokeid = None, toQueue = None):
-        self.interpreter.send(name, data, invokeid, toQueue)
+        with self._lock:
+            self.interpreter.send(name, data, invokeid, toQueue)
         
     def In(self, statename):
         with self._lock:
@@ -130,8 +133,14 @@ class MultiSession(object):
     def __getitem__(self, val):
         return self.sm_mapping[val]
     
+    def __setitem__(self, key, val):
+        self.make_session(key, val)
+    
+    def __contains__(self, item):
+        return item in self.sm_mapping
+    
     def start(self):
-        ''' launches the initialized sessions by calling start() on each sm'''
+        ''' launches the initialized sessions by calling start_threaded() on each sm'''
         for sm in self:
             sm.start_threaded()
             
@@ -155,7 +164,7 @@ class MultiSession(object):
     
     def on_sm_exit(self, sender):
         if sender.sessionid in self:
-            self.logger.info("The session '%s' finished" % sender.sessionid)
+            self.logger.debug("The session '%s' finished" % sender.sessionid)
             del self[sender.sessionid]
         else:
             self.logger.error("The session '%s' reported exit but it " 
@@ -182,6 +191,7 @@ class preprocessor(object):
         compiler.preprocess_mapping[self.namespace] = f
         return f
     
+__all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor"]
 
 if __name__ == "__main__":
     
@@ -191,7 +201,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-    xml = open("../../resources/invoke_test.xml").read()
+    xml = open("../../unittest_xml/all_configs.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     xml2 = '''
@@ -212,10 +222,60 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.INFO)
     
+    listener = '''
+        <scxml>
+            <state>
+                <transition event="e1" target="f">
+                    <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
+                </transition>
+            </state>
+            <final id="f" />
+        </scxml>
+    '''
+    sender = '''
+    <scxml>
+        <state>
+            <onentry>
+                <log label="sending event" />
+                <send event="e1" target="#_scxml_session1"  />
+            </onentry>
+            <transition event="e2" target="f" />
+        </state>
+        <final id="f" />
+    </scxml>
+    '''
+    
+    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
+    ms.start()
+    time.sleep(0.1)
+    print all(map(lambda x: x.isFinished(), ms))
+    
+    sys.exit()
+    
+#    logger = logging.getLogger("pyscxml")
+#    logger.setLevel(logging.INFO)
+#    handler = SocketHandler("0.0.0.0", 9020)
+#    handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+#    handler.setLevel(logging.INFO)
+#    logger.addHandler(handler)
+    
+#    logger.info("hello")
+#    logger.debug("hello")
+#    logger.error("hello")
+    
+#    xml = '''
+#    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+#        <state>
+#            <transition event="next" target="f" />
+#        </state>
+#        <final id="f" />
+#    </scxml>
+#    '''
+    
     
     sm = StateMachine(xml)
-    sm.sessionid = "mysession"
-    sm.start()
-#    sm.send("anyEvent")
+    t = Thread(target=sm.start)
+    t.start()
+    sm.send("a")
     
     

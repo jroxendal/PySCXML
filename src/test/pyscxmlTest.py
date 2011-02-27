@@ -24,6 +24,7 @@ from scxml.pyscxml import StateMachine, MultiSession
 import os.path
 from scxml.pyscxml_server import PySCXMLServer, TYPE_RESPONSE
 from threading import Thread
+import logging
 xmlDir = "../../unittest_xml/"
 if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
@@ -37,7 +38,7 @@ class RegressionTest(unittest.TestCase):
     
     def testInterpreter(self):
 
-        
+        logging.basicConfig()
         sm = StateMachine(open(xmlDir + "colors.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
