@@ -527,8 +527,7 @@ class Compiler(object):
             
     
     def setDataList(self, datalist):
-        # we only set the data if such a field is undefined in the datamodel
-        for node in filter(lambda nd : self.dm[nd.get("id")] is None, datalist):
+        for node in datalist:
             self.dm[node.get("id")] = None
             if node.get("expr"):
                 self.dm[node.get("id")] = self.getExprValue(node.get("expr"))
