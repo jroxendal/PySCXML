@@ -13,6 +13,9 @@ This file is part of pyscxml.
 
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    
+    @author: Johan Roxendal
+    @contact: johan@roxendal.com
 '''
 
 import compiler
@@ -217,7 +220,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-    xml = open("../../unittest_xml/finalize.xml").read()
+    xml = open("../../unittest_xml/parallel.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     xml2 = '''
@@ -280,8 +283,33 @@ if __name__ == "__main__":
 #    </scxml>
 #    '''
     
-    
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+       <initial>
+                <transition target="A2 B2" />
+       </initial>
+
+       <parallel id="P">
+
+                <state id="A" initial="A1">
+                         <state id="A1"/>
+
+                         <state id="A2"/>
+                </state>
+
+                <state id="B" initial="B1">
+                         <state id="B1"/>
+
+                         <state id="B2"/>
+                </state>
+
+       </parallel>
+
+</scxml>
+    '''
+#    logging.getLogger("pyscxml").propagate = False
     sm = StateMachine(xml)
-    sm.start()
+    sm.start_threaded()
+    sm.send("hello")
     
     

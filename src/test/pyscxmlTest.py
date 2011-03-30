@@ -38,11 +38,11 @@ class RegressionTest(unittest.TestCase):
     
     def testInterpreter(self):
 
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.NOTSET)
         sm = StateMachine(open(xmlDir + "colors.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
-    
+        
         sm = StateMachine(open(xmlDir + "parallel.xml").read())
         sm.start()
         self.assert_(sm.isFinished())

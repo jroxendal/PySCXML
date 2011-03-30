@@ -204,7 +204,7 @@ class Compiler(object):
                 t = Timer(delay, self.parseSend, args=(sendNode, True))
                 if sendNode.get("id"):
                     self.timer_mapping[sendNode.get("id")] = t
-                t.run()
+                t.start()
                 return 
         
         type = self.parseAttr(sendNode, "type", "scxml")

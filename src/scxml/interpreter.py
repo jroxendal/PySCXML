@@ -81,7 +81,7 @@ class Interpreter(object):
         
     
     def startEventLoop(self):
-    
+        self.logger.debug("startEventLoop config: {" + ", ".join([s.id for s in self.configuration if s.id != "__main__"]) + "}")
         initialStepComplete = False;
         while not initialStepComplete:
             enabledTransitions = self.selectEventlessTransitions()
@@ -266,12 +266,17 @@ class Interpreter(object):
         statesForDefaultEntry = OrderedSet()
         for t in enabledTransitions:
             if t.target:
-                LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
-                if isParallelState(LCA):
-                    for child in getChildStates(LCA):
-                        self.addStatesToEnter(child,LCA,statesToEnter,statesForDefaultEntry)
-                for s in self.getTargetStates(t.target):
-                    self.addStatesToEnter(s,LCA,statesToEnter,statesForDefaultEntry)
+                tstates = self.getTargetStates(t.target)
+                for s in tstates:
+                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
+                LCA = self.findLCA([t.source] + tstates)
+                for s in tstates:
+                    for anc in getProperAncestors(s,LCA):
+                        statesToEnter.add(anc)
+                        if isParallelState(anc):
+                            for child in getChildStates(anc):
+                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
+                                    self.recursivelyAddDefaultDescendants(child,statesToEnter,statesForDefaultEntry)
         for s in statesToEnter:
             self.statesToInvoke.add(s)
         statesToEnter.sort(key=enterOrder)
@@ -322,6 +327,25 @@ class Interpreter(object):
                         if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
                             self.addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
     
+    
+    def recursivelyAddDefaultDescendants(self, state,statesToEnter,statesForDefaultEntry):
+        if isHistoryState(state):
+            if self.historyValue[state.id]:
+                for s in self.historyValue[state.id]:
+                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
+            else:
+                for t in state.transition:
+                    for s in self.getTargetStates(t.target):
+                        self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
+        else:
+            statesToEnter.add(state)
+            if isParallelState(state):
+                for s in getChildStates(state):
+                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
+            elif isCompoundState(state):
+                statesForDefaultEntry.add(state)
+                for s in self.getTargetStates(state.initial):
+                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
     
     def isInFinalState(self, s):
         if isCompoundState(s):
@@ -443,7 +467,7 @@ def isAtomicState(s):
 
 
 def isCompoundState(s):
-    return isinstance(s,SCXMLNode) and (s.state != [] or s.final != [])
+    return isinstance(s,State) and (s.state != [] or s.final != [])
 
 
 def enterOrder(s):
