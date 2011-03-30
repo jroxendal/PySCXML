@@ -117,6 +117,9 @@ class StateMachine(object):
         with self._lock:
             if sender is self.interpreter:
                 self.is_finished = True
+                for timer in self.compiler.timer_mapping.items():
+                    timer.cancel()
+                    del timer
                 dispatcher.send("signal_exit", self)
     
 
@@ -182,6 +185,7 @@ class MultiSession(object):
         return sm
     
     def on_sm_exit(self, sender):
+        
         if sender.sessionid in self:
             self.logger.debug("The session '%s' finished" % sender.sessionid)
             del self[sender.sessionid]

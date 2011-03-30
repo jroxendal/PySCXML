@@ -167,6 +167,7 @@ class Interpreter(object):
             if self.invokeId and self.dm["_parent"]:
                 self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], doneData))
             self.logger.info("Exiting interpreter")
+            
         dispatcher.send("signal_exit", self)
     
     def selectEventlessTransitions(self):
