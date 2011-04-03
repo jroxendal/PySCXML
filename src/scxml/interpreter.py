@@ -268,16 +268,21 @@ class Interpreter(object):
         for t in enabledTransitions:
             if t.target:
                 tstates = self.getTargetStates(t.target)
+                
+                if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
+                    ancestor = t.source
+                else:
+                    ancestor = self.findLCA([t.source] + tstates)
+                
                 for s in tstates:
                     self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
-                LCA = self.findLCA([t.source] + tstates)
                 for s in tstates:
-                    for anc in getProperAncestors(s,LCA):
+                    for anc in getProperAncestors(s,ancestor):
                         statesToEnter.add(anc)
                         if isParallelState(anc):
                             for child in getChildStates(anc):
                                 if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
-                                    self.recursivelyAddDefaultDescendants(child,statesToEnter,statesForDefaultEntry)
+                                    self.addStatesToEnter(child,statesToEnter,statesForDefaultEntry)  
         for s in statesToEnter:
             self.statesToInvoke.add(s)
         statesToEnter.sort(key=enterOrder)
@@ -328,7 +333,7 @@ class Interpreter(object):
                         if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
                             self.addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
     
-    
+                
     def recursivelyAddDefaultDescendants(self, state,statesToEnter,statesForDefaultEntry):
         if isHistoryState(state):
             if self.historyValue[state.id]:
@@ -347,6 +352,7 @@ class Interpreter(object):
                 statesForDefaultEntry.add(state)
                 for s in self.getTargetStates(state.initial):
                     self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
+    
     
     def isInFinalState(self, s):
         if isCompoundState(s):

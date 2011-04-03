@@ -10,10 +10,8 @@
 			<log expr="'Done transition'" />
 		</transition>
 
-		<parallel id="p">
-
-
-			<state id="s1" initial="f1">
+		<parallel id="p" initial="s1 s2">
+			<state id="s1">
 				<onentry>
 					<raise event="a.b.c.d" />
 				</onentry>

@@ -37,12 +37,17 @@ class RegressionTest(unittest.TestCase):
     '''
     
     def testInterpreter(self):
-
+        try:
+            import pydevd 
+            pydevd.set_pm_excepthook()
+        except:
+            pass
+        
         logging.basicConfig(level=logging.NOTSET)
         sm = StateMachine(open(xmlDir + "colors.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
-        
+    
         sm = StateMachine(open(xmlDir + "parallel.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
@@ -114,6 +119,9 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         self.assert_(sm.isFinished())
         sm = StateMachine(open(xmlDir + "finalize.xml").read())
+        sm.start()
+        self.assert_(sm.isFinished())
+        sm = StateMachine(open(xmlDir + "parallel2.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
         

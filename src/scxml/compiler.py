@@ -22,7 +22,6 @@ This file is part of pyscxml.
 
 from node import *
 import re, time, Queue, logging
-from xml.etree import ElementTree, ElementInclude
 from functools import partial
 from xml.sax.saxutils import unescape
 from messaging import UrlGetter
@@ -32,6 +31,9 @@ from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import *
 from xml.parsers.expat import ExpatError
 from threading import Timer
+from StringIO import StringIO
+from xml.etree import ElementTree, ElementInclude
+    
 
 try: 
     from Cheetah.Template import Template as Tmpl
@@ -48,7 +50,6 @@ except ImportError:
         def template(tmpl, namespace):
             return tmpl % namespace
         
-
 
 def prepend_ns(tag):
     return ("{%s}" % ns) + tag
@@ -109,7 +110,7 @@ class Compiler(object):
                 elif node_name == "assign":
                     
                     if node.get("location") not in self.dm:
-                        msg = "The location expression %s was not instantiated in the datamodel." % node.get("location")
+                        msg = "Line %s: The location expression %s was not instantiated in the datamodel." % (node.lineno, node.get("location"))
                         self.logger.error(msg)
                         self.raiseError("error.execution.nameerror", NameError(msg))
                         continue
@@ -198,7 +199,15 @@ class Compiler(object):
     def parseSend(self, sendNode, skip_delay=False):
         if not skip_delay:
             delay = self.parseAttr(sendNode, "delay", "0s")
-            n, unit = re.search("(\d+)(\w+)", delay).groups()
+            try:
+                n, unit = re.search("(\d+)(\w+)", delay).groups()
+                assert unit in ("s", "ms") 
+            except AttributeError, AssertionError:
+                e = RuntimeError("Line %s: delay format error: the delay attribute should be " 
+                "specified using the CSS time format, you supplied the faulty value: %s" % (sendNode.lineno, delay))
+                self.logger.error(str(e))
+                self.raiseError("error.execution.send.delay", e)
+                return
             delay = float(n) if unit == "s" else float(n) / 1000
             if delay:
                 t = Timer(delay, self.parseSend, args=(sendNode, True))
@@ -215,8 +224,9 @@ class Compiler(object):
             hints = eval(self.parseAttr(sendNode, "hints", "{}"))
             assert isinstance(hints, dict)
         except:
-            self.logger.error("hints or hintsexpr malformed: %s" % hints)
-            self.raiseError("error.execution.hints")
+            e = RuntimeError("Line %s: hints or hintsexpr malformed: %s" % (sendNode.lineno, hints))
+            self.logger.error(str(e))
+            self.raiseError("error.execution.hints", e)
         
         if type == "scxml":
             if not target:
@@ -234,8 +244,9 @@ class Compiler(object):
                 try:
                     toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
                     self.interpreter.send(event, data, toQueue=toQueue)
-                except KeyError, e:
-                    self.logger.error("The session '%s' is inaccessible." % sessionid)
+                except KeyError:
+                    e = RuntimeError("Line %s: The session '%s' is inaccessible." % (sendNode, sessionid))
+                    self.logger.error(str(e))
                     self.raiseError("error.send.target", e)
                 
             elif target == "#_response":
@@ -267,9 +278,9 @@ class Compiler(object):
                 getter.get_sync(target, {"_content" : eventXML})
                 
             else:
-                self.logger.error("The send target %s is malformed or unsupported by the platform." % target)
-                self.raiseError("error.send.target")
-            
+                e = RuntimeError("Line %s: The send target '%s' is malformed or unsupported by the platform." % (sendNode.lineno, target))
+                self.logger.error(str(e))
+                self.raiseError("error.send.target", e)
             
         elif type == "basichttp":
             
@@ -283,15 +294,16 @@ class Compiler(object):
             try:
                 evt_obj = Event(event, data)
                 self.dm[target].send(evt_obj)
-            except Exception, e:
-                self.logger.error("Exception while executing function at target: '%s'" % target)
-                self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
+            except Exception:
+                e = RuntimeError("Line %s: No StateMachine instance at datamodel location '%s'" % (sendNode.lineno, target))
+                self.logger.error(str(e))
                 self.raiseError("error.execution." + type(e).__name__.lower(), e) 
         
         # this is where to add parsing for more send types. 
         else:
-            self.logger.error("The send type %s is invalid or unsupported by the platform" % type)
-            self.raiseError("error.send.type")
+            e = RuntimeError("Line %s: The send type %s is invalid or unsupported by the platform" % (sendNode.lineno, type))
+            self.logger.error(str(e))
+            self.raiseError("error.send.type", e)
     
     def getUrlGetter(self, target):
         getter = UrlGetter()
@@ -302,13 +314,13 @@ class Compiler(object):
         
         return getter
 
-    def onHttpError(self, signal, error_code, source, **named ):
+    def onHttpError(self, signal, error_code, source, exception, **named ):
         self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
-        self.raiseError("error.communication")
+        self.raiseError("error.communication", exception)
 
-    def onURLError(self, signal, sender):
+    def onURLError(self, signal, sender, exception):
         self.logger.error("The address %s is currently unavailable" % sender.url)
-        self.raiseError("error.communication")
+        self.raiseError("error.communication", exception)
         
     def onHttpResult(self, signal, **named):
         self.logger.info("onHttpResult " + str(named))
@@ -321,7 +333,7 @@ class Compiler(object):
         self.interpreter = interpreterRef
         xmlStr = self.addDefaultNamespace(xmlStr)
         try:
-            tree = ElementTree.fromstring(xmlStr)
+            tree = xml_from_string(xmlStr)
         except ExpatError:
             xmlStr = "\n".join("%s %s" % (n, line) for n, line in enumerate(xmlStr.split("\n")))
             self.logger.error(xmlStr)
@@ -391,9 +403,10 @@ class Compiler(object):
             elif node_tag == "invoke":
                 try:
                     parentState.addInvoke(self.make_invoke_wrapper(node, parentState.id))
-                except NotImplementedError, e:
-                    self.logger.error("The invoke type %s is not supported by the platform. "  
-                    "As a result, the invoke was not instantiated." % type )
+                except NotImplementedError:
+                    e = NotImplementedError("Line %s: The invoke type %s is not supported by the platform. "  
+                    "As a result, the invoke was not instantiated." % (node.lineno, type ))
+                    self.logger.error(e)
                     self.raiseError("error.execution.invoke.type", e)
             elif node_tag == "onentry":
                 s = Onentry()
@@ -471,18 +484,19 @@ class Compiler(object):
         contentNode = node.find(prepend_ns("content"))
         if type == "scxml": # here's where we add more invoke types. 
             inv = InvokeSCXML()
-            if contentNode != None and contentNode.text:
+            if contentNode != None and contentNode.text.strip():
                 inv.content = template(contentNode.text, self.dm)
                 # TODO: support non-cdata content child, but fix datamodel init first. 
-#            else:
-#                inv.content = ElementTree.fromstring(contentNode[0])
+            elif contentNode and len(contentNode) > 0:
+                print contentNode[0]
+                inv.content = ElementTree.tostring(contentNode[0])
             
         elif type == "x-pyscxml-soap":
             inv = InvokeSOAP()
         elif type == "x-pyscxml-httpserver":
             inv = InvokeHTTP()
         else:
-            raise NotImplementedError, "Invoke type %s not implemented by the platform." % type
+            raise NotImplementedError
             
         inv.src = src
         inv.autoforward = node.get("autoforward", "false").lower() == "true"
@@ -535,10 +549,7 @@ class Compiler(object):
                 try:
                     self.dm[node.get("id")] = urlopen(node.get("src")).read()
                 except ValueError:
-#                    try:
                     self.dm[node.get("id")] = open(node.get("src")).read()
-#                    except IOError:
-#                        raise "The document could not be fetched through http or locally."
                 except Exception, e:
                     self.logger.error("Data src not found : '%s'\n" % node.get("src"))
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
@@ -547,7 +558,7 @@ class Compiler(object):
                 self.dm[node.get("id")] = template(node.text, self.dm)
             
     def addDefaultNamespace(self, xmlStr):
-        if not "xmlns=" in re.search(r"<scxml.*?>", xmlStr, re.DOTALL).group():
+        if not ElementTree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":
             self.logger.warn("Your document lacks the correct "
                 "default namespace declaration. It has been added for you, for parsing purposes.")
             return xmlStr.replace("<scxml", "<scxml xmlns='http://www.w3.org/2005/07/scxml'", 1)
@@ -598,6 +609,23 @@ def iter_elems(tree):
         for elem in child:
             if elem.tag in tagsForTraversal:
                 queue.append((child, elem))
+                
+class FileWrapper(object):
+    def __init__(self, source):
+        self.source = source
+        self.lineno = 0
+    def read(self, bytes):
+        s = self.source.readline()
+        self.lineno += 1
+        return s
+    
+def xml_from_string(xmlstr):
+    f = FileWrapper(StringIO(xmlstr))
+    root = None
+    for event, elem in ElementTree.iterparse(f, events=("start", )):
+        if not root: root = elem
+        elem.lineno = f.lineno
+    return root
 
 class ParseError(Exception):
     pass

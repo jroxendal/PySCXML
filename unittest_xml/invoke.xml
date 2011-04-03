@@ -1,7 +1,7 @@
 <scxml xmlns="http://www.w3.org/2005/07/scxml">
 	<state>
 		<invoke id="i" type="scxml">
-			<content><![CDATA[
+			<content>
 				<scxml xmlns="http://www.w3.org/2005/07/scxml">
 					<datamodel>
 						<data id="x" />
@@ -29,7 +29,7 @@
 						</donedata>
 					</final>
 				</scxml>
-			]]></content>
+			</content>
 		</invoke>
 		<transition event="init.invoke">
             <log label="init" />

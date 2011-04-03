@@ -1,13 +1,13 @@
 <scxml xmlns="http://www.w3.org/2005/07/scxml">
 	<state>
 		<onentry>
-			<assign location="apa" expr="1" />
+			<assign location="loc1" expr="1" />
 		</onentry>
 		<transition event="error.execution" target="s2" /> 
 	</state>
 	<state id="s2">
 		<onentry>
-			<log expr="apa" />
+			<log expr="loc1" />
 		</onentry>
 		<transition event="error.execution" target="s3" /> 
 	</state>

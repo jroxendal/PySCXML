@@ -23,6 +23,7 @@ from interpreter import Interpreter
 from louie import dispatcher
 from threading import Thread, RLock
 import logging
+from time import time
 
 
 def default_logfunction(label, msg):
@@ -141,10 +142,10 @@ class MultiSession(object):
         self.default_scxml_doc = default_scxml_doc
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
+        self.logger = logging.getLogger("pyscxml.multisession")
         for sessionid, xml in init_sessions.items():
             self.make_session(sessionid, xml)
             
-        self.logger = logging.getLogger("pyscxml.multisession")
             
     def __iter__(self):
         return self.sm_mapping.itervalues()
@@ -217,103 +218,38 @@ class preprocessor(object):
 __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor"]
 
 if __name__ == "__main__":
+    try:
+        import pydevd 
+        pydevd.set_pm_excepthook()
+    except:
+        pass 
     
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
 #    xml = open("../../resources/history_bug.xml").read()
-#    xml = open("../../unittest_xml/history.xml").read()
+    xml = open("../../unittest_xml/all_configs.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-    xml = open("../../unittest_xml/parallel.xml").read()
+#    xml = open("../../unittest_xml/error_management.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
-    xml2 = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-        <state>
-            <invoke id="i" type="x-pyscxml-httpserver" src="http://localhost:8081/session1/basichttp" />
-            <onentry>
-                <send event="start_event" />
-            </onentry>  
-            <transition event="start_event">
-                <send event="PUT" target="#i" >
-                    <param name="p" expr="'val'" />
-                </send>
-            </transition>
-        </state>
-    </scxml>
-    '''
-    
     logging.basicConfig(level=logging.NOTSET)
-    listener = '''
-        <scxml>
-            <state>
-                <transition event="e1" target="f">
-                    <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
-                </transition>
-            </state>
-            <final id="f" />
-        </scxml>
-    '''
-    sender = '''
-    <scxml>
-        <state>
-            <onentry>
-                <log label="sending event" />
-                <send event="e1" target="#_scxml_session1"  />
-            </onentry>
-            <transition event="e2" target="f" />
-        </state>
-        <final id="f" />
-    </scxml>
-    '''
     
-#    logger = logging.getLogger("pyscxml")
-#    logger.setLevel(logging.INFO)
-#    handler = SocketHandler("0.0.0.0", 9020)
-#    handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
-#    handler.setLevel(logging.INFO)
-#    logger.addHandler(handler)
     
-#    logger.info("hello")
-#    logger.debug("hello")
-#    logger.error("hello")
-    
-#    xml = '''
-#    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-#        <state>
-#            <transition event="next" target="f" />
-#        </state>
-#        <final id="f" />
-#    </scxml>
-#    '''
-    
-    xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-       <initial>
-                <transition target="A2 B2" />
-       </initial>
-
-       <parallel id="P">
-
-                <state id="A" initial="A1">
-                         <state id="A1"/>
-
-                         <state id="A2"/>
-                </state>
-
-                <state id="B" initial="B1">
-                         <state id="B1"/>
-
-                         <state id="B2"/>
-                </state>
-
-       </parallel>
-
-</scxml>
-    '''
-#    logging.getLogger("pyscxml").propagate = False
     sm = StateMachine(xml)
-    sm.start_threaded()
-    sm.send("hello")
+#    sm.start()
+    t = Thread(target=sm.start)
+    t.start()
+    sm.send("a")
+    sm.send("b")
+    sm.send("c")
+    sm.send("d")
+    sm.send("e")
+    sm.send("f")
+    sm.send("g")
+    sm.send("h")
+#    time.sleep(0.1)
+#    self.assert_(sm.isFinished())
+    
     
     
