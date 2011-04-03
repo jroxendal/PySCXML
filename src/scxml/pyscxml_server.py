@@ -19,8 +19,7 @@ Created on Dec 15, 2010
 @author: Johan Roxendal
 '''
 
-from eventprocessor import SCXMLEventProcessor as Processor
-from interpreter import Event
+from eventprocessor import SCXMLEventProcessor as Processor, Event
 from scxml.pyscxml import MultiSession
 from wsgiref.simple_server import make_server
 from xml.parsers.expat import ExpatError
@@ -28,6 +27,7 @@ import cgi
 import logging
 import threading, time
 from functools import partial
+import os
 try:
     from eventlet import wsgi, websocket
     import eventlet
@@ -37,6 +37,8 @@ except ImportError:
 TYPE_DEFAULT = 1
 TYPE_RESPONSE = 2
 TYPE_WEBSOCKET = 4
+
+handler_mapping = {}
 
 
 class PySCXMLServer(object):
@@ -83,11 +85,10 @@ class PySCXMLServer(object):
         self.host = host
         self.port = port
         self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
+        for sm in self.sm_mapping:
+            self.set_processors(sm)
         
-        self.handler_mapping = {}
-        self.default_types = [("basichttp", "http"), ("scxml", "http")]
-        if self.is_type(TYPE_WEBSOCKET):
-            self.default_types.append(("websocket", "ws"))
+        
         #the connected websocket clients
         self.clients = []
         
@@ -95,20 +96,6 @@ class PySCXMLServer(object):
     def is_type(self, type):
         return self.server_type & type == type 
     
-    def register_handler(self, type, input_handler, protocol="http"):
-        '''
-        Using this method, you can register a handler for an IO processor, so that 
-        your server may be accessed at protocol://example.com:1234/mysession/type,
-        where protocol defaults to http, type has to be distinct from 'scxml', 'basichttp'
-        and 'websocket' (support for these types is built in).
-        @param input_handler: a function with the signature f(session, data, sm, fs),
-        where session is a string (corresponding to 'mysession' in the example url above),
-        data is the request data payload as a dict, sm the target StateMachine instance at that
-        session and fs the FieldStorage instance with more detailed request information. 
-        This function must return an object of type scxml.eventprocessor.Event.   
-        '''
-        assert (type, protocol) not in self.default_types
-        self.handler_mapping[(type, protocol)] = input_handler
     
     def serve_forever(self):
         """Start the server."""
@@ -124,11 +111,16 @@ class PySCXMLServer(object):
         
     def init_session(self, sessionid):
         sm = self.sm_mapping.make_session(sessionid, None)
-        
-        sm.datamodel["_ioprocessors"] = dict( (type, "%s://%s:%s/%s/%s" % (protocol, self.host, self.port, sessionid, type) )  
-                                              for type, protocol in list(self.handler_mapping) + self.default_types )
+        self.set_processors(sm)
         sm.start_threaded()
         return sm
+    
+    def set_processors(self, sm):
+        sm.datamodel["_ioprocessors"] = dict( (type, "http://%s:%s/%s/%s" % (self.host, self.port, sm.datamodel["_sessionid"], type) )  
+                                              for type in handler_mapping)
+        
+        if self.is_type(TYPE_WEBSOCKET):
+            sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s/websocket" % (self.host, self.port, sm.datamodel["_sessionid"])
     
     def websocket_handler(self, ws):
         self.clients.append(ws)
@@ -155,12 +147,13 @@ class PySCXMLServer(object):
     def request_handler(self, environ, start_response):
         status = '200 OK'
         try:
-            pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+            pathlist = filter(bool, environ["PATH_INFO"].split("/"))
             session = pathlist[0]
             type = pathlist[1]
-            assert type in map(lambda x:x[0], list(self.handler_mapping) + self.default_types)
-        except:
+            assert type in handler_mapping
+        except Exception, e:
             status = "403 FORBIDDEN"
+            self.logger.info(str(e))
             start_response(status, [('Content-type', 'text/plain')])
             return [""]
         if self.is_type(TYPE_WEBSOCKET) and type == "websocket":
@@ -183,23 +176,12 @@ class PySCXMLServer(object):
 
         try:
             sm = self.sm_mapping.get(session) or self.init_session(session)
-            if type == "basichttp":
-        
-                if "_content" in data:
-                    event = Processor.fromxml(data["_content"], "unknown")
-                else:
-                    pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
-                    event = Event(["http", environ['REQUEST_METHOD'].lower()] + pth, data=data)
-                
-            elif type == "scxml":
-                if "_content" in data:
-                    event = Processor.fromxml(data["_content"])
-                else:
-                    event = Processor.fromxml(data["request"])
-                    
-            elif type in map(lambda x:x[0], self.handler_mapping):
+            try:
                 #picks out the input handler and executes it.
-                event = self.handler_mapping[type](session, data, sm, fs)
+                event = handler_mapping[type](session, data, sm, environ)
+            except:
+                self.logger.error("Error when looking up handler for type %s.")
+                raise
                 
             if self.is_type(TYPE_DEFAULT):
                 timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
@@ -228,11 +210,37 @@ class PySCXMLServer(object):
         return [output]
 
 
+class ioprocessor(object):
+    '''A decorator for defining an IOProcessor type'''
+    def __init__(self, type):
+        self.type = type
+    
+    def __call__(self, f):
+        handler_mapping[self.type] = f
+        return f
 
+@ioprocessor('basichttp')
+def type_basichttp(session, data, sm, environ):
+    if "_content" in data:
+        event = Processor.fromxml(data["_content"], "unknown")
+    else:
+        pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
+        event = Event(["http", environ['REQUEST_METHOD'].lower()] + pth, data=data)
+        
+    return event
+
+@ioprocessor('scxml')
+def type_scxml(session, data, sm, environ):
+    if "_content" in data:
+        event = Processor.fromxml(data["_content"])
+    else:
+        event = Processor.fromxml(data["request"])
+    return event
+        
 
 if __name__ == "__main__":
     import sys
-    
+    logging.basicConfig(level=logging.NOTSET)
     xml = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml">
         <script></script>
@@ -284,6 +292,10 @@ if __name__ == "__main__":
     dialog_xml = open("../../resources/tropo_colors.xml").read()
     
     
+#    @custom_ioprocessor('custom_type')
+#    def my_ioprocessor(session, data, sm, fs):
+#        e = Event(["http", "custom"], data, type="external")
+#        return e
     
     
 #    import sys;sys.exit()
@@ -294,6 +306,9 @@ if __name__ == "__main__":
                     <log label="http" expr="_event.name" />
                     <log label="data" expr="_event.data" />
                 </transition>
+                <transition event="custom">
+                    <log label="got custom event" />
+                </transition>
             </state>
         </scxml>
     '''
@@ -301,15 +316,17 @@ if __name__ == "__main__":
 #    xml = open("../../resources/tropo_server.xml").read()
 #    
     server = PySCXMLServer("localhost", 8081, xml)
-    server.serve_forever()
+#    server.serve_forever()
     
     
     xml1 = '''\
         <scxml name="session1">
             <state id="s1">
-                <transition event="e1">
+                <transition event="e1" >
                     <send event="ok" targetexpr="'#_scxml_' + _event.origin" />
+                    <send type="scxml" targetexpr="_ioprocessors['scxml']" event="quit" />
                 </transition>
+                <transition event="quit" target="f" />
             </state>
             
             <final id="f" />

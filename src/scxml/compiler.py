@@ -444,7 +444,7 @@ class Compiler(object):
         try:
             return eval(expr, self.dm)
         except Exception, e:
-            self.logger.error("Exception while executing expression: '%s'" % expr)
+            self.logger.error("Exception while evaluating expression: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
             self.raiseError("error.execution." + type(e).__name__.lower(), e)
             return None
