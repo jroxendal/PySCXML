@@ -90,8 +90,9 @@ class SCXMLEventProcessor(object):
         return event
     
 class Event(object):
-    def __init__(self, name, data, invokeid=None, type="platform"):
-        self.name = name
+    def __init__(self, name, data={}, invokeid=None, type="platform"):
+            
+        self.name = name.split(".") if hasattr(name, "split") else name
         self.data = data
         self.invokeid = invokeid
         self.type = type

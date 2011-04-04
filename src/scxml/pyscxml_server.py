@@ -324,7 +324,7 @@ if __name__ == "__main__":
             <state id="s1">
                 <transition event="e1" >
                     <send event="ok" targetexpr="'#_scxml_' + _event.origin" />
-                    <send type="scxml" targetexpr="_ioprocessors['scxml']" event="quit" />
+                    <!--<send type="scxml" targetexpr="_ioprocessors['scxml']" event="quit" />-->
                 </transition>
                 <transition event="quit" target="f" />
             </state>
@@ -348,6 +348,11 @@ if __name__ == "__main__":
             <final id="f" />
         </scxml>    
     '''
+    
+    @ioprocessor('send')
+    def send_processor(session, data, sm, environ):
+        return Event(data["event"], data)
+    
     server1 = PySCXMLServer("localhost", 8081, default_scxml_doc=xml2, init_sessions={"session1" : xml1, "session2" : xml2})
     t = threading.Thread(target=server1.serve_forever)
     t.start()
