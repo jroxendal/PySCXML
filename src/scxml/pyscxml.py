@@ -219,7 +219,7 @@ __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor"]
 
 if __name__ == "__main__":
     try:
-        import pydevd 
+        import pydevd #@UnresolvedImport
         pydevd.set_pm_excepthook()
     except:
         pass 
