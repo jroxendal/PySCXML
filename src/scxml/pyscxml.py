@@ -23,7 +23,7 @@ from interpreter import Interpreter
 from louie import dispatcher
 from threading import Thread, RLock
 import logging
-from time import time
+from time import time, sleep
 
 
 def default_logfunction(label, msg):
@@ -225,8 +225,9 @@ if __name__ == "__main__":
         pass 
     
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
-#    xml = open("../../resources/history_bug.xml").read()
-    xml = open("../../unittest_xml/all_configs.xml").read()
+#    xml = open("../../resources/colors.xml").read()
+    xml = open("../../resources/parallel_bug.xml").read()
+#    xml = open("../../unittest_xml/all_configs.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
@@ -238,17 +239,25 @@ if __name__ == "__main__":
     
     sm = StateMachine(xml)
 #    sm.start()
+    
     t = Thread(target=sm.start)
     t.start()
-    sm.send("a")
-    sm.send("b")
-    sm.send("c")
-    sm.send("d")
+    sleep(0.1)
+    print sm.interpreter.configuration
     sm.send("e")
-    sm.send("f")
-    sm.send("g")
-    sm.send("h")
-#    time.sleep(0.1)
+    sleep(1)
+    print sm.interpreter.configuration
+    
+    
+    
+#    sm.send("a")
+#    sm.send("b")
+#    sm.send("c")
+#    sm.send("d")
+#    sm.send("e")
+#    sm.send("f")
+#    sm.send("g")
+#    sm.send("h")
 #    self.assert_(sm.isFinished())
     
     

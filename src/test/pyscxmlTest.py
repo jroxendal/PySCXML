@@ -38,7 +38,7 @@ class RegressionTest(unittest.TestCase):
     
     def testInterpreter(self):
         try:
-            import pydevd 
+            import pydevd #@UnresolvedImport
             pydevd.set_pm_excepthook()
         except:
             pass

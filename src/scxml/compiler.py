@@ -147,7 +147,7 @@ class Compiler(object):
                                           "element for documents in a MultiSession enviroment")
             elif node_ns in custom_exec_mapping:
                 # execute functions registered using scxml.pyscxml.custom_executable
-                custom_exec_mapping[node_ns](node)
+                custom_exec_mapping[node_ns](node, self.dm)
                 
             else:
                 if self.strict_parse: 
@@ -180,16 +180,17 @@ class Compiler(object):
         Given a parent node, returns a data object corresponding to 
         its param child nodes, namelist attribute or content child element.
         '''
+        
         output = {}
         for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("name"))
             
-            output[p.get("name")] = self.getExprValue(expr)
+            output[p.get("name")] = self.getExprValue(expr, True)
                 
         
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
-                output[name] = self.getExprValue(name)
+                output[name] = self.getExprValue(name, True)
         
         if child.find(prepend_ns("content")) != None:
             output["content"] = template(child.find(prepend_ns("content")).text, self.dm)
@@ -219,7 +220,14 @@ class Compiler(object):
         type = self.parseAttr(sendNode, "type", "scxml")
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
         target = self.parseAttr(sendNode, "target")
-        data = self.parseData(sendNode)
+        try:
+            data = self.parseData(sendNode)
+        except Exception, e:
+#            print sendNode.find(prepend_ns("content")).text
+            self.logger.error("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "lineno", 'unknown'))
+            self.raiseError("error.execution", e)
+            raise e
+            return
         try:
             hints = eval(self.parseAttr(sendNode, "hints", "{}"))
             assert isinstance(hints, dict)
@@ -435,7 +443,7 @@ class Compiler(object):
             self.raiseError("error.execution." + type(e).__name__.lower(), e)
                 
     
-    def getExprValue(self, expr):
+    def getExprValue(self, expr, throwErrors=False):
         """These expression are always one-line, so their value is evaluated and returned."""
         if not expr: 
             return None
@@ -444,9 +452,12 @@ class Compiler(object):
         try:
             return eval(expr, self.dm)
         except Exception, e:
-            self.logger.error("Exception while evaluating expression: '%s'" % expr)
-            self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
-            self.raiseError("error.execution." + type(e).__name__.lower(), e)
+            if throwErrors:
+                raise e
+            else:
+                self.logger.error("Exception while evaluating expression: '%s'" % expr)
+                self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
+                self.raiseError("error.execution." + type(e).__name__.lower(), e)
             return None
     
     def make_invoke_wrapper(self, node, parentId):
@@ -568,15 +579,28 @@ class Compiler(object):
 
 def preprocess(tree):
     tree.set("id", "__main__")
-    
+    toAppend = []
     for parent in tree.getiterator():
         for child in parent:
             node_ns, node_tag = split_ns(child)
             if node_ns in preprocess_mapping:
                 xmlstr = preprocess_mapping[node_ns](child)
                 i = list(parent).index(child)
-                parent[i] = ElementTree.fromstring(xmlstr)
-            
+                
+#                newNode = ElementTree.fromstring(xmlstr)
+                newNode = ElementTree.fromstring("<wrapper>%s</wrapper>" % xmlstr)
+                for node in newNode:
+                    if "{" not in node.tag:
+                        node.set("xmlns", ns)
+#                        parent[i] = newNode 
+                newNode = ElementTree.fromstring(ElementTree.tostring(newNode))
+                toAppend.append((parent, (i, len(newNode)-1), newNode) )
+#                parent[i:len(newNode)-1] = newNode[:]
+#                newNode.lineno = child.lineno
+#                for n, desc in enumerate(newNode.getiterator()):
+#                    desc.lineno = newNode.lineno + n 
+    for parent, (i, j), newNode in toAppend:
+        parent[i:j] = newNode[:]
     
     for n, parent, node in iter_elems(tree):
         node_ns, node_tag = split_ns(node)

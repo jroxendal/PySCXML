@@ -1,10 +1,14 @@
 <scxml xmlns="http://www.w3.org/2005/07/scxml" initial="red">
 	<script>
-		import math
-		variable = 10
-		def square(x):
-			return x + math.sin(90)
-		print doc
+        import math, sys
+        variable = 10
+        def square(x):
+            return x + math.sin(90)
+        
+        try:
+            1/0
+        except:
+            print sys.exc_info()
 	</script>
 	<datamodel>
 		<data id="doc" src="http://google.com" />

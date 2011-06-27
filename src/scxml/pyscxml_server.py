@@ -28,9 +28,11 @@ import logging
 import threading, time
 from functools import partial
 import os
+import inspect
 try:
     from eventlet import wsgi, websocket
     import eventlet
+    
 except ImportError:
     pass
 
@@ -150,7 +152,6 @@ class PySCXMLServer(object):
             pathlist = filter(bool, environ["PATH_INFO"].split("/"))
             session = pathlist[0]
             type = pathlist[1]
-            assert type in handler_mapping
         except Exception, e:
             status = "403 FORBIDDEN"
             self.logger.info(str(e))
@@ -189,12 +190,18 @@ class PySCXMLServer(object):
             elif self.is_type(TYPE_RESPONSE):
                 sm.interpreter.externalQueue.put(event)
                 output, hints = sm.datamodel["_response"].get() #blocks
-
-                output = output["content"].strip()
-                if type == "scxml":
-                    headers["Content-type"] = "text/xml"
-                    
-                headers.update(hints)
+                if hints.get("status"):
+                    status = str(hints.get("status"))
+                    output = ""
+                else:
+                    try:
+                        output = output["content"].strip()
+                    except:
+                        pass
+                    if type == "scxml":
+                        headers["Content-type"] = "text/xml"
+                        
+                    headers.update(hints)
                 
             
         except AssertionError:

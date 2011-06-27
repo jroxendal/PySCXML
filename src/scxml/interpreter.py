@@ -268,21 +268,19 @@ class Interpreter(object):
         for t in enabledTransitions:
             if t.target:
                 tstates = self.getTargetStates(t.target)
-                
                 if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
                     ancestor = t.source
                 else:
                     ancestor = self.findLCA([t.source] + tstates)
-                
                 for s in tstates:
-                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
+                    self.addStatesToEnter(s,statesToEnter,statesForDefaultEntry)
                 for s in tstates:
                     for anc in getProperAncestors(s,ancestor):
                         statesToEnter.add(anc)
                         if isParallelState(anc):
                             for child in getChildStates(anc):
                                 if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
-                                    self.addStatesToEnter(child,statesToEnter,statesForDefaultEntry)  
+                                    self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry) #TODO: ?  
         for s in statesToEnter:
             self.statesToInvoke.add(s)
         statesToEnter.sort(key=enterOrder)
@@ -308,30 +306,30 @@ class Interpreter(object):
                 self.g_continue = False;
     
     
-    def addStatesToEnter(self, s,root,statesToEnter,statesForDefaultEntry):
-        if isHistoryState(s):
-            if s.id in self.historyValue:
-                for s0 in self.historyValue[s.id]:
-                    self.addStatesToEnter(s0, root, statesToEnter, statesForDefaultEntry)
+    def addStatesToEnter(self, state,statesToEnter,statesForDefaultEntry):
+        if isHistoryState(state):
+            if state.id in self.historyValue:
+                for s in self.historyValue[state.id]:
+                    self.addStatesToEnter(s, statesToEnter, statesForDefaultEntry)
             else:
-                for t in s.transition:
-                    for s0 in self.getTargetStates(t.target):
-                        self.addStatesToEnter(s0, s, statesToEnter, statesForDefaultEntry)
+                for t in state.transition:
+                    for s in self.getTargetStates(t.target):
+                        self.addStatesToEnter(s, statesToEnter, statesForDefaultEntry)
         else:
-            statesToEnter.add(s)
-            if isParallelState(s):
-                for child in getChildStates(s):
-                    self.addStatesToEnter(child,s,statesToEnter,statesForDefaultEntry)
-            elif isCompoundState(s):
-                statesForDefaultEntry.add(s)
-                for tState in self.getTargetStates(s.initial):
-                    self.addStatesToEnter(tState, s, statesToEnter, statesForDefaultEntry)
-            for anc in getProperAncestors(s,root):
-                statesToEnter.add(anc)
-                if isParallelState(anc):
-                    for pChild in getChildStates(anc):
-                        if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
-                            self.addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
+            statesToEnter.add(state)
+            if isCompoundState(state):
+                statesForDefaultEntry.add(state)
+                for s in self.getTargetStates(state.initial):
+                    self.addStatesToEnter(s, statesToEnter, statesForDefaultEntry)
+            elif isParallelState(state):
+                for s in getChildStates(state):
+                    self.addStatesToEnter(s,statesToEnter,statesForDefaultEntry)
+#            for anc in getProperAncestors(s,root):
+#                statesToEnter.add(anc)
+#                if isParallelState(anc):
+#                    for pChild in getChildStates(anc):
+#                        if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
+#                            self.addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
     
                 
     def recursivelyAddDefaultDescendants(self, state,statesToEnter,statesForDefaultEntry):
@@ -372,6 +370,8 @@ class Interpreter(object):
         inv.finalize()
     
     def getTargetStates(self, targetIds):
+        if targetIds == None:
+            pass
         states = []
         for id in targetIds:
             state = self.doc.getState(id)
