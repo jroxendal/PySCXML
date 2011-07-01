@@ -124,6 +124,9 @@ class RegressionTest(unittest.TestCase):
         sm = StateMachine(open(xmlDir + "parallel2.xml").read())
         sm.start()
         self.assert_(sm.isFinished())
+        sm = StateMachine(open(xmlDir + "parallel3.xml").read())
+        sm.start()
+        self.assert_(sm.isFinished())
         
         
         listener = '''

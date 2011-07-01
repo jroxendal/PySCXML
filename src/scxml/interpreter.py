@@ -419,7 +419,6 @@ def getProperAncestors(state,root):
         while hasattr(state,'parent') and state.parent and state.parent != root:
             state = state.parent
             ancestors.append(state)
-        
         return ancestors
     
     
