@@ -280,7 +280,7 @@ class Interpreter(object):
                         if isParallelState(anc):
                             for child in getChildStates(anc):
                                 if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
-                                    self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry) #TODO: ?  
+                                    self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)   
         for s in statesToEnter:
             self.statesToInvoke.add(s)
         statesToEnter.sort(key=enterOrder)
@@ -415,7 +415,7 @@ class Interpreter(object):
 
 
 def getProperAncestors(state,root):
-        ancestors = []
+        ancestors = [root] if root else []
         while hasattr(state,'parent') and state.parent and state.parent != root:
             state = state.parent
             ancestors.append(state)
