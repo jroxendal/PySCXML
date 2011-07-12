@@ -1,0 +1,24 @@
+<scxml xmlns="http://www.w3.org/2005/07/scxml" version="1.0"
+    initial="p">
+    <parallel id="p">
+        <state id="s" initial="a">
+            <state id="a" />
+            <state id="b" />
+            <transition event="e" target="b" />
+        </state>
+        <state id="s2">
+            <onentry>
+                <log label="s2 entered" />
+            </onentry>
+            <onexit>
+                <log label="s2 exited" />
+            </onexit>
+        </state>
+        <onexit>
+            <log label="p exited" />
+        </onexit>
+        <onentry>
+            <log label="p entered" />
+        </onentry>
+    </parallel>
+</scxml>

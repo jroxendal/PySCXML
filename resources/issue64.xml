@@ -1,0 +1,14 @@
+<scxml initial="wrap">
+<parallel id="wrap">
+  <state id="a" initial="a1">
+    <state id="a1"/>
+    <state id="a2"/>
+    <transition event="e" target="a2"/>
+  </state>
+  <state id="b" initial="b1">
+    <state id="b1"/>
+    <state id="b2"/>
+    <transition event="e" target="b2"/>
+  </state>
+</parallel>
+</scxml>

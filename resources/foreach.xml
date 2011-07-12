@@ -1,0 +1,12 @@
+<scxml>
+    <datamodel>
+        <data id="array" expr="['apa', 'bepa', 'cepa']" />
+    </datamodel>
+    <state>
+        <onentry>
+            <foreach array="array" item="item" index="i">
+                <log expr="item + ' ' + str(i)" />
+            </foreach>
+        </onentry>
+    </state>
+</scxml>

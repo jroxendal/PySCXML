@@ -78,20 +78,21 @@ class StateMachine(object):
         top-level final state or was cancelled.'''
         return self.is_finished
     
-    def cancel(self, data):
+    def cancel(self):
         '''
         Stops the execution of the StateMachine, causing 
         all the states in the current configuration to execute 
         their onexit blocks. The StateMachine instance now no longer
-        accepts events. 
+        accepts events. For clarity, consider using the 
+        top-level <final /> state in your document instead.  
         '''
-        self.sm.interpreter.g_continue = False
+        self.interpreter.g_continue = False
     
     def send(self, name, data={}):
         '''
         Send an event to the running machine. 
         @param name: the event name (string)
-        @param data: the data passed to the _event.data variable (dict)
+        @param data: the data passed to the _event.data variable (any data type)
         '''
         self._send(name, data)
             
@@ -105,7 +106,7 @@ class StateMachine(object):
         (i.e if the StateMachine instance is currently 'in' that state).
         '''
         with self._lock:
-            self.interpreter.In(statename)
+            return self.interpreter.In(statename)
             
     def _sessionid_getter(self):
         return self.datamodel["_sessionid"]
@@ -226,7 +227,8 @@ if __name__ == "__main__":
     
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
 #    xml = open("../../resources/colors.xml").read()
-    xml = open("../../unittest_xml/parallel3.xml").read()
+    xml = open("../../resources/issue64.xml").read()
+#    xml = open("../../resources/foreach.xml").read()
 #    xml = open("../../unittest_xml/all_configs.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
@@ -242,7 +244,7 @@ if __name__ == "__main__":
     
     t = Thread(target=sm.start)
     t.start()
-    
+    sm.cancel()
     
     
 #    sm.send("a")

@@ -125,6 +125,19 @@ class Compiler(object):
                         
                 elif node_name == "if":
                     self.parseIf(node)
+                elif node_name == "foreach":
+                    try:
+                        for index, item in enumerate(self.getExprValue(node.get("array"))):
+                            self.dm[node.get("item")] = item
+                            if node.get("index"):
+                                self.dm[node.get("index")] = index
+                            self.do_execute_content(node)
+                    except Exception, e:
+                        msg = "Line %s: foreach parsing failed." % node.lineno
+                        self.logger.error(msg)
+                        self.raiseError("error.execution", e)
+                        continue
+                        
                 
             elif node_ns == pyscxml_ns:
                 if node_name == "start_session":
