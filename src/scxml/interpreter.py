@@ -230,9 +230,20 @@ class Interpreter(object):
                     ancestor = t.source
                 else:
                     ancestor = self.findLCA([t.source] + self.getTargetStates(t.target))
-                for s in self.configuration:
-                    if isDescendant(s,ancestor):
-                        statesToExit.add(s)
+                
+                if isParallelState(ancestor):
+                    for child in getChildStates(ancestor):
+                        if child in getProperAncestors(t.source, ancestor) + [t.source]:
+                            statesToExit.add(child)
+                            for s in self.configuration:
+                                if isDescendant(s,child):
+                                    statesToExit.add(s)  
+                    
+                             
+                else:
+                    for s in self.configuration:
+                        if isDescendant(s,ancestor):
+                            statesToExit.add(s)
         
         for s in statesToExit:
             self.statesToInvoke.delete(s)
@@ -279,7 +290,7 @@ class Interpreter(object):
                         statesToEnter.add(anc)
                         if isParallelState(anc):
                             for child in getChildStates(anc):
-                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
+                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)) and isDescendant(s, child): #child in getProperAncestors(s, anc):
                                     self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)   
         for s in statesToEnter:
             self.statesToInvoke.add(s)

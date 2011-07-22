@@ -227,9 +227,9 @@ if __name__ == "__main__":
     
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
 #    xml = open("../../resources/colors.xml").read()
-    xml = open("../../resources/issue64.xml").read()
+#    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
-#    xml = open("../../unittest_xml/all_configs.xml").read()
+    xml = open("../../unittest_xml/parallel3.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
@@ -244,7 +244,9 @@ if __name__ == "__main__":
     
     t = Thread(target=sm.start)
     t.start()
-    sm.cancel()
+    sleep(0.1)
+    sm.send("e")
+#    sm.cancel()
     
     
 #    sm.send("a")

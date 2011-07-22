@@ -60,7 +60,7 @@ class SCXMLNode(object):
         self.onexit.append(exit)
         
     def getChildren(self):
-        return self.transition +self.state + self.final 
+        return self.state + self.final 
     
     def __repr__(self):
         return str(self)
