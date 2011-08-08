@@ -69,15 +69,19 @@ class Compiler(object):
     def __init__(self):
         self.doc = SCXMLDocument()
         self.dm = self.doc.datamodel
-        self.dm["_sessionid"] = "pyscxml_session_" + str(int(time.time() * 1000))
         self.dm["_response"] = Queue.Queue() 
         self.dm["_websocket"] = Queue.Queue()
-
-        self.logger = logging.getLogger("pyscxml.%s.compiler" % self.dm["_sessionid"] )
+        
+        self.setSessionId("pyscxml_session_" + str(int(time.time() * 1000)))
+        
         self.log_function = None
         self.strict_parse = False
         self.timer_mapping = {}
         self.instantiate_datamodel = None
+    
+    def setSessionId(self, id):
+        self.dm["_sessionid"] = id
+        self.logger = logging.getLogger("pyscxml.%s.compiler" % id )
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):

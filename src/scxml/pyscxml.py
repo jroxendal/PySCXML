@@ -111,7 +111,7 @@ class StateMachine(object):
     def _sessionid_getter(self):
         return self.datamodel["_sessionid"]
     def _sessionid_setter(self, id):
-        self.datamodel["_sessionid"] = id
+        self.compiler.setSessionId(id)
     
     sessionid = property(_sessionid_getter, _sessionid_setter)
     
@@ -140,6 +140,7 @@ class MultiSession(object):
         a set of sessions. Set value to None as a shorthand for deferring to the 
         default xml for that session. 
         '''
+        self._lock = RLock()
         self.default_scxml_doc = default_scxml_doc
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
@@ -165,8 +166,9 @@ class MultiSession(object):
     
     def start(self):
         ''' launches the initialized sessions by calling start_threaded() on each sm'''
-        for sm in self:
-            sm.start_threaded()
+        with self._lock:
+            for sm in self:
+                sm.start_threaded()
             
     
     def make_session(self, sessionid, xml):
@@ -187,13 +189,13 @@ class MultiSession(object):
         return sm
     
     def on_sm_exit(self, sender):
-        
-        if sender.sessionid in self:
-            self.logger.debug("The session '%s' finished" % sender.sessionid)
-            del self[sender.sessionid]
-        else:
-            self.logger.error("The session '%s' reported exit but it " 
-            "can't be found in the mapping." % sender.sessionid)
+        with self._lock:
+            if sender.sessionid in self:
+                self.logger.debug("The session '%s' finished" % sender.sessionid)
+                del self[sender.sessionid]
+            else:
+                self.logger.error("The session '%s' reported exit but it " 
+                "can't be found in the mapping." % sender.sessionid)
 
 
 class custom_executable(object):
@@ -219,33 +221,29 @@ class preprocessor(object):
 __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor"]
 
 if __name__ == "__main__":
-    try:
-        import pydevd #@UnresolvedImport
-        pydevd.set_pm_excepthook()
-    except:
-        pass 
     
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
 #    xml = open("../../resources/colors.xml").read()
 #    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
     xml = open("../../unittest_xml/parallel3.xml").read()
+#    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-#    xml = open("../../unittest_xml/error_management.xml").read()
 #    xml = open("../../unittest_xml/error_management.xml").read()
     
     logging.basicConfig(level=logging.NOTSET)
     
     
     sm = StateMachine(xml)
-#    sm.start()
+    sm.sessionid = "hello"
+    sm.start()
+#    t = Thread(target=sm.start)
+#    t.start()
+#    sleep(0.1)
     
-    t = Thread(target=sm.start)
-    t.start()
-    sleep(0.1)
-    sm.send("e")
+#    sm.send("e")
 #    sm.cancel()
     
     
@@ -259,5 +257,32 @@ if __name__ == "__main__":
 #    sm.send("h")
 #    self.assert_(sm.isFinished())
     
-    
+
+    listener = '''
+        <scxml>
+            <state>
+                <transition event="e1" target="f">
+                    <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
+                </transition>
+            </state>
+            <final id="f" />
+        </scxml>
+    '''
+    sender = '''
+    <scxml>
+        <state>
+            <onentry>
+                <script>1/0</script>
+                <log label="sending event" />
+                <send event="e1" target="#_scxml_session1"  />
+            </onentry>
+            <transition event="e2" target="f" />
+        </state>
+        <final id="f" />
+    </scxml>
+    '''
+    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
+    ms.start()
+    sleep(0.1)
+    print all(map(lambda x: x.isFinished(), ms))
     

@@ -190,9 +190,6 @@ class Interpreter(object):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
         for state in atomicStates:
-#            if hasattr(event, "invokeid") and state.invokeid == event.invokeid:  # event is the result of an <invoke> in this state
-#                self.applyFinalize(state, event)
-                
             if not self.isPreempted(state, enabledTransitions):
                 done = False
                 for s in [state] + getProperAncestors(state, None):
@@ -204,13 +201,13 @@ class Interpreter(object):
                             break 
         return enabledTransitions
     
-    
     def isPreempted(self, s, transitionList):
         preempted = False
         for t in transitionList:
             if t.target:
                 LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
-                if isDescendant(s,LCA):
+                #TODO: diverges from standard doc, check this.
+                if not isParallelState(LCA) and isDescendant(s,LCA):
                     preempted = True
                     break
         return preempted
@@ -290,7 +287,8 @@ class Interpreter(object):
                         statesToEnter.add(anc)
                         if isParallelState(anc):
                             for child in getChildStates(anc):
-                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)) and isDescendant(s, child): #child in getProperAncestors(s, anc):
+                                #TODO: diverges from standard doc, check this.
+                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)) and child not in self.configuration:
                                     self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)   
         for s in statesToEnter:
             self.statesToInvoke.add(s)
@@ -426,11 +424,11 @@ class Interpreter(object):
 
 
 def getProperAncestors(state,root):
-        ancestors = [root] if root else []
-        while hasattr(state,'parent') and state.parent and state.parent != root:
-            state = state.parent
-            ancestors.append(state)
-        return ancestors
+    ancestors = [root] if root else []
+    while hasattr(state,'parent') and state.parent and state.parent != root:
+        state = state.parent
+        ancestors.append(state)
+    return ancestors
     
     
 def isDescendant(state1,state2):

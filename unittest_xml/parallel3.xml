@@ -1,7 +1,7 @@
 <scxml xmlns="http://www.w3.org/2005/07/scxml" version="1.0">
     <initial>
         <transition target="p">
-<!--             <send event="e" /> -->
+            <send event="e" />
         </transition>
     </initial>
     <parallel id="p">
@@ -18,7 +18,7 @@
                 <log label="exit s2" />
             </onexit>
         </state>
-<!--         <transition cond="In('b') and In('s2')" target="f" /> -->
+        <transition cond="In('b') and In('s2')" target="f" />
     </parallel>
     <final id="f" />
 </scxml>

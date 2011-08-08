@@ -43,22 +43,20 @@ class RegressionTest(unittest.TestCase):
         except:
             pass
         
-        logging.basicConfig(level=logging.NOTSET)
-        sm = StateMachine(open(xmlDir + "colors.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-    
-        sm = StateMachine(open(xmlDir + "parallel.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
+        runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
+                               "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
+                               "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
+                               "cheetah.xml", "internal_transition.xml", "binding.xml", "finalize.xml"]
+        
+        for name in runToCompletionList:
+            print "Running " + name 
+            sm = StateMachine(open(xmlDir + name).read())
+            sm.start()
+            self.assert_(sm.isFinished())
         
         sm = StateMachine(open(xmlDir + "factorial.xml").read())
         sm.start()
         self.assertEquals(sm.datamodel['fac'], 720)
-
-        sm = StateMachine(open(xmlDir + "issue_164.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
 
         sm = StateMachine(open(xmlDir + "all_configs.xml").read())
         t = Thread(target=sm.start)
@@ -78,56 +76,13 @@ class RegressionTest(unittest.TestCase):
         sm.start()
         self.assertEquals(sm.datamodel["x"], 584346861767418750)
 
-        sm = StateMachine(open(xmlDir + "twolock_door.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
+        
         '''
         sm = StateMachine(open(xmlDir + "xinclude.xml").read())
         sm.start()
         
         self.assert_(sm.isFinished())
         '''
-        
-        sm = StateMachine(open(xmlDir + "if_block.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-
-        sm = StateMachine(open(xmlDir + "donedata.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-
-        sm = StateMachine(open(xmlDir + "invoke.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-
-        sm = StateMachine(open(xmlDir + "error_management.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-
-        sm = StateMachine(open(xmlDir + "history.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-
-        sm = StateMachine(open(xmlDir + "cheetah.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-        
-        sm = StateMachine(open(xmlDir + "internal_transition.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-        sm = StateMachine(open(xmlDir + "binding.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-        sm = StateMachine(open(xmlDir + "finalize.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-        sm = StateMachine(open(xmlDir + "parallel2.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-        sm = StateMachine(open(xmlDir + "parallel3.xml").read())
-        sm.start()
-        self.assert_(sm.isFinished())
-        
         
         listener = '''
             <scxml>

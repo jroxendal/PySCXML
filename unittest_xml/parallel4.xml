@@ -1,0 +1,23 @@
+<scxml>
+    <initial>
+        <transition target="p">
+            <send event="e" />
+        </transition>
+    </initial>
+    <parallel id="p">
+        <state id="a" initial="a1">
+            <state id="a1" />
+            <state id="a2" />
+            <transition event="e" target="a2" />
+        </state>
+        <state id="b" initial="b1">
+            <state id="b1" />
+            <state id="b2" />
+            <transition event="e" target="b2" />
+        </state>
+    </parallel>
+    
+    <transition cond="In('a2') and In('b2')" target="f" />
+    
+    <final id="f" />
+</scxml>
