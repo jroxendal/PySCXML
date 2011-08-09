@@ -122,7 +122,16 @@ class StateMachine(object):
                 for timer in self.compiler.timer_mapping.items():
                     timer.cancel()
                     del timer
+                dispatcher.disconnect(self, "signal_exit", self.interpreter)
                 dispatcher.send("signal_exit", self)
+    
+    def __enter__(self):
+        self.start()
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        if not self.isFinished():
+            self.cancel()
     
 
 class MultiSession(object):
@@ -188,6 +197,21 @@ class MultiSession(object):
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
         return sm
     
+    def send(self, event, data={}, to_session=None):
+        '''send an event to the specified session. if to_session is None or "", 
+        the event is sent to all active sessions.'''
+        with self._lock:
+            if to_session:
+                self[to_session].send(event, data)
+            else:
+                for sm in self:
+                    sm.send(event, data)
+    
+    def cancel(self):
+        with self._lock:
+            for sm in self:
+                sm.cancel()
+    
     def on_sm_exit(self, sender):
         with self._lock:
             if sender.sessionid in self:
@@ -196,7 +220,13 @@ class MultiSession(object):
             else:
                 self.logger.error("The session '%s' reported exit but it " 
                 "can't be found in the mapping." % sender.sessionid)
-
+    
+    def __enter__(self):
+        self.start()
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.cancel()
 
 class custom_executable(object):
     '''A decorator for defining custom executable content'''
@@ -235,10 +265,9 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.NOTSET)
     
+#    with StateMachine(xml) as sm:
+#        sm.send("e")
     
-    sm = StateMachine(xml)
-    sm.sessionid = "hello"
-    sm.start()
 #    t = Thread(target=sm.start)
 #    t.start()
 #    sleep(0.1)
@@ -272,17 +301,18 @@ if __name__ == "__main__":
     <scxml>
         <state>
             <onentry>
-                <script>1/0</script>
                 <log label="sending event" />
-                <send event="e1" target="#_scxml_session1"  />
+                <!--<send event="e1" target="#_scxml_session1"  />-->
             </onentry>
             <transition event="e2" target="f" />
         </state>
         <final id="f" />
     </scxml>
     '''
-    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
-    ms.start()
-    sleep(0.1)
-    print all(map(lambda x: x.isFinished(), ms))
+#    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
+    with MultiSession(init_sessions={"session1" : listener, "session2" : sender}) as ms:
+        ms.send("e1")
+#    ms.start()
+#    sleep(0.1)
+#    print all(map(lambda x: x.isFinished(), ms))
     
