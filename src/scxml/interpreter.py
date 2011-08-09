@@ -288,7 +288,7 @@ class Interpreter(object):
                         if isParallelState(anc):
                             for child in getChildStates(anc):
                                 #TODO: diverges from standard doc, check this.
-                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)) and child not in self.configuration:
+                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)) and isDescendant(s, child):
                                     self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)   
         for s in statesToEnter:
             self.statesToInvoke.add(s)

@@ -126,7 +126,7 @@ class StateMachine(object):
                 dispatcher.send("signal_exit", self)
     
     def __enter__(self):
-        self.start()
+        self.start_threaded()
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
@@ -265,13 +265,31 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.NOTSET)
     
-#    with StateMachine(xml) as sm:
-#        sm.send("e")
+    xml = '''<scxml initial="wrap">
+                <parallel id="wrap">
+                  <state id="a" initial="a1">
+                        <state id="a1"/>
+                        <state id="a2"/>
+                        <transition event="e" target="a2"/>
+                  </state>
+                  <state id="b" initial="b1">
+                        <state id="b1">
+                         <onexit><log label="exit b1" /></onexit>
+                        </state>
+                        <state id="b2"/>
+                        <transition event="e" target="b2"/>
+                  </state>
+                </parallel>
+            </scxml>'''
     
+    with StateMachine(xml) as sm:
+        sm.send("e")
+    
+#    sm = StateMachine(xml)
 #    t = Thread(target=sm.start)
 #    t.start()
 #    sleep(0.1)
-    
+#    sm.start()
 #    sm.send("e")
 #    sm.cancel()
     
@@ -310,8 +328,8 @@ if __name__ == "__main__":
     </scxml>
     '''
 #    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
-    with MultiSession(init_sessions={"session1" : listener, "session2" : sender}) as ms:
-        ms.send("e1")
+#    with MultiSession(init_sessions={"session1" : listener, "session2" : sender}) as ms:
+#        ms.send("e1")
 #    ms.start()
 #    sleep(0.1)
 #    print all(map(lambda x: x.isFinished(), ms))
