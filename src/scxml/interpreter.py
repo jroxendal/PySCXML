@@ -331,33 +331,6 @@ class Interpreter(object):
             elif isParallelState(state):
                 for s in getChildStates(state):
                     self.addStatesToEnter(s,statesToEnter,statesForDefaultEntry)
-#            for anc in getProperAncestors(s,root):
-#                statesToEnter.add(anc)
-#                if isParallelState(anc):
-#                    for pChild in getChildStates(anc):
-#                        if not any(map(lambda s2: isDescendant(s2,pChild), statesToEnter)):
-#                            self.addStatesToEnter(pChild,anc,statesToEnter,statesForDefaultEntry)
-    
-                
-    def recursivelyAddDefaultDescendants(self, state,statesToEnter,statesForDefaultEntry):
-        if isHistoryState(state):
-            if self.historyValue[state.id]:
-                for s in self.historyValue[state.id]:
-                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
-            else:
-                for t in state.transition:
-                    for s in self.getTargetStates(t.target):
-                        self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
-        else:
-            statesToEnter.add(state)
-            if isParallelState(state):
-                for s in getChildStates(state):
-                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
-            elif isCompoundState(state):
-                statesForDefaultEntry.add(state)
-                for s in self.getTargetStates(state.initial):
-                    self.recursivelyAddDefaultDescendants(s,statesToEnter,statesForDefaultEntry)
-    
     
     def isInFinalState(self, s):
         if isCompoundState(s):
