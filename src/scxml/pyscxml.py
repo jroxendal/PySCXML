@@ -282,7 +282,33 @@ if __name__ == "__main__":
                 </parallel>
             </scxml>'''
     
+    xml = '''
+    <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://www.w3.org/2011/04/SCXML/scxml.xsd"
+            initial="wrap">
+            <parallel id="wrap">
+                <state id="a" initial="a1">
+                    <state id="a1">
+                         <onentry><log label="enter a1" /></onentry>
+                         <onexit><log label="exit a1" /></onexit>
+                    </state>
+                    <state id="a2"/>
+                </state>
+                <state id="b" initial="b1">
+                    <state id="b1"/>
+                    <state id="b2"/>
+                </state>
+                <transition event="e" target="a2 b2"/>
+                <transition event="e" target="b2" type="internal"/>
+                <transition event="shutdown" target="shutdown"/>
+            </parallel>
+            <final id="shutdown"/>
+        </scxml>
+    '''
+    
     with StateMachine(xml) as sm:
+#        pass
         sm.send("e")
     
 #    sm = StateMachine(xml)
@@ -293,16 +319,6 @@ if __name__ == "__main__":
 #    sm.send("e")
 #    sm.cancel()
     
-    
-#    sm.send("a")
-#    sm.send("b")
-#    sm.send("c")
-#    sm.send("d")
-#    sm.send("e")
-#    sm.send("f")
-#    sm.send("g")
-#    sm.send("h")
-#    self.assert_(sm.isFinished())
     
 
     listener = '''

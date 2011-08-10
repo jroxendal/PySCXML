@@ -223,20 +223,18 @@ class Interpreter(object):
         statesToExit = OrderedSet()
         for t in enabledTransitions:
             if t.target:
-                if t.type == "internal" and map(lambda s: isDescendant(s,t.source), self.getTargetStates(t.target)):
+                if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), self.getTargetStates(t.target))):
                     ancestor = t.source
                 else:
                     ancestor = self.findLCA([t.source] + self.getTargetStates(t.target))
                 
                 if isParallelState(ancestor):
                     for child in getChildStates(ancestor):
-                        if child in getProperAncestors(t.source, ancestor) + [t.source]:
+                        if isDescendant(child, t.source):
                             statesToExit.add(child)
                             for s in self.configuration:
                                 if isDescendant(s,child):
                                     statesToExit.add(s)  
-                    
-                             
                 else:
                     for s in self.configuration:
                         if isDescendant(s,ancestor):

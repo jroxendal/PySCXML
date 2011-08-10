@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://scxml-schema.googlecode.com/svn/SCXML-Schema/ecma/scxml-profile-ecma.xsd">
+    xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://www.w3.org/2011/04/SCXML/scxml.xsd">
 
     <script><![CDATA[
         import json
@@ -29,7 +29,6 @@
         </onentry>
         <transition target="dialog" event="tropo.answer.say" />
     </state>
-    
     <state id="error">
         <state id="nomatch">
             <onentry>
