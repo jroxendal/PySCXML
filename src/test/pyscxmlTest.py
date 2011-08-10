@@ -46,7 +46,8 @@ class RegressionTest(unittest.TestCase):
         runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
                                "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
-                               "cheetah.xml", "internal_transition.xml", "binding.xml", "finalize.xml"]
+                               "cheetah.xml", "internal_transition.xml", "binding.xml", "finalize.xml",
+                               "internal_parallel.xml"]
         
         for name in runToCompletionList:
             print "Running " + name 

@@ -1,0 +1,20 @@
+<scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml">
+    <initial>
+        <transition target="wrap" >
+            <send event="e" />
+        </transition>
+    </initial>
+    <parallel id="wrap">
+        <state id="a" initial="a1">
+            <state id="a1" />
+            <state id="a2" />
+        </state>
+        <state id="b" initial="b1">
+            <state id="b1" />
+            <state id="b2" />
+        </state>
+        <transition event="e" target="a2 b2" type="internal" />
+        <transition cond="In('a2') and In('b2')" target="f" />
+    </parallel>
+    <final id="f" />
+</scxml>
