@@ -223,22 +223,23 @@ class Interpreter(object):
         statesToExit = OrderedSet()
         for t in enabledTransitions:
             if t.target:
-                if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), self.getTargetStates(t.target))):
+                tstates = self.getTargetStates(t.target)
+                if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
                     ancestor = t.source
                 else:
-                    ancestor = self.findLCA([t.source] + self.getTargetStates(t.target))
+                    ancestor = self.findLCA([t.source] + tstates)
                 
-                if isParallelState(ancestor):
-                    for child in getChildStates(ancestor):
-                        if isDescendant(child, t.source):
-                            statesToExit.add(child)
-                            for s in self.configuration:
-                                if isDescendant(s,child):
-                                    statesToExit.add(s)  
-                else:
-                    for s in self.configuration:
-                        if isDescendant(s,ancestor):
-                            statesToExit.add(s)
+#                if isParallelState(ancestor):
+#                    for child in getChildStates(ancestor):
+#                        if child is t.source: #isDescendant(child, t.source): #or child is t.source:
+#                            statesToExit.add(child)
+#                            for s in self.configuration:
+#                                if isDescendant(s,child):
+#                                    statesToExit.add(s)  
+#                else:
+                for s in self.configuration:
+                    if isDescendant(s,ancestor):
+                        statesToExit.add(s)
         
         for s in statesToExit:
             self.statesToInvoke.delete(s)
@@ -286,7 +287,7 @@ class Interpreter(object):
                         if isParallelState(anc):
                             for child in getChildStates(anc):
                                 #TODO: diverges from standard doc, check this.
-                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)) and isDescendant(s, child):
+                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)): #and isDescendant(s, child):
                                     self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)   
         for s in statesToEnter:
             self.statesToInvoke.add(s)
