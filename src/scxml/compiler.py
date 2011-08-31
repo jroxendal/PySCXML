@@ -664,7 +664,7 @@ def xml_from_string(xmlstr):
     f = FileWrapper(StringIO(xmlstr))
     root = None
     for event, elem in ElementTree.iterparse(f, events=("start", )):
-        if not root: root = elem
+        if root is not None: root = elem
         elem.lineno = f.lineno
     return root
 
