@@ -200,9 +200,11 @@ class Compiler(object):
         
         output = {}
         for p in child.findall(prepend_ns("param")):
-            expr = p.get("expr", p.get("name"))
-            
-            output[p.get("name")] = self.getExprValue(expr, True)
+            expr = p.get("expr", p.get("location"))
+            try:
+                output[p.get("name")] = self.getExprValue(expr, True)
+            except Exception, e:
+                self.raiseError("error.execution", e)
                 
         
         if child.get("namelist"):
@@ -664,7 +666,7 @@ def xml_from_string(xmlstr):
     f = FileWrapper(StringIO(xmlstr))
     root = None
     for event, elem in ElementTree.iterparse(f, events=("start", )):
-        if root is not None: root = elem
+        if root is None: root = elem
         elem.lineno = f.lineno
     return root
 
