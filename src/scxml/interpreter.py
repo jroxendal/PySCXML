@@ -207,7 +207,8 @@ class Interpreter(object):
             if t.target:
                 LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
                 #TODO: diverges from standard doc, check this.
-                if not isParallelState(LCA) and isDescendant(s,LCA):
+#                if not isParallelState(LCA) and isDescendant(s,LCA):
+                if isDescendant(s,LCA):
                     preempted = True
                     break
         return preempted
