@@ -173,6 +173,8 @@ class Interpreter(object):
     def selectEventlessTransitions(self):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
+        #TODO: diverges from standard doc, check this.
+        atomicStates = sorted(atomicStates, key=documentOrder)
         for state in atomicStates:
             if not self.isPreempted(state, enabledTransitions):
                 done = False
@@ -189,6 +191,8 @@ class Interpreter(object):
     def selectTransitions(self, event):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
+        #TODO: diverges from standard doc, check this.
+        atomicStates = sorted(atomicStates, key=documentOrder)
         for state in atomicStates:
             if not self.isPreempted(state, enabledTransitions):
                 done = False
@@ -206,8 +210,6 @@ class Interpreter(object):
         for t in transitionList:
             if t.target:
                 LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
-                #TODO: diverges from standard doc, check this.
-#                if not isParallelState(LCA) and isDescendant(s,LCA):
                 if isDescendant(s,LCA):
                     preempted = True
                     break
@@ -223,6 +225,8 @@ class Interpreter(object):
     def exitStates(self, enabledTransitions):
         statesToExit = OrderedSet()
         for t in enabledTransitions:
+            if "s1" in t.target:
+                pass
             if t.target:
                 tstates = self.getTargetStates(t.target)
                 if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
@@ -287,8 +291,7 @@ class Interpreter(object):
                         statesToEnter.add(anc)
                         if isParallelState(anc):
                             for child in getChildStates(anc):
-                                #TODO: diverges from standard doc, check this.
-                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)): #and isDescendant(s, child):
+                                if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
                                     self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)   
         for s in statesToEnter:
             self.statesToInvoke.add(s)
@@ -343,10 +346,11 @@ class Interpreter(object):
             return False
     
     def findLCA(self, stateList):
-        for anc in getProperAncestors(stateList[0], None):
+        for anc in filter(isCompoundState, getProperAncestors(stateList[0], None)):
+#        for anc in getProperAncestors(stateList[0], None):
             if all(map(lambda(s): isDescendant(s,anc), stateList[1:])):
                 return anc
-                
+    
     
     def applyFinalize(self, inv, event):
         inv.finalize()
@@ -396,10 +400,11 @@ class Interpreter(object):
         self.internalQueue.put(Event(event, data, type=type))
 
 
-def getProperAncestors(state,root):
+def getProperAncestors(state,root, skipParallel=False):
     ancestors = [root] if root else []
     while hasattr(state,'parent') and state.parent and state.parent != root:
         state = state.parent
+        if skipParallel and isParallelState(state): continue;
         ancestors.append(state)
     return ancestors
     
@@ -463,6 +468,15 @@ def enterOrder(s):
 
 def exitOrder(s):
     return (0 - getStateDepth(s), s.n)
+
+def documentOrder(s):
+    key = [s.n]
+    p = s.parent
+    while p.n:
+        key.append(p.n)
+        p = p.parent
+    key.reverse()
+    return key
     
 def getStateDepth(s):
     depth = 0
