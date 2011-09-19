@@ -30,6 +30,8 @@ from datastructures import OrderedSet
 import logging
 from eventprocessor import Event
 from louie import dispatcher
+import operator
+from functools import partial
 
 
 
@@ -173,47 +175,99 @@ class Interpreter(object):
     def selectEventlessTransitions(self):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
-        #TODO: diverges from standard doc, check this.
         atomicStates = sorted(atomicStates, key=documentOrder)
         for state in atomicStates:
-            if not self.isPreempted(state, enabledTransitions):
-                done = False
-                for s in [state] + getProperAncestors(state, None):
-                    if done: break
-                    for t in s.transition:
-                        if not t.event and self.conditionMatch(t): 
-                            enabledTransitions.add(t)
-                            done = True
-                            break
+#            if not self.isPreempted(state, enabledTransitions):
+            done = False
+            for s in [state] + getProperAncestors(state, None):
+                if done: break
+                for t in s.transition:
+                    if not t.event and self.conditionMatch(t): 
+                        enabledTransitions.add(t)
+                        done = True
+                        break
+        enabledTransitions = self.filterPreempted(enabledTransitions)
         return enabledTransitions
     
     
+#    def selectTransitions(self, event):
+#        enabledTransitions = OrderedSet()
+#        atomicStates = filter(isAtomicState, self.configuration)
+#        atomicStates = sorted(atomicStates, key=documentOrder)
+#        for state in atomicStates:
+#            if not self.isPreempted(state, enabledTransitions):
+#                done = False
+#                for s in [state] + getProperAncestors(state, None):
+#                    if done: break
+#                    for t in s.transition:
+#                        if t.event and nameMatch(t.event, event.name) and self.conditionMatch(t):
+#                            enabledTransitions.add(t)
+#                            done = True
+#                            break 
+#        return enabledTransitions
+
+#        flatten = partial(reduce, operator.concat)
+#        
+#        allAncestors = flatten(map(lambda s: [s] + getProperAncestors(s, None), atomicStates))
+#        allTransitions = flatten(map(lambda s: s.t, allAncestors))
+#        relevantTransitions = filter(lambda t: t.event and nameMatch(t.event, event.name) and self.conditionMatch(t))
     def selectTransitions(self, event):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
-        #TODO: diverges from standard doc, check this.
         atomicStates = sorted(atomicStates, key=documentOrder)
+
         for state in atomicStates:
-            if not self.isPreempted(state, enabledTransitions):
-                done = False
-                for s in [state] + getProperAncestors(state, None):
-                    if done: break
-                    for t in s.transition:
-                        if t.event and nameMatch(t.event, event.name) and self.conditionMatch(t):
-                            enabledTransitions.add(t)
-                            done = True
-                            break 
+#            if not self.isPreempted(state, enabledTransitions):
+            done = False
+            for s in [state] + getProperAncestors(state, None):
+                if done: break
+                for t in s.transition:
+                    if t.event and nameMatch(t.event, event.name) and self.conditionMatch(t):
+                        enabledTransitions.add(t)
+                        done = True
+                        break
+                    
+        enabledTransitions = self.filterPreempted(enabledTransitions)
         return enabledTransitions
     
-    def isPreempted(self, s, transitionList):
-        preempted = False
-        for t in transitionList:
-            if t.target:
-                LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
-                if isDescendant(s,LCA):
-                    preempted = True
-                    break
-        return preempted
+    
+    def getStatesToExit(self, transition):
+        statesToExit = OrderedSet()
+        if transition.target:
+            tstates = self.getTargetStates(transition.target)
+            if transition.type == "internal" and all(map(lambda s: isDescendant(s,transition.source), tstates)):
+                ancestor = transition.source
+            else:
+                ancestor = self.findLCA([transition.source] + tstates)
+            
+            for s in self.configuration:
+                if isDescendant(s,ancestor):
+                    statesToExit.add(s)
+        return statesToExit
+    
+    def filterPreempted(self, enabledTransitions):
+        filtered = []
+        if enabledTransitions: filtered.append(enabledTransitions[0])
+        for i, t in enumerate(enabledTransitions):
+#            rest = set(enabledTransitions).difference([t])
+            rest = enabledTransitions[i + 1:]
+            remainder = filter(partial(self.preemptsTransition, t), rest) 
+            filtered.extend(remainder)
+#        print "filtered", enabledTransitions, filtered
+        return OrderedSet(filtered)
+    
+    def preemptsTransition(self, t, t2):
+        return not bool(set(self.getStatesToExit(t)).intersection(self.getStatesToExit(t2))) 
+    
+#    def isPreempted(self, s, transitionList):
+#        preempted = False
+#        for t in transitionList:
+#            if t.target:
+#                LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
+#                if isDescendant(s,LCA):
+#                    preempted = True
+#                    break
+#        return preempted
     
     def microstep(self, enabledTransitions):
         self.exitStates(enabledTransitions)
@@ -225,8 +279,8 @@ class Interpreter(object):
     def exitStates(self, enabledTransitions):
         statesToExit = OrderedSet()
         for t in enabledTransitions:
-            if "s1" in t.target:
-                pass
+#            if "s1" in t.target:
+#                pass
             if t.target:
                 tstates = self.getTargetStates(t.target)
                 if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
@@ -234,14 +288,6 @@ class Interpreter(object):
                 else:
                     ancestor = self.findLCA([t.source] + tstates)
                 
-#                if isParallelState(ancestor):
-#                    for child in getChildStates(ancestor):
-#                        if child is t.source: #isDescendant(child, t.source): #or child is t.source:
-#                            statesToExit.add(child)
-#                            for s in self.configuration:
-#                                if isDescendant(s,child):
-#                                    statesToExit.add(s)  
-#                else:
                 for s in self.configuration:
                     if isDescendant(s,ancestor):
                         statesToExit.add(s)

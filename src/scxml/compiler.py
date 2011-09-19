@@ -376,7 +376,6 @@ class Compiler(object):
                 parentState = self.doc.getState(parent.get("id"))
             
             node_ns, node_tag = split_ns(node)
-            
             if node_tag == "scxml":
                 s = State(node.get("id"), None, n)
                 s.initial = self.parseInitial(node)

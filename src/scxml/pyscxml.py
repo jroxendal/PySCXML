@@ -256,7 +256,8 @@ if __name__ == "__main__":
 #    xml = open("../../resources/colors.xml").read()
 #    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
-    xml = open("../../unittest_xml/parallel3.xml").read()
+#    xml = open("../../unittest_xml/parallel3.xml").read()
+    xml = open("../../w3c_tests/testPreemption.scxml").read()
 #    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
@@ -265,51 +266,11 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.NOTSET)
     
-    xml = '''<scxml initial="wrap">
-                <parallel id="wrap">
-                  <state id="a" initial="a1">
-                        <state id="a1"/>
-                        <state id="a2"/>
-                        <transition event="e" target="a2"/>
-                  </state>
-                  <state id="b" initial="b1">
-                        <state id="b1">
-                         <onexit><log label="exit b1" /></onexit>
-                        </state>
-                        <state id="b2"/>
-                        <transition event="e" target="b2"/>
-                  </state>
-                </parallel>
-            </scxml>'''
     
-    xml = '''
-    <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://www.w3.org/2011/04/SCXML/scxml.xsd"
-            initial="wrap">
-            <parallel id="wrap">
-                <state id="a" initial="a1">
-                    <state id="a1">
-                         <onentry><log label="enter a1" /></onentry>
-                         <onexit><log label="exit a1" /></onexit>
-                    </state>
-                    <state id="a2"/>
-                </state>
-                <state id="b" initial="b1">
-                    <state id="b1"/>
-                    <state id="b2"/>
-                </state>
-                <transition event="e" target="a2 b2"/>
-                <transition event="e" target="b2" type="internal"/>
-                <transition event="shutdown" target="shutdown"/>
-            </parallel>
-            <final id="shutdown"/>
-        </scxml>
-    '''
-    
+#    xml = open("../../unittest_xml/ispreempted.xml").read()
     with StateMachine(xml) as sm:
-#        pass
-        sm.send("e")
+        pass
+#        sm.send("e")
     
 #    sm = StateMachine(xml)
 #    t = Thread(target=sm.start)

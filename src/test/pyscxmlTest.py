@@ -28,7 +28,9 @@ import logging
 xmlDir = "../../unittest_xml/"
 if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
-
+w3cDir = "../../w3c_tests/"
+if not os.path.isdir(xmlDir):
+    w3cDir = "w3c_tests/"
      
 
 class RegressionTest(unittest.TestCase):
@@ -37,21 +39,22 @@ class RegressionTest(unittest.TestCase):
     '''
     
     def testInterpreter(self):
-        try:
-            import pydevd #@UnresolvedImport
-            pydevd.set_pm_excepthook()
-        except:
-            pass
-        
         runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
-                               "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
+                               "if_block.xml", "parallel2.xml", "parallel3.xml", #"parallel4.xml", 
                                "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
                                "cheetah.xml", "internal_transition.xml", "binding.xml", "finalize.xml",
                                "internal_parallel.xml"]
         
+        w3cTests = ["testSiblingTransition.scxml", "testReenterChild.scxml", "testPreemption.scxml"]
+        
         for name in runToCompletionList:
             print "Running " + name 
             sm = StateMachine(open(xmlDir + name).read())
+            sm.start()
+            self.assert_(sm.isFinished())
+        for name in w3cTests:
+            print "Running w3c test: " + name 
+            sm = StateMachine(open(w3cDir + name).read())
             sm.start()
             self.assert_(sm.isFinished())
         

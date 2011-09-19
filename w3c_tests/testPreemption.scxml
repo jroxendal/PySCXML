@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- two transitions conflict if the 
+    intersection of the set of states they exit is non-null. Among transitions 
+    that confict, the earlier one in document order preempts the later one. When 
+    P is entered, eventp is raised and the transitions in p1 and p3 should be 
+    taken, while those in p2 is preempted. The transition in p1 raises event1, 
+    which triggers the transition in P2. It in turn preempts the transition in 
+    P3. The transitions through s1 - s3 test that each transition was taken once. 
+    (using multiple states each with a single test makes the xslt simpler. -->
+<scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance"
+    initialstate="p">
+    <datamodel>
+        <data id="Var1" expr="0" />  <!-- how many times p1 transition has been taken -->
+        <data id="Var2" expr="0" />  <!-- how many times p2 transition has been taken -->
+        <data id="Var3" expr="0" />  <!-- how many times p3 transition has been taken -->
+    </datamodel>
+
+    <parallel id="p">
+        <onentry>
+            <raise event="enterp" />
+        </onentry>
+
+
+        <state id="p1" initial="p11">
+            <transition event="enterp" type="internal" target="p11">
+                <assign location="Var1" expr="Var1 + 1" />
+                <raise event="event1" />
+            </transition>
+            <state id="p11" />
+        </state>
+
+
+        <state id="p2">
+            <transition event="*" target="s1">
+                <assign location="Var2" expr="Var2 + 1" />
+            </transition>
+        </state>
+
+
+        <state id="p3" initial="p31">
+            <transition event="*" type="internal" target="p31">
+                <assign location="Var3" expr="Var3 + 1" />
+            </transition>
+            <state id="p31" />
+        </state>
+
+    </parallel>
+
+    <state id="s1">
+        <transition cond="Var1==1" target="s2" />
+        <transition target="fail" />
+    </state>
+
+    <state id="s2">
+        <transition cond="Var2==1" target="s3" />
+        <transition target="fail" />
+    </state>
+
+    <state id="s3">
+        <transition cond="Var3==1" target="pass" />
+        <transition target="fail" />
+    </state>
+
+
+    <final xmlns="http://www.w3.org/2005/07/scxml" id="pass">
+        <onentry>
+            <log label="Outcome" expr="'pass'" />
+        </onentry>
+    </final>
+    <final xmlns="http://www.w3.org/2005/07/scxml" id="fail">
+        <onentry>
+            <log label="Outcome" expr="'fail'" />
+        </onentry>
+    </final>
+
+</scxml>
