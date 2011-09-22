@@ -169,7 +169,7 @@ class PySCXMLServer(object):
         except TypeError:
             data = {"request" : fs.value }
         
-        if environ["QUERY_STRING"]:
+        if "QUERY_STRING" in environ:
             data.update(x.split("=") for x in environ["QUERY_STRING"].split("&"))
 
         output = ""

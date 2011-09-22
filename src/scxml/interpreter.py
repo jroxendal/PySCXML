@@ -30,7 +30,6 @@ from datastructures import OrderedSet
 import logging
 from eventprocessor import Event
 from louie import dispatcher
-import operator
 from functools import partial
 
 
@@ -246,14 +245,13 @@ class Interpreter(object):
         return statesToExit
     
     def filterPreempted(self, enabledTransitions):
-        filtered = []
-        if enabledTransitions: filtered.append(enabledTransitions[0])
-        for i, t in enumerate(enabledTransitions):
-#            rest = set(enabledTransitions).difference([t])
-            rest = enabledTransitions[i + 1:]
-            remainder = filter(partial(self.preemptsTransition, t), rest) 
+        if not enabledTransitions: return OrderedSet() 
+        filtered = [enabledTransitions[0]]
+        while enabledTransitions:
+            t = enabledTransitions.pop(0)
+            remainder = filter(partial(self.preemptsTransition, t), enabledTransitions) 
             filtered.extend(remainder)
-#        print "filtered", enabledTransitions, filtered
+        
         return OrderedSet(filtered)
     
     def preemptsTransition(self, t, t2):

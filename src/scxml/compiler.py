@@ -503,7 +503,7 @@ class Compiler(object):
     def onInvokeSignal(self, signal, sender, **kwargs):
         self.logger.debug("onInvokeSignal " + signal)
         if signal.startswith("error"):
-            self.raiseError(signal, kwargs["exception"])
+            self.raiseError(signal, kwargs["data"]["exception"])
             return
         self.interpreter.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)  
     

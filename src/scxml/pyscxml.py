@@ -257,7 +257,7 @@ if __name__ == "__main__":
 #    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
 #    xml = open("../../unittest_xml/parallel3.xml").read()
-    xml = open("../../w3c_tests/testPreemption.scxml").read()
+    xml = open("../../w3c_tests/test338.scxml").read()
 #    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()

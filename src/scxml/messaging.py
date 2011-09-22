@@ -35,8 +35,7 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
         opener = urllib2.build_opener(self)
         try:
             f = opener.open(req, data=data)
-            
-            if str(f.code)[0] == "2":
+            if f.code is None or str(f.code)[0] == "2":
                 dispatcher.send(UrlGetter.HTTP_RESULT, self, result=f.read(), source=url)
             else:
                 e = HTTPError(url, f.code, "A code %s HTTP error has ocurred when trying to send to target %s" % (f.code, url), req.headers, f)
@@ -60,7 +59,8 @@ if __name__ == '__main__':
     def onHttpResult( signal, **named ):
         print '  result', named
     def onHttpError( signal, **named ):
-        print '  error', named
+        print '  error', named["exception"]
+        raise named["exception"]
     def onUrlError( signal, **named ):
         print '  error', named
     
@@ -68,7 +68,9 @@ if __name__ == '__main__':
     dispatcher.connect(onHttpResult, UrlGetter.HTTP_RESULT, getter)
     dispatcher.connect(onHttpError, UrlGetter.HTTP_ERROR, getter)
     dispatcher.connect(onUrlError, UrlGetter.URL_ERROR, getter)
-    
-    getter.get_async("http://localhost/cgi-bin/cgi_test.py", {'mykey' : 'myvalue'})
+    import os
+    print os.getcwd()
+#    getter.get_async("http://localhost/cgi-bin/cgi_test.py", {'mykey' : 'myvalue'})
+    getter.get_async("file:messaging.py", {})
     
     
