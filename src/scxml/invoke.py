@@ -41,6 +41,7 @@ class InvokeWrapper(object):
         inv.invokeid = self.invokeid
         self.autoforward = inv.autoforward
         self.cancel = inv.cancel
+        self.send = getattr(inv, "send", None)
         
     def finalize(self):
         if self.invoke_obj:
@@ -85,7 +86,6 @@ class InvokeSCXML(BaseFetchingInvoke):
     def __init__(self):
         BaseFetchingInvoke.__init__(self)
         self.sm = None
-        self.send = None
         self.parentQueue = None
         self.content = None
     
@@ -99,9 +99,11 @@ class InvokeSCXML(BaseFetchingInvoke):
     def _start(self, doc):
         from pyscxml import StateMachine
         self.sm = StateMachine(doc)
-        self.send = self.sm._send
         self.sm.start_threaded(self.parentQueue, self.invokeid)
         dispatcher.send("init.invoke." + self.invokeid, self)
+    
+    def send(self, eventobj):
+        self.sm.interpreter.externalQueue.put(eventobj)
     
     def onHttpResult(self, signal, result, **named):
         self.logger.debug("onHttpResult " + str(named))
@@ -118,8 +120,8 @@ class InvokeHTTP(BaseFetchingInvoke):
     def __init__(self):
         BaseFetchingInvoke.__init__(self)
         
-    def send(self, event, data, hints):
-        self.getter.get_async(self.content, data, type=event)
+    def send(self, eventobj):
+        self.getter.get_async(self.content, eventobj.data, type=eventobj.name.join("."))
     
     def start(self, parentQueue):
         dispatcher.send("init.invoke." + self.invokeid, self)
@@ -142,8 +144,8 @@ class InvokeSOAP(BaseInvoke):
         self.client = Client(self.content)
         dispatcher.send("init.invoke." + self.invokeid, self)
         
-    def send(self, name, data={}, invokeid = None, toQueue = None):
-        exec_async(partial(self.soap_send_sync, ".".join(name), data))
+    def send(self, eventobj):
+        exec_async(partial(self.soap_send_sync, ".".join(eventobj.name), eventobj.data))
         
     def soap_send_sync(self, method, data):
         result = getattr(self.client.service, method)(**data)

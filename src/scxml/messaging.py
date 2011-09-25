@@ -44,11 +44,11 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
             dispatcher.send(UrlGetter.URL_ERROR, self, exception=e)
         
     
-    def http_error_default(self, req, fp, code, msg, headers):
-        result = urllib2.HTTPError(                           
-            req.get_full_url(), code, msg, headers, fp)       
-        result.status = code                                  
-        return result        
+#    def http_error_default(self, req, fp, code, msg, headers):
+#        result = urllib2.HTTPError(                           
+#            req.get_full_url(), code, msg, headers, fp)       
+#        result.status = code                                  
+#        return result        
 
     
 if __name__ == '__main__':

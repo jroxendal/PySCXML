@@ -33,6 +33,7 @@ from xml.parsers.expat import ExpatError
 from threading import Timer
 from StringIO import StringIO
 from xml.etree import ElementTree, ElementInclude
+import json
     
 
 try: 
@@ -58,7 +59,7 @@ def split_ns(node):
     return node.tag[1:].split("}")
 
 ns = "http://www.w3.org/2005/07/scxml"
-pyscxml_ns = "{http://code.google.com/p/pyscxml}"
+pyscxml_ns = "http://code.google.com/p/pyscxml"
 tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transition", "invoke", "onentry", "onexit", "datamodel"]
 tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
@@ -147,15 +148,15 @@ class Compiler(object):
                 if node_name == "start_session":
                     xml = None
                     if node.find(prepend_ns("content")) != None:
-                        xml = template(node.find(prepend_ns("content")).text)
+                        xml = template(node.find(prepend_ns("content")).text, self.dm)
                     elif node.get("expr"):
                         xml = self.getExprValue(node.get("expr"))
                     elif self.parseAttr(node, "src"):
                         xml = urlopen(self.parseAttr(node, "src")).read()
                     try:
                         multisession = self.dm["_x"]["sessions"]
-                        sm = multisession[self.parseAttr(node, "sessionid")] = xml
-                        sm.start()
+                        sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
+                        sm.start_threaded()
                     except AssertionError:
                         raise ParseError("You supplied no xml for <pyscxml:start_session /> " 
                                             "and no default has been declared.")
@@ -212,7 +213,9 @@ class Compiler(object):
                 output[name] = self.getExprValue(name, True)
         
         if child.find(prepend_ns("content")) != None:
-            output["content"] = template(child.find(prepend_ns("content")).text, self.dm)
+            output = template(child.find(prepend_ns("content")).text, self.dm)
+#        if child.find(pyscxml_ns + "tmpl") != None:
+#            output = template(child.find(pyscxml_ns + "tmpl").text, self.dm)
         
         return output
     
@@ -237,7 +240,8 @@ class Compiler(object):
                 return 
         
         type = self.parseAttr(sendNode, "type", "scxml")
-        event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None 
+        event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None
+        eventstr = ".".join(event) if event else "" 
         target = self.parseAttr(sendNode, "target")
         try:
             data = self.parseData(sendNode)
@@ -247,13 +251,13 @@ class Compiler(object):
             self.raiseError("error.execution", e)
             raise e
             return
-        try:
-            hints = eval(self.parseAttr(sendNode, "hints", "{}"))
-            assert isinstance(hints, dict)
-        except:
-            e = RuntimeError("Line %s: hints or hintsexpr malformed: %s" % (sendNode.lineno, hints))
-            self.logger.error(str(e))
-            self.raiseError("error.execution.hints", e)
+#        try:
+#            hints = eval(self.parseAttr(sendNode, "hints", "{}"))
+#            assert isinstance(hints, dict)
+#        except:
+#            e = RuntimeError("Line %s: hints or hintsexpr malformed: %s" % (sendNode.lineno, hints))
+#            self.logger.error(str(e))
+#            self.raiseError("error.execution.hints", e)
         
         if type == "scxml":
             if not target:
@@ -278,27 +282,34 @@ class Compiler(object):
                 
             elif target == "#_response":
                 self.logger.debug("sending to _response")
-                self.dm["_response"].put((data, hints))
+                headers = data.pop("headers") if "headers" in data else {} 
+#                if type == "scxml": headers["Content-Type"] = "text/xml"
+                if headers.get("Content-Type", "").split("/")[1] == "json": 
+                    data = json.dumps(data)  
+                self.dm["_response"].put((data, headers))
             elif target == "#_websocket":
                 self.logger.debug("sending to _websocket")
-                evt = ".".join(event) if event else ""
-                eventXML = Processor.toxml(evt, target, data, "", sendNode.get("id", ""), hints, language="json")
+                eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
                 self.dm["_websocket"].put(eventXML)
+            elif target == "#_sse":
+                self.logger.debug("sending to sse")
+                headers = data.pop("headers") if "headers" in data else {}
+                headers.update({"Content-Type" : "text/event-stream", "Cache-Control" : "no-cache"})
+                eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
+                self.dm["_response"].put(("data:" + eventXML + "\n", headers))
             elif target.startswith("#_"): # invokeid
                 inv = self.dm[target[2:]]
-#                if isinstance(inv, InvokePySCXMLServer):
-#                    inv.send(Processor.toxml(".".join(event), target, data, "", sendNode.get("id"), hints))
-                if isinstance(inv, InvokeHTTP):
-                    inv.send(".".join(event), data, hints=hints)
-                else:
-                    inv.send(event, data)
+                evt = Event(event, data, self.interpreter.invokeId)
+                evt.origin = self.dm["_sessionid"]
+                evt.origintype = "scxml"
+                inv.send(evt)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
                     origin = self.dm["_ioprocessors"]["scxml"]
                 except KeyError:
                     origin = ""
-                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id", ""), hints)
+                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id", ""))
                 
                 getter = self.getUrlGetter(target)
                 
@@ -447,6 +458,9 @@ class Compiler(object):
                 
             elif node_tag == "datamodel":
                 parentState.initDatamodel = partial(self.setDataList, node.findall(prepend_ns("data")))
+                
+            else:
+                self.logger.error("Parsing of element '%s' failed at line %s" % (node_tag, node.lineno or "unknown"))
     
         return self.doc
 
@@ -513,7 +527,7 @@ class Compiler(object):
         contentNode = node.find(prepend_ns("content"))
         if type == "scxml": # here's where we add more invoke types. 
             inv = InvokeSCXML()
-            if contentNode != None and contentNode.text.strip():
+            if contentNode != None and len(contentNode) == 0 and contentNode.text.strip():
                 inv.content = template(contentNode.text, self.dm)
                 # TODO: support non-cdata content child, but fix datamodel init first. 
             elif contentNode and len(contentNode) > 0:

@@ -117,13 +117,21 @@ class Interpreter(object):
             self.logger.info("external event found: %s", externalEvent.name)
             
             self.dm["_event"] = externalEvent
-            if externalEvent.invokeid:
-                for state in self.configuration:
-                    for inv in state.invoke:
-                        if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
-                            self.applyFinalize(inv, externalEvent)
-                        if inv.autoforward:
-                            inv.send(externalEvent.name, None, 0, externalEvent.data);
+            
+            for state in self.configuration:
+                for inv in state.invoke:
+                    if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
+                        self.applyFinalize(inv, externalEvent)
+                    if inv.autoforward:
+                        inv.send(externalEvent)
+            
+#            if externalEvent.invokeid:
+#                for state in self.configuration:
+#                    for inv in state.invoke:
+#                        if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
+#                            self.applyFinalize(inv, externalEvent)
+#                        if inv.autoforward:
+#                            inv.send(externalEvent.name, None, 0, externalEvent.data);
             
             enabledTransitions = self.selectTransitions(externalEvent)
             if enabledTransitions:

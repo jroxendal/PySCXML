@@ -1,8 +1,8 @@
 
 from setuptools import setup
 
-version = "0.7.2"
-filename = "0.7.2-20110827-lite"
+version = "0.7.3"
+filename = "0.7.3-20110922-full"
 
 setup(name="pyscxml",
       version=filename,
@@ -11,7 +11,7 @@ setup(name="pyscxml",
       author="Johan Roxendal",
       author_email="johan@roxendal.com",
       url="http://code.google.com/p/pyscxml/",
-      download_url="http://pypi.python.org/pypi/pyscxml/",
+      download_url="http://code.google.com/p/pyscxml/downloads/list?q=full",
       packages=["scxml"],
       package_dir={"" : "src"},
       license="LGPLv3",
@@ -31,5 +31,5 @@ setup(name="pyscxml",
           'Topic :: Text Processing :: Markup :: XML'
           
       ],
-      install_requires=['Louie']
+      install_requires=['Louie', 'Cheetah', 'suds', 'eventlet', 'restlib']
      )

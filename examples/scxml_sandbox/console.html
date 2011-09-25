@@ -1,0 +1,39 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>PySCXML console</title>
+<script src="lib/jquery.js"></script>
+<script src="lib/jquery.jLog.min.js"></script>
+<script src="lib/jquery.format.js"></script>
+<script src="SCXMLEventProcessor.js"></script>
+<script src="sandbox.js"></script>
+<script src="lib/jquery.format.js"></script>
+</head>
+<body>
+<div>
+<input type="text" id="address" size="40"> 
+<input id="connect" type="submit" value="connect"> 
+<input id="close" type="button" value="close">
+</div>
+<div>
+<textarea id="log" rows="10" cols="40" readonly></textarea>
+</div>
+<textarea id="doc" rows="30" cols="100"><![CDATA[
+	<scxml>
+		<state id="s1">
+			<transition event="next" target="s2" />
+		</state>
+		<state id="s2">
+			<transition event="quit" target="f" />		        
+		</state>
+		<final id="f" />
+	</scxml>
+]]></textarea>
+<!-- <button id="sendDoc">Send</button> -->
+
+<div>Write an event name here.
+	<input type="text" id="message" size="40">
+	<input id="sendEvent" type="submit" value="send">
+</div>
+</body>
+</html>

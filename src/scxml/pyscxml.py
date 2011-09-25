@@ -200,12 +200,12 @@ class MultiSession(object):
     def send(self, event, data={}, to_session=None):
         '''send an event to the specified session. if to_session is None or "", 
         the event is sent to all active sessions.'''
-        with self._lock:
-            if to_session:
-                self[to_session].send(event, data)
-            else:
-                for sm in self:
-                    sm.send(event, data)
+#        with self._lock:
+        if to_session:
+            self[to_session].send(event, data)
+        else:
+            for session in self.sm_mapping:
+                self.sm_mapping[session].send(event, data)
     
     def cancel(self):
         with self._lock:

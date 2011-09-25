@@ -169,7 +169,7 @@ class PySCXMLServer(object):
         except TypeError:
             data = {"request" : fs.value }
         
-        if "QUERY_STRING" in environ:
+        if "QUERY_STRING" in environ and environ["QUERY_STRING"]:
             data.update(x.split("=") for x in environ["QUERY_STRING"].split("&"))
 
         output = ""
@@ -187,21 +187,38 @@ class PySCXMLServer(object):
             if self.is_type(TYPE_DEFAULT):
                 timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
                 timer.start()
+                start_response(status, headers.items())
             elif self.is_type(TYPE_RESPONSE):
                 sm.interpreter.externalQueue.put(event)
-                output, hints = sm.datamodel["_response"].get() #blocks
-                if hints.get("status"):
-                    status = str(hints.get("status"))
-                    output = ""
+                if type != "sse":
+                    output, headers = sm.datamodel["_response"].get() #blocks
+                    start_response(status, headers.items())
+                    output = output["content"].strip() if "content" in output else output
                 else:
-                    try:
-                        output = output["content"].strip()
-                    except:
-                        pass
-                    if type == "scxml":
-                        headers["Content-type"] = "text/xml"
+                    output, headers = sm.datamodel["_response"].get() #blocks
+                    
+                    start_response(status, headers.items())
+                    content = output["content"].strip() if "content" in output else output
+                    def gen():
+                        output = content
+                        print repr(output) 
+                        yield output
+                        yield "data:hello\n"
+                        print "after"
+                        while output != "\n\n":
+                            output, headers = sm.datamodel["_response"].get() #blocks
+                            print output
+                            yield output["content"].strip() if "content" in output else output
+                        yield output
                         
-                    headers.update(hints)
+                    return gen()
+#                        write([output])
+                        
+                    
+#                if headers.get("status"):
+#                    status = str(hints.get("status"))
+#                else:
+                        
                 
             
         except AssertionError:
@@ -212,7 +229,7 @@ class PySCXMLServer(object):
             status = '400 BAD REQUEST'
             output = str(e)
 
-        start_response(status, headers.items())
+        
         
         return [output]
 
@@ -243,6 +260,10 @@ def type_scxml(session, data, sm, environ):
     else:
         event = Processor.fromxml(data["request"])
     return event
+
+@ioprocessor("sse")
+def type_sse(*args):
+    return Event(["sse", "connect"])
         
 
 if __name__ == "__main__":

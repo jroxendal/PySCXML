@@ -12,7 +12,7 @@ import pickle
 
 class SCXMLEventProcessor(object):
     @staticmethod
-    def toxml(event, target, data, origin="", sendid="", hints="", language="python"):
+    def toxml(event, target, data, origin="", sendid="", language="python"):
         '''
         takes a send element and a dictionary corresponding to its 
         param and namelist attributes and outputs the equivalient 
@@ -33,10 +33,6 @@ class SCXMLEventProcessor(object):
         })
         
         b.start("scxml:payload", {})
-        if hints:
-            b.start("scxml:hints")
-            b.data(hints)
-            b.end("scxml:hints")
             
         for k, v in data.items():
             b.start("scxml:property", {"name" : k})
@@ -102,3 +98,7 @@ class Event(object):
         
     def __str__(self):
         return "<eventprocessor.Event>, " + str(self.__dict__)
+
+
+if __name__ == "__main__":
+    print SCXMLEventProcessor.toxml("evt", "_parent", {}, "", "", language="json")

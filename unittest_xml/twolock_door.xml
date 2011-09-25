@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<scxml xmlns="http://www.w3.org/2005/07/scxml" initial="closed">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://www.w3.org/2011/04/SCXML/scxml.xsd"
+    initial="closed" version="1.0">
 	
 	<final id="opened" />
 	
-	<transition event="done.state.__main__">
-		<log expr="'main state done'" />
-	</transition>
-	
-	<parallel id="closed" initial="lock_1 lock_2">
+	<parallel id="closed">
 		<onentry>
 			<send event="unlock_1"/>
 		</onentry>
