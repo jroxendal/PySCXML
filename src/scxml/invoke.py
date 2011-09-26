@@ -32,11 +32,13 @@ import logging
 class InvokeWrapper(object):
     
     def __init__(self, id):
+        self.logger = logging.getLogger("pyscxml.invoke.%s" % type(self).__name__)
         self.invoke = lambda: None
         self.invokeid = id
         self.invoke_obj = None
         
     def set_invoke(self, inv):
+        inv.logger = self.logger
         self.invoke_obj = inv
         inv.invokeid = self.invokeid
         self.autoforward = inv.autoforward
@@ -49,7 +51,6 @@ class InvokeWrapper(object):
     
 class BaseInvoke(object):
     def __init__(self):
-        self.logger = logging.getLogger("pyscxml.invoke.%s" % type(self).__name__)
         self.invokeid = None
         self.autoforward = False
         self.src = None

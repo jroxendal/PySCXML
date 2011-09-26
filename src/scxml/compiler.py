@@ -88,7 +88,10 @@ class Compiler(object):
         if not elem.get(attr, elem.get(attr + "expr")):
             return default
         else:
-            output = elem.get(attr) or self.getExprValue(elem.get(attr + "expr")) 
+            try:
+                output = elem.get(attr) or self.getExprValue(elem.get(attr + "expr"), True)
+            except:
+                raise ExprEvalError("Line %s: Error while evaluating %s='%s'.", (elem.lineno, attr + "expr", elem.get(attr + "expr")))
             return output if not is_list else output.split(" ")
         
     
@@ -97,79 +100,82 @@ class Compiler(object):
         @param parent: usually an xml Element containing executable children
         elements, but can also be any iterator of executable elements. 
         '''
-        for node in parent:
-            node_ns, node_name = split_ns(node)  
-            if node_ns == ns: 
-                if node_name == "log":
-                    self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
-                elif node_name == "raise":
-                    eventName = node.get("event").split(".")
-                    self.interpreter.raiseFunction(eventName, self.parseData(node))
-                elif node_name == "send":
-                    self.parseSend(node)
-                elif node_name == "cancel":
-                    sendid = self.parseAttr(node, "sendid")
-                    if sendid in self.timer_mapping:
-                        self.timer_mapping[sendid].cancel()
-                        del self.timer_mapping[sendid]
-                elif node_name == "assign":
-                    
-                    if node.get("location") not in self.dm:
-                        msg = "Line %s: The location expression %s was not instantiated in the datamodel." % (node.lineno, node.get("location"))
-                        self.logger.error(msg)
-                        self.raiseError("error.execution.nameerror", NameError(msg))
-                        continue
-                    
-                    expression = node.get("expr") or node.text.strip()
-                    self.dm[node.get("location")] = self.getExprValue(expression)
-                elif node_name == "script":
-                    if node.get("src"):
-                        self.execExpr(urlopen(node.get("src")).read())
-                    else:
-                        self.execExpr(node.text)
+        try:
+            for node in parent:
+                node_ns, node_name = split_ns(node)  
+                if node_ns == ns: 
+                    if node_name == "log":
+                        self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
+                    elif node_name == "raise":
+                        eventName = node.get("event").split(".")
+                        self.interpreter.raiseFunction(eventName, self.parseData(node))
+                    elif node_name == "send":
+                        self.parseSend(node)
+                    elif node_name == "cancel":
+                        sendid = self.parseAttr(node, "sendid")
+                        if sendid in self.timer_mapping:
+                            self.timer_mapping[sendid].cancel()
+                            del self.timer_mapping[sendid]
+                    elif node_name == "assign":
                         
-                elif node_name == "if":
-                    self.parseIf(node)
-                elif node_name == "foreach":
-                    try:
-                        for index, item in enumerate(self.getExprValue(node.get("array"))):
-                            self.dm[node.get("item")] = item
-                            if node.get("index"):
-                                self.dm[node.get("index")] = index
-                            self.do_execute_content(node)
-                    except Exception, e:
-                        msg = "Line %s: foreach parsing failed." % node.lineno
-                        self.logger.error(msg)
-                        self.raiseError("error.execution", e)
-                        continue
+                        if node.get("location") not in self.dm:
+                            msg = "Line %s: The location expression %s was not instantiated in the datamodel." % (node.lineno, node.get("location"))
+                            self.logger.error(msg)
+                            self.raiseError("error.execution.nameerror", NameError(msg))
+                            continue
                         
-                
-            elif node_ns == pyscxml_ns:
-                if node_name == "start_session":
-                    xml = None
-                    if node.find(prepend_ns("content")) != None:
-                        xml = template(node.find(prepend_ns("content")).text, self.dm)
-                    elif node.get("expr"):
-                        xml = self.getExprValue(node.get("expr"))
-                    elif self.parseAttr(node, "src"):
-                        xml = urlopen(self.parseAttr(node, "src")).read()
-                    try:
-                        multisession = self.dm["_x"]["sessions"]
-                        sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
-                        sm.start_threaded()
-                    except AssertionError:
-                        raise ParseError("You supplied no xml for <pyscxml:start_session /> " 
-                                            "and no default has been declared.")
-                    except KeyError:
-                        raise ParseError("You can only use the pyscxml:start_session " 
-                                          "element for documents in a MultiSession enviroment")
-            elif node_ns in custom_exec_mapping:
-                # execute functions registered using scxml.pyscxml.custom_executable
-                custom_exec_mapping[node_ns](node, self.dm)
-                
-            else:
-                if self.strict_parse: 
-                    raise ParseError("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
+                        expression = node.get("expr") or node.text.strip()
+                        self.dm[node.get("location")] = self.getExprValue(expression)
+                    elif node_name == "script":
+                        if node.get("src"):
+                            self.execExpr(urlopen(node.get("src")).read())
+                        else:
+                            self.execExpr(node.text)
+                            
+                    elif node_name == "if":
+                        self.parseIf(node)
+                    elif node_name == "foreach":
+                        try:
+                            for index, item in enumerate(self.getExprValue(node.get("array"))):
+                                self.dm[node.get("item")] = item
+                                if node.get("index"):
+                                    self.dm[node.get("index")] = index
+                                self.do_execute_content(node)
+                        except Exception, e:
+                            msg = "Line %s: foreach parsing failed." % node.lineno
+                            self.logger.error(msg)
+                            self.raiseError("error.execution", e)
+                            continue
+                            
+                    
+                elif node_ns == pyscxml_ns:
+                    if node_name == "start_session":
+                        xml = None
+                        if node.find(prepend_ns("content")) != None:
+                            xml = template(node.find(prepend_ns("content")).text, self.dm)
+                        elif node.get("expr"):
+                            xml = self.getExprValue(node.get("expr"))
+                        elif self.parseAttr(node, "src"):
+                            xml = urlopen(self.parseAttr(node, "src")).read()
+                        try:
+                            multisession = self.dm["_x"]["sessions"]
+                            sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
+                            sm.start_threaded()
+                        except AssertionError:
+                            raise ParseError("You supplied no xml for <pyscxml:start_session /> " 
+                                                "and no default has been declared.")
+                        except KeyError:
+                            raise ParseError("You can only use the pyscxml:start_session " 
+                                              "element for documents in a MultiSession enviroment")
+                elif node_ns in custom_exec_mapping:
+                    # execute functions registered using scxml.pyscxml.custom_executable
+                    custom_exec_mapping[node_ns](node, self.dm)
+                    
+                else:
+                    if self.strict_parse: 
+                        raise ParseError("PySCXML doesn't recognize the executabel content '%s'" % node.tag)
+        except ExprEvalError, e:
+            self.raiseError("error.execution." + type(e).__name__.lower(), e)
         
     
     def parseIf(self, node):
@@ -276,9 +282,9 @@ class Compiler(object):
                     toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
                     self.interpreter.send(event, data, toQueue=toQueue)
                 except KeyError:
-                    e = RuntimeError("Line %s: The session '%s' is inaccessible." % (sendNode, sessionid))
+                    e = RuntimeError("Line %s: The session '%s' is inaccessible." % (sendNode.lineno, sessionid))
                     self.logger.error(str(e))
-                    self.raiseError("error.send.target", e)
+                    self.raiseError("error.communication", e)
                 
             elif target == "#_response":
                 self.logger.debug("sending to _response")
@@ -298,11 +304,14 @@ class Compiler(object):
                 eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
                 self.dm["_response"].put(("data:" + eventXML + "\n", headers))
             elif target.startswith("#_"): # invokeid
-                inv = self.dm[target[2:]]
-                evt = Event(event, data, self.interpreter.invokeId)
-                evt.origin = self.dm["_sessionid"]
-                evt.origintype = "scxml"
-                inv.send(evt)
+                try:
+                    inv = self.dm[target[2:]]
+                    evt = Event(event, data, self.interpreter.invokeId)
+                    evt.origin = self.dm["_sessionid"]
+                    evt.origintype = "scxml"
+                    inv.send(evt)
+                except Exception, e:
+                    self.raiseError("error.communication", RuntimeError("Line %s: No valid target at '%s'." % (sendNode.lineno, target[2:])))
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
@@ -531,7 +540,6 @@ class Compiler(object):
                 inv.content = template(contentNode.text, self.dm)
                 # TODO: support non-cdata content child, but fix datamodel init first. 
             elif contentNode and len(contentNode) > 0:
-                print contentNode[0]
                 inv.content = ElementTree.tostring(contentNode[0])
             
         elif type == "x-pyscxml-soap":
@@ -684,4 +692,7 @@ def xml_from_string(xmlstr):
     return root
 
 class ParseError(Exception):
+    pass
+
+class ExprEvalError(Exception):
     pass

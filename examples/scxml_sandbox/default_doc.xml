@@ -1,0 +1,9 @@
+<scxml>
+  <state id="s1">
+    <transition event="next" target="s2" />
+  </state>
+  <state id="s2">
+    <transition event="quit" target="f" />		        
+  </state>
+  <final id="f" />
+</scxml>

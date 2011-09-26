@@ -2,38 +2,40 @@
 <html>
 <head>
 <title>PySCXML console</title>
+<link rel="stylesheet" href="lib/codemirror/lib/codemirror.css">
+<link rel="stylesheet" href="lib/codemirror/theme/default.css">
+<link rel="stylesheet" href="lib/codemirror/theme/eclipse.css">
+<link rel="stylesheet" href="lib/codemirror/theme/elegant.css">
+<link rel="stylesheet" href="styles.css">
+
 <script src="lib/jquery.js"></script>
 <script src="lib/jquery.jLog.min.js"></script>
 <script src="lib/jquery.format.js"></script>
 <script src="SCXMLEventProcessor.js"></script>
 <script src="sandbox.js"></script>
 <script src="lib/jquery.format.js"></script>
+
+<script src="lib/codemirror/lib/codemirror.js"></script>
+<script src="lib/codemirror/mode/xml/xml.js"></script>
 </head>
 <body>
-<div>
-<input type="text" id="address" size="40"> 
-<input id="connect" type="submit" value="connect"> 
-<input id="close" type="button" value="close">
-</div>
+<!-- <div> -->
+<!-- <input id="connect" type="submit" value="connect">  -->
+<!-- <input id="close" type="button" value="close"> -->
+<!-- </div> -->
+<div id="main">
 <div>
 <textarea id="log" rows="10" cols="40" readonly></textarea>
 </div>
-<textarea id="doc" rows="30" cols="100"><![CDATA[
-	<scxml>
-		<state id="s1">
-			<transition event="next" target="s2" />
-		</state>
-		<state id="s2">
-			<transition event="quit" target="f" />		        
-		</state>
-		<final id="f" />
-	</scxml>
-]]></textarea>
-<!-- <button id="sendDoc">Send</button> -->
+<textarea id="doc" rows="30" cols="80">
+	
+</textarea>
+<button id="sendDoc">Send Document</button>
 
 <div>Write an event name here.
 	<input type="text" id="message" size="40">
 	<input id="sendEvent" type="submit" value="send">
+</div>
 </div>
 </body>
 </html>

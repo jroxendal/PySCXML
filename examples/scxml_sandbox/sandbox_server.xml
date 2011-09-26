@@ -29,85 +29,82 @@
 <!--         </state> -->
 
         <state id="sandbox">
-                <transition event="http.post">
-                    <assign location="session" expr="'session_' + str(counter)" />
-                    <spyderbrain:start_session sessionidexpr="session">
-                        <content><![CDATA[
-                        
-                            <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" >
-                                <script>
-                                    import logging
-                                </script>
-                                <datamodel>
-                                    <data id="log_handler" /> 
-                                </datamodel>
-                                
-                                <state id="waiting">
-                                    <transition event="websocket.connect" target="connected" />
-                                </state>
-                                
-                                <state id="connected">
-                                
-                                    <invoke id="i">
-                                        <content>
-                                            $_event.data["doc"]
-                                        </content>
-                                    </invoke>
-                                    
-                                    
-                                    
-                                    <transition event="init.invoke">
-                                        <script>
-                                            class EventHandler(logging.Handler):
-                                                def __init__(self, level=logging.NOTSET):
-                                                    logging.Handler.__init__(self, level=level)
-                                                    
-                                                def handle(self, record):
-                                                    _x["self"].send("log", data=record.getMessage() )
+            <transition event="http.post">
+                <if cond="session">
+                    <send targetexpr="'#_scxml_' + session" event="quit" />
+                </if>
+                <assign location="session" expr="'session_' + str(counter)" />
+                <spyderbrain:start_session sessionidexpr="session">
+                    <content><![CDATA[
+                    
+                        <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" >
+                            <script>
+                                import logging
+                            </script>
+                            <datamodel>
+                                <data id="log_handler" /> 
+                            </datamodel>
+                            
+                            <state id="waiting">
+                                <transition event="websocket.connect" target="connected" />
+                            </state>
+                            
+                            <state id="connected">
+                                <onentry>
+                                    <script>
+                                        class EventHandler(logging.Handler):
+                                            def __init__(self, level=logging.NOTSET):
+                                                logging.Handler.__init__(self, level=level)
                                                 
-                                            log_handler = EventHandler()
-                                            _x["self"].datamodel["i"].sm.interpreter.logger.addHandler(log_handler)
-                                        </script>
-                                    </transition>
-                                    
-                                    <transition event="log">
-                                        <log expr="'event ' + str(_event.name)" />
-                                        <send target="#_websocket" event="log">
-                                            <param name="payload" expr="_event.data" />
-                                        </send>
-                                    </transition>
-                                    <transition event="websocket.disconnect done.invoke quit" target="f">
-                                        <script>
-                                            delete log_handler
-                                        </script>
-                                    </transition>
-                                    
-                                    <transition event="error">
-                                        <log label="error in sandbox_server" expr="_event.data" />
-                                    </transition>
-                                    
-                                    <transition event="*">
-                                        <send target="#_i" eventexpr="'.'.join(_event.name)" />
-                                    </transition>
-                                </state>
+                                            def handle(self, record):
+                                                _x["self"].send("log", data=record.getMessage() )
+                                            
+                                        log_handler = EventHandler()
+                                        logging.getLogger("pyscxml.i").addHandler(log_handler)
+                                        #_x["self"].datamodel["i"].sm.interpreter.logger.addHandler(log_handler)
+                                    </script>
                                 
-                                <final id="f" />
-                            </scxml>
-                        ]]>    
-                        </content>
-                        
-                    </spyderbrain:start_session>
-                    <assign location="counter" expr="counter + 1" />
-                    <send target="#_response" namelist="session headers" />
-                </transition>
-                
-                
-                <transition event="done.invoke" target="idle">
-                    <send event="done" target="#_websocket" />
-                </transition>
-                
-                
-
+                                </onentry>
+                                <invoke id="i">
+                                    <content>
+                                        $_event.data["doc"]
+                                    </content>
+                                </invoke>
+                                
+                                
+                                
+                                <transition event="log">
+                                    <send target="#_websocket" event="log">
+                                        <param name="payload" expr="_event.data" />
+                                    </send>
+                                </transition>
+                                <transition event="websocket.disconnect done.invoke quit" target="f">
+                                    <script>
+                                        logging.getLogger("pyscxml.i").removeHandler(log_handler)
+                                    </script>
+                                </transition>
+                                
+                                <transition event="error">
+                                    <log label="error in sandbox_server" expr="_event.data" />
+                                </transition>
+                                
+                                <transition event="*">
+                                    <send target="#_i" eventexpr="'.'.join(_event.name)" />
+                                </transition>
+                                <onexit>
+                                    <send target="#_websocket" event="close" />
+                                </onexit>
+                            </state>
+                            
+                            <final id="f" />
+                        </scxml>
+                    ]]>    
+                    </content>
+                    
+                </spyderbrain:start_session>
+                <assign location="counter" expr="counter + 1" />
+                <send target="#_response" namelist="session headers" />
+            </transition>
 
         </state>
     </parallel>
