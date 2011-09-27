@@ -2,7 +2,7 @@ from scxml.pyscxml_server import PySCXMLServer, TYPE_WEBSOCKET, TYPE_DEFAULT, TY
 import logging
 logging.basicConfig(level=logging.NOTSET)
 
-server = PySCXMLServer("localhost", 8081, 
+server = PySCXMLServer("mac21.svenska.gu.se", 8081, 
                         init_sessions={"server" : open("sandbox_server.xml").read()},
                         server_type=TYPE_RESPONSE | TYPE_WEBSOCKET
                         )
@@ -10,12 +10,12 @@ server = PySCXMLServer("localhost", 8081,
 
 server.serve_forever()
 
-from wsgiref.simple_server import make_server
-from time import sleep
-from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
-
-from eventlet import wsgi, websocket
-import eventlet
+#from wsgiref.simple_server import make_server
+#from time import sleep
+#from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
+#
+#from eventlet import wsgi, websocket
+#import eventlet
 
 
 #def hello_world_app(environ, start_response):

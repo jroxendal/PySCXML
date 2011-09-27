@@ -267,7 +267,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.NOTSET)
     
     
-#    xml = open("../../unittest_xml/ispreempted.xml").read()
+    xml = open("../../resources/preemption.xml").read()
     with StateMachine(xml) as sm:
         pass
 #        sm.send("e")

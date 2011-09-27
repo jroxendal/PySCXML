@@ -167,6 +167,8 @@ class Compiler(object):
                         except KeyError:
                             raise ParseError("You can only use the pyscxml:start_session " 
                                               "element for documents in a MultiSession enviroment")
+                        except Exception, e:
+                            self.raiseError("error.execution." + type(e).__name__.lower(), e)
                 elif node_ns in custom_exec_mapping:
                     # execute functions registered using scxml.pyscxml.custom_executable
                     custom_exec_mapping[node_ns](node, self.dm)
@@ -290,6 +292,7 @@ class Compiler(object):
                 self.logger.debug("sending to _response")
                 headers = data.pop("headers") if "headers" in data else {} 
 #                if type == "scxml": headers["Content-Type"] = "text/xml"
+#                TODO: let's start sending scxml events back. 
                 if headers.get("Content-Type", "").split("/")[1] == "json": 
                     data = json.dumps(data)  
                 self.dm["_response"].put((data, headers))

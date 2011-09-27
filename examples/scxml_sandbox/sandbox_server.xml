@@ -46,6 +46,9 @@
                             </datamodel>
                             
                             <state id="waiting">
+                                <onentry>
+                                    <send target="#_scxml_server" eventexpr="'init.session.' + _sessionid" />
+                                </onentry>
                                 <transition event="websocket.connect" target="connected" />
                             </state>
                             
@@ -103,9 +106,16 @@
                     
                 </spyderbrain:start_session>
                 <assign location="counter" expr="counter + 1" />
-                <send target="#_response" namelist="session headers" />
+                
+<!--                 <send target="#_response" namelist="session headers" /> -->
             </transition>
-
+            
+            <transition event="init.session">
+                <send target="#_response" namelist="session headers" event="success" />
+            </transition>
+            <transition event="error">
+                <send target="#_response" namelist="headers" eventexpr="'.'.join(_event.name)" />
+            </transition>
         </state>
     </parallel>
 </scxml>

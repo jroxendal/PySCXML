@@ -1,4 +1,4 @@
-var HOST = "localhost";
+var HOST = location.host;
 var PORT = 8081;
 var editor;
 
