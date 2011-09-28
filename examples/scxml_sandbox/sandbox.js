@@ -40,12 +40,14 @@ function sendDoc() {
 	$.post($.format("http://%s:%s/server/basichttp", [HOST, PORT]), {
 		"doc" : editor.getValue()
 	}, function(data) {
-		$.log("post result", data);
-		connect($.format("ws://%s:%s/%s/websocket", [HOST, PORT, data.session]));
+		var evt = SCXMLEventProcessor.fromXML(data);
+		$.log("post result", data, evt);
+		
+		connect($.format("ws://%s:%s/%s/websocket", [HOST, PORT, evt.data.session]));
 	});
 }
 
-function send(event, data) {
+function send() {
 	var evt = SCXMLEventProcessor.toXML(messageBox.value);
 	socket.send(evt);
 //	addToLog('> ' + messageBox.value);

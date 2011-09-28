@@ -12,7 +12,7 @@
         <data id="get" expr="_x['self'].datamodel.get" />
         <data id="session" />
         <data id="counter" expr="0" />
-        <data id="headers" expr="{'Access-Control-Allow-Origin' : '*', 'Content-Type' : 'application/json'}" />
+        <data id="headers" expr="{'Access-Control-Allow-Origin' : '*'}" />
     </datamodel>
 
 
@@ -105,13 +105,13 @@
                     </content>
                     
                 </spyderbrain:start_session>
-                <assign location="counter" expr="counter + 1" />
                 
 <!--                 <send target="#_response" namelist="session headers" /> -->
             </transition>
             
             <transition event="init.session">
                 <send target="#_response" namelist="session headers" event="success" />
+                <assign location="counter" expr="counter + 1" />
             </transition>
             <transition event="error">
                 <send target="#_response" namelist="headers" eventexpr="'.'.join(_event.name)" />

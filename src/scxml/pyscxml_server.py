@@ -21,20 +21,48 @@ Created on Dec 15, 2010
 
 from eventprocessor import SCXMLEventProcessor as Processor, Event
 from scxml.pyscxml import MultiSession
-from wsgiref.simple_server import make_server
 from xml.parsers.expat import ExpatError
 import cgi
 import logging
 import threading, time
 from functools import partial
-import os
-import inspect
-try:
-    from eventlet import wsgi, websocket
-    import eventlet
-    
-except ImportError:
-    pass
+
+def get_server(isWebSocket):
+    try:
+        import gevent.pywsgi
+        from ws4py.server.geventserver import UpgradableWSGIHandler
+        from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
+        class WebSocketServer(gevent.pywsgi.WSGIServer):
+            handler_class = UpgradableWSGIHandler
+            
+            def __init__(self, listener, application, fallback_app=None, **kwargs):
+                gevent.pywsgi.WSGIServer.__init__(self, listener, application, **kwargs)
+                protocols = kwargs.pop('websocket_protocols', [])
+                extensions = kwargs.pop('websocket_extensions', [])
+                self.application = WebSocketUpgradeMiddleware(self.application, 
+                                    protocols=protocols,
+                                    extensions=extensions,
+                                    fallback_app=fallback_app)
+                
+        return WebSocketServer
+    except ImportError:
+        try:
+            from eventlet import wsgi, websocket
+            import eventlet
+            class Server(object):
+                def __init__(self, adressTuple, ws_handler, handler):
+                    self.adressTuple = adressTuple
+                    self.handler = handler
+                    
+                def serve_forever(self):
+                    wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
+            return Server
+        except ImportError, e:
+            if isWebSocket:
+                raise e
+            else:
+                from wsgiref.simple_server import make_server 
+                return lambda tup, ws_handler, handler: make_server(*tup, handler=handler)
 
 TYPE_DEFAULT = 1
 TYPE_RESPONSE = 2
@@ -104,11 +132,13 @@ class PySCXMLServer(object):
         self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
         self.sm_mapping.start()
         
-        if self.is_type(TYPE_WEBSOCKET):
-            wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
-        else:
-            self.httpd = make_server(self.host, self.port, self.request_handler)
-            self.httpd.serve_forever()
+        self.httpd = get_server(self.is_type(TYPE_WEBSOCKET))((self.host, self.port), self.websocket_handler, self.request_handler)
+        self.httpd.serve_forever()
+        
+#        if self.is_type(TYPE_WEBSOCKET):
+#            wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
+#        else:
+#            self.httpd = make_server(self.host, self.port, self.request_handler)
                 
         
     def init_session(self, sessionid):
@@ -124,18 +154,21 @@ class PySCXMLServer(object):
         if self.is_type(TYPE_WEBSOCKET):
             sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s/websocket" % (self.host, self.port, sm.datamodel["_sessionid"])
     
-    def websocket_handler(self, ws):
+    def websocket_handler(self, ws, environ):
         self.clients.append(ws)
-        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
+#        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
+        pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+        
         session = pathlist[0]
         sm = self.sm_mapping.get(session) or self.init_session(session)
         sm.send("websocket.connect")
         threading.Thread(target=self.websocket_response, args=(sm,)).start()
         while True:
-            message = ws.wait()
+#            message = ws.wait()
+            message = ws.receive(msg_obj=True)
             if message is None:
                 break
-            evt = Processor.fromxml(message, origintype="javascript")
+            evt = Processor.fromxml(str(message.data), origintype="javascript")
             sm.interpreter.externalQueue.put(evt)
         sm.send("websocket.disconnect")
         self.clients.remove(ws)
@@ -157,9 +190,9 @@ class PySCXMLServer(object):
             self.logger.info(str(e))
             start_response(status, [('Content-type', 'text/plain')])
             return [""]
-        if self.is_type(TYPE_WEBSOCKET) and type == "websocket":
-            handler = websocket.WebSocketWSGI(partial(PySCXMLServer.websocket_handler, self))
-            return handler(environ, start_response)
+#        if self.is_type(TYPE_WEBSOCKET) and type == "websocket" and "websocket" in dir():
+#            handler = websocket.WebSocketWSGI(partial(PySCXMLServer.websocket_handler, self))
+#            return handler(environ, start_response)
         fs = cgi.FieldStorage(fp=environ['wsgi.input'],
                                environ=environ,
                                keep_blank_values=True)

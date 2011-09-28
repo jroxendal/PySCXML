@@ -16,15 +16,17 @@ SCXMLEventProcessor.toXML = function(event, data) {
 	
 }
 	
-SCXMLEventProcessor.fromXML = function(xmlstr) {
-	if (window.DOMParser) {
+SCXMLEventProcessor.fromXML = function(xml) {
+	if (typeof xml == "string" && window.DOMParser) {
 		parser = new DOMParser();
-		xmlDoc = parser.parseFromString(xmlstr, "text/xml");
-	} else // Internet Explorer
+		xmlDoc = parser.parseFromString(xml, "text/xml");
+	} else if(typeof xml == "string")// Internet Explorer
 	{
 		xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
 		xmlDoc.async = "false";
-		xmlDoc.loadXML(xmlstr);
+		xmlDoc.loadXML(xml);
+	} else {
+		xmlDoc = xml;
 	}
 	
 	var output = {};
@@ -36,10 +38,14 @@ SCXMLEventProcessor.fromXML = function(xmlstr) {
 	
 	var data = {};
 	
-	var propNodes = xmlDoc.getElementsByTagName("property");
+	var propNodes = xmlDoc.getElementsByTagNameNS("http://www.w3.org/2005/07/scxml", "property")
 	for ( var i = 0; i < propNodes.length; i++) {
 		var prop = propNodes[i];
-		data[prop.attributes[0].nodeValue] = prop.firstChild.nodeValue;
+		if(output["language"] == "json") {
+			data[prop.attributes[0].nodeValue] = JSON.parse(prop.firstChild.nodeValue);
+		} else {
+			data[prop.attributes[0].nodeValue] = prop.firstChild.nodeValue;
+		}
 	}
 	output["data"] = data;
 	return output;

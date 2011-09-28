@@ -266,8 +266,9 @@ class Compiler(object):
 #            e = RuntimeError("Line %s: hints or hintsexpr malformed: %s" % (sendNode.lineno, hints))
 #            self.logger.error(str(e))
 #            self.raiseError("error.execution.hints", e)
-        
-        if type == "scxml":
+        scxmlSendType = ("http://www.w3.org/TR/scxml/#SCXMLEventProcessor", "scxml")
+        httpSendType = ("http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor", "basichttp")
+        if type in scxmlSendType:
             if not target:
                 self.interpreter.send(event, data)
             elif target == "#_parent":
@@ -288,14 +289,6 @@ class Compiler(object):
                     self.logger.error(str(e))
                     self.raiseError("error.communication", e)
                 
-            elif target == "#_response":
-                self.logger.debug("sending to _response")
-                headers = data.pop("headers") if "headers" in data else {} 
-#                if type == "scxml": headers["Content-Type"] = "text/xml"
-#                TODO: let's start sending scxml events back. 
-                if headers.get("Content-Type", "").split("/")[1] == "json": 
-                    data = json.dumps(data)  
-                self.dm["_response"].put((data, headers))
             elif target == "#_websocket":
                 self.logger.debug("sending to _websocket")
                 eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
@@ -306,33 +299,35 @@ class Compiler(object):
                 headers.update({"Content-Type" : "text/event-stream", "Cache-Control" : "no-cache"})
                 eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
                 self.dm["_response"].put(("data:" + eventXML + "\n", headers))
-            elif target.startswith("#_"): # invokeid
+            elif target.startswith("#_") and not target == "#_response": # invokeid
                 try:
                     inv = self.dm[target[2:]]
                     evt = Event(event, data, self.interpreter.invokeId)
                     evt.origin = self.dm["_sessionid"]
                     evt.origintype = "scxml"
                     inv.send(evt)
-                except Exception, e:
-                    self.raiseError("error.communication", RuntimeError("Line %s: No valid target at '%s'." % (sendNode.lineno, target[2:])))
+                except Exception:
+                    e = RuntimeError("Line %s: No valid target at '%s'." % (sendNode.lineno, target[2:]))
+                    self.logger.error(str(e))
+                    self.raiseError("error.communication", e)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
                     origin = self.dm["_ioprocessors"]["scxml"]
                 except KeyError:
                     origin = ""
-                eventXML = Processor.toxml(".".join(event), target, data, origin, sendNode.get("id", ""))
+                eventXML = Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
                 
                 getter = self.getUrlGetter(target)
                 
                 getter.get_sync(target, {"_content" : eventXML})
                 
-            else:
-                e = RuntimeError("Line %s: The send target '%s' is malformed or unsupported by the platform." % (sendNode.lineno, target))
-                self.logger.error(str(e))
-                self.raiseError("error.send.target", e)
+#            else:
+#                e = RuntimeError("Line %s: The send target '%s' is malformed or unsupported by the platform." % (sendNode.lineno, target))
+#                self.logger.error(str(e))
+#                self.raiseError("error.send.target", e)
             
-        elif type == "basichttp":
+        elif type in httpSendType:
             
             getter = self.getUrlGetter(target)
             
@@ -354,6 +349,19 @@ class Compiler(object):
             e = RuntimeError("Line %s: The send type %s is invalid or unsupported by the platform" % (sendNode.lineno, type))
             self.logger.error(str(e))
             self.raiseError("error.send.type", e)
+        
+        # send with variable type
+        if target == "#_response":
+            self.logger.debug("sending to _response")
+            headers = data.pop("headers") if "headers" in data else {} 
+#                if type == "scxml": headers["Content-Type"] = "text/xml"
+#            if headers.get("Content-Type", "/").split("/")[1] == "json": 
+#                data = json.dumps(data)  
+            
+            if type in scxmlSendType:
+                data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"], sendNode.get("id", ""), language="json")    
+                headers["Content-Type"] = "text/xml" 
+            self.dm["_response"].put((data, headers))
     
     def getUrlGetter(self, target):
         getter = UrlGetter()

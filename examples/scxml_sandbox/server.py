@@ -2,7 +2,7 @@ from scxml.pyscxml_server import PySCXMLServer, TYPE_WEBSOCKET, TYPE_DEFAULT, TY
 import logging
 logging.basicConfig(level=logging.NOTSET)
 
-server = PySCXMLServer("mac21.svenska.gu.se", 8081, 
+server = PySCXMLServer("localhost", 8081, 
                         init_sessions={"server" : open("sandbox_server.xml").read()},
                         server_type=TYPE_RESPONSE | TYPE_WEBSOCKET
                         )
@@ -10,9 +10,9 @@ server = PySCXMLServer("mac21.svenska.gu.se", 8081,
 
 server.serve_forever()
 
-#from wsgiref.simple_server import make_server
+from wsgiref.simple_server import make_server
 #from time import sleep
-#from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
+from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
 #
 #from eventlet import wsgi, websocket
 #import eventlet
@@ -37,10 +37,10 @@ server.serve_forever()
 #        start_response(status, headers)
 #        return [""]
 
-@websocket.WebSocketWSGI
-def websocket_handler(ws):
-    print "handle"
-    ws.send("hello")
+#@websocket.WebSocketWSGI
+#def websocket_handler(ws):
+#    print "handle"
+#    ws.send("hello")
 #    while True:
 #        message = ws.wait()
 #        if message is None:
@@ -48,9 +48,31 @@ def websocket_handler(ws):
 #        print "message received:", message
 #        ws.send(message)
 
-#httpd = make_server('', 8081, WebSocketUpgradeMiddleware(websocket_handler))
-wsgi.server(eventlet.listen(('localhost', 8081)), websocket_handler)
-print "Serving on port 8081..."
+def echo_handler(websocket, environ):
+    try:
+        while True:
+            msg = websocket.receive(msg_obj=True)
+            if msg is not None:
+                websocket.send(msg.data, msg.is_binary)
+            else:
+                break
+    finally:
+        websocket.close()
+        
+def fallback(environ, start_response):
+    status = '200 OK' # HTTP Status
+    headers = [('Content-type', 'text/plain')] # HTTP Headers
+    start_response(status, headers)
+    return ["hello"]
+#httpd = make_server('', 8081, WebSocketUpgradeMiddleware(echo_handler))
+#wsgi.server(eventlet.listen(('localhost', 8081)), websocket_handler)
+#print "Serving on port 8081..."
 
 # Serve until process is killed
-httpd.serve_forever()
+#httpd.serve_forever()
+
+
+#from ws4py.server.geventserver import WebSocketServer
+#server = WebSocketServer(('127.0.0.1', 8081), echo_handler, fallback_app=fallback)
+#print "Serving on port 8081..."
+#server.serve_forever()
