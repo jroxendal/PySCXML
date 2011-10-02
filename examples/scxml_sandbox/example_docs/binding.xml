@@ -1,0 +1,44 @@
+<scxml xmlns="http://www.w3.org/2005/07/scxml" binding="early">
+    <datamodel>
+        <data id="d1" expr="1" />
+    </datamodel>
+    <parallel id="p">
+        <state id="s1">
+            <state>
+                <invoke>
+                    <content><![CDATA[
+                        <scxml xmlns="http://www.w3.org/2005/07/scxml" binding="late">
+                            <datamodel>
+                                <data id="d1" expr="1" />
+                            </datamodel>
+                            <state id="s2">
+                                <transition target="i_f" cond="d1 == 1 and not d2" />
+                            </state>
+                            <state>
+                                <datamodel>
+                                    <data id="d2" expr="2" />
+                                </datamodel>
+                            </state>
+                            <final id="i_f" />
+                        </scxml> 
+                ]]></content>
+                </invoke>
+                <transition event="done.invoke" target="f1" />
+            </state>
+            <final id="f1" />
+        </state>
+        <state id="s2">
+            <state>
+                <transition target="f2" cond="d1 == 1 and d2 == 2" />
+            </state>
+            <state>
+                <datamodel>
+                    <data id="d2" expr="2" />
+                </datamodel>
+            </state>
+            <final id="f2" />
+        </state>
+        <transition event="done.state.p" target="f" />
+    </parallel>
+    <final id="f" />
+</scxml>

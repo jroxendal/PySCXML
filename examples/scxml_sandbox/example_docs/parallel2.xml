@@ -1,0 +1,23 @@
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <initial>
+        <transition target="A2 B2" />
+    </initial>
+
+    <parallel id="P">
+
+        <state id="A" initial="A1">
+            <state id="A1" />
+
+            <state id="A2" />
+        </state>
+
+        <state id="B" initial="B1">
+            <state id="B1" />
+
+            <state id="B2" />
+        </state>
+        <transition target="f" cond="In('A2') and In('B2')" />
+    </parallel>
+
+    <final id="f" />
+</scxml>
