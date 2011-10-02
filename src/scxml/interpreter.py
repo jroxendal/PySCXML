@@ -63,11 +63,13 @@ class Interpreter(object):
         self.dm = self.doc.datamodel
         self.dm["In"] = self.In
         self.dm["_parent"] = optionalParentExternalQueue
-        if invokeId:
-            self.dm["_invokeid"] = invokeId
-            self.logger = logging.getLogger("pyscxml.%s.interpreter" % (invokeId) )
-        else:
-            self.logger = logging.getLogger("pyscxml.%s.interpreter" % self.dm["_sessionid"] )
+#        if invokeId:
+#            print invokeId, self.dm["_sessionid"]
+#            self.dm["_invokeid"] = invokeId
+#            self.logger = logging.getLogger("pyscxml.%s.interpreter" % (invokeId) )
+#        else:
+#        if not invokeId:
+#            self.logger = logging.getLogger("pyscxml.%s.interpreter" % self.dm["_sessionid"] )
 
         self.invokeId = invokeId
         
@@ -229,7 +231,7 @@ class Interpreter(object):
             for s in [state] + getProperAncestors(state, None):
                 if done: break
                 for t in s.transition:
-                    if t.event and nameMatch(t.event, event.name) and self.conditionMatch(t):
+                    if t.event and nameMatch(t.event, event.name.split(".")) and self.conditionMatch(t):
                         enabledTransitions.add(t)
                         done = True
                         break
@@ -449,7 +451,7 @@ class Interpreter(object):
         
             
     def raiseFunction(self, event, data, type="internal"):
-        self.internalQueue.put(Event(event, data, type=type))
+        self.internalQueue.put(Event(event, data, eventtype=type))
 
 
 def getProperAncestors(state,root, skipParallel=False):

@@ -120,7 +120,7 @@ class PySCXMLServer(object):
         
         
         #the connected websocket clients
-        self.clients = []
+        self.clients = {}
         
     
     def is_type(self, type):
@@ -154,15 +154,19 @@ class PySCXMLServer(object):
         if self.is_type(TYPE_WEBSOCKET):
             sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s/websocket" % (self.host, self.port, sm.datamodel["_sessionid"])
     
+    
     def websocket_handler(self, ws, environ):
-        self.clients.append(ws)
 #        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
         pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
         
         session = pathlist[0]
         sm = self.sm_mapping.get(session) or self.init_session(session)
+        if not session in self.clients: 
+            self.clients[session] = [ws]
+            threading.Thread(target=self.websocket_response, args=(sm, session)).start()
+        else:
+            self.clients[session].append(ws)
         sm.send("websocket.connect")
-        threading.Thread(target=self.websocket_response, args=(sm,)).start()
         while True:
 #            message = ws.wait()
             message = ws.receive(msg_obj=True)
@@ -171,12 +175,12 @@ class PySCXMLServer(object):
             evt = Processor.fromxml(str(message.data), origintype="javascript")
             sm.interpreter.externalQueue.put(evt)
         sm.send("websocket.disconnect")
-        self.clients.remove(ws)
+        self.clients[session].remove(ws)
 
-    def websocket_response(self, sm):
-        while self.clients:
+    def websocket_response(self, sm, session):
+        while self.clients[session]:
             evt_xml = sm.datamodel["_websocket"].get() # blocks
-            for ws in self.clients:
+            for ws in self.clients[session]:
                 ws.send(evt_xml)
     
     def request_handler(self, environ, start_response):
@@ -214,7 +218,7 @@ class PySCXMLServer(object):
                 #picks out the input handler and executes it.
                 event = handler_mapping[type](session, data, sm, environ)
             except:
-                self.logger.error("Error when looking up handler for type %s.")
+                self.logger.error("Error when looking up handler for type %s." % type)
                 raise
                 
             if self.is_type(TYPE_DEFAULT):

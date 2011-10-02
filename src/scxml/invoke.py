@@ -99,7 +99,8 @@ class InvokeSCXML(BaseFetchingInvoke):
     
     def _start(self, doc):
         from pyscxml import StateMachine
-        self.sm = StateMachine(doc)
+        self.sm = StateMachine(doc, sessionid=self.parentSession + "." + self.invokeid)
+        
         self.sm.start_threaded(self.parentQueue, self.invokeid)
         dispatcher.send("init.invoke." + self.invokeid, self)
     

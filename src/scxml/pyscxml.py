@@ -37,22 +37,29 @@ class StateMachine(object):
     This class provides the entry point for the pyscxml library. 
     '''
     
-    def __init__(self, xml, log_function=default_logfunction):
+    def __init__(self, xml, log_function=default_logfunction, sessionid=None):
         '''
         @param xml: the scxml document to parse, expressed as a string.
         @param log_function: the function to execute on a <log /> element. 
-        signature is f(label, msg), where label is a string and msg a string. 
+        signature is f(label, msg), where label is a string and msg a string.
+        @param sessionid: is stored in the _session variable. Will be automatically
+        generated if not provided.
         '''
 
         self.is_finished = False
         self._lock = RLock()
-        self.interpreter = Interpreter()
         # makes sure the scxml done event reaches this class. 
-        dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
         self.compiler = compiler.Compiler()
         self.compiler.log_function = log_function
+        
+        self.sessionid = sessionid or "pyscxml_session_" + str(int(time() * 1000))
+        self.interpreter = Interpreter()
+        dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
+        self.interpreter.logger = logging.getLogger("pyscxml.%s.interpreter" % self.sessionid)
+        self.compiler.logger = logging.getLogger("pyscxml.%s.compiler" % self.sessionid)
         self.doc = self.compiler.parseXML(xml, self.interpreter)
         self.doc.datamodel["_x"] = {"self" : self}
+        self.doc.datamodel["_sessionid"] = sessionid 
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
         
@@ -108,12 +115,12 @@ class StateMachine(object):
         with self._lock:
             return self.interpreter.In(statename)
             
-    def _sessionid_getter(self):
-        return self.datamodel["_sessionid"]
-    def _sessionid_setter(self, id):
-        self.compiler.setSessionId(id)
-    
-    sessionid = property(_sessionid_getter, _sessionid_setter)
+#    def _sessionid_getter(self):
+#        return self.datamodel["_sessionid"]
+#    def _sessionid_setter(self, id):
+#        self.compiler.setSessionId(id)
+#    
+#    sessionid = property(_sessionid_getter, _sessionid_setter)
     
     def on_exit(self, sender):
         with self._lock:
@@ -190,10 +197,9 @@ class MultiSession(object):
         not been started, only initialized.
          '''
         assert xml or self.default_scxml_doc
-        sm = StateMachine(xml or self.default_scxml_doc)
+        sm = StateMachine(xml or self.default_scxml_doc, sessionid=sessionid)
         self.sm_mapping[sessionid] = sm
         sm.datamodel["_x"]["sessions"] = self
-        sm.sessionid = sessionid
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
         return sm
     

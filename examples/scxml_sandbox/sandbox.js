@@ -2,56 +2,84 @@ var HOST = location.host;
 var PORT = 8081;
 var editor;
 
+var socket = null;
+var logBox = null;
+var messageBox = null;
+
 var deferred = $.get("default_doc.xml", null, null, "text");
 var deferred_domReady = $.Deferred(function( dfd ){
 	$(dfd.resolve);
 }).promise();
 
-$.when(deferred, deferred_domReady).then(function(getArray) {
+var jsonDeferred = $.getJSON("example_list.json");
+
+$.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonArray) {
 	var doc = getArray[0];
-	$.log(doc)
+	var filelist = jsonArray[0];
+	$.log("onready", doc, filelist);
+	
+	$($.map(filelist, function(item) {
+		return $("<li>", {"data-url" : item}).append($.format("<a>%s</a>", item.split("/")[1])).get();
+	})).appendTo("#menu");
+	
+	$("#menu").menu({
+		select : function(event, ui) {
+			$.log("select menu", ui.item.data("url"));
+			$.get(ui.item.data("url"), null, null, "text").done(function(data) {
+				data = data.replace(/^(    )|\t/g, "  ");
+				editor.setValue(data);
+			});
+			
+		}
+	});
+	
 	logBox = document.getElementById('log');
 	messageBox = document.getElementById('message');
 	editor = CodeMirror.fromTextArea($("#doc").get(0), {
 		mode : {"name" : "xml", htmlMode : false},
 		theme : "eclipse",
-		tabMode : "shift"
+		tabMode : "shift",
+		lineNumbers : true
 	});
 	editor.setValue(doc);
 	$("#close").click(closeSocket);
 	$("#connect").click(connect);
-	$("#sendEvent").click(send);
+	$("#eventForm").submit(send);
 	$("#sendDoc").click(sendDoc);
 	sendDoc();
 });
-var socket = null;
 
-var logBox = null;
-var messageBox = null;
 
 function addToLog(log) {
-	logBox.value += log + '\n'
+	logBox.value += "> " + log + '\n'
 	// Large enough to keep showing the latest message.
 	logBox.scrollTop = 1000000;
 	
 }
 
 function sendDoc() {
+	addToLog("Sending document...");
 	$.post($.format("http://%s:%s/server/basichttp", [HOST, PORT]), {
 		"doc" : editor.getValue()
 	}, function(data) {
 		var evt = SCXMLEventProcessor.fromXML(data);
 		$.log("post result", data, evt);
 		
-		connect($.format("ws://%s:%s/%s/websocket", [HOST, PORT, evt.data.session]));
+		if(evt.name.split(".")[0] == "error") {
+			$.log("error", evt);
+			addToLog("Error when posting document: " + evt.name.split(".")[2])
+		} else {
+			connect($.format("ws://%s:%s/%s/websocket", [HOST, PORT, evt.data.session]));
+		}
+		
 	});
 }
 
 function send() {
 	var evt = SCXMLEventProcessor.toXML(messageBox.value);
 	socket.send(evt);
-//	addToLog('> ' + messageBox.value);
-//	messageBox.value = '';
+	messageBox.value = "";
+	return false;
 }
 
 function connect(address) {
@@ -63,22 +91,21 @@ function connect(address) {
 	};
 	socket.onmessage = function(event) {
 		var evt = SCXMLEventProcessor.fromXML(event.data);
-		addToLog('< ' + evt.name + " " + evt.data.payload || "");
+		if(evt.data.payload == "external event found: init.invoke.i") return;
+		addToLog(evt.name + " " + (evt.data.payload || ""));
 		console.log(evt.data);
 		if(evt.name == "close") {
 			socket.close();
 		}
-//		addToLog('< ' + event.data);
 	};
 	socket.onerror = function(event) {
-		console.log("error event", event);
-		addToLog('WebSocket Error');
+//		console.log("error event", event);
+//		addToLog('WebSocket Error');
 	};
 	socket.onclose = function() {
 		addToLog('Closed');
 	};
 
-//	addToLog('Connect ' + addressBox.value);
 }
 
 function closeSocket() {

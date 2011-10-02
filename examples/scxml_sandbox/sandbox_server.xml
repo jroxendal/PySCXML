@@ -5,11 +5,6 @@
     version="1.0">
 
     <datamodel>
-        <data id="this_doc" src="sandbox_server.xml" />
-        <data id="console" src="console.html" />
-        <data id="sandbox" src="sandbox.js" />
-        <data id="SCXMLEventProcessor" src="SCXMLEventProcessor.js" />
-        <data id="get" expr="_x['self'].datamodel.get" />
         <data id="session" />
         <data id="counter" expr="0" />
         <data id="headers" expr="{'Access-Control-Allow-Origin' : '*'}" />
@@ -30,10 +25,11 @@
 
         <state id="sandbox">
             <transition event="http.post">
-                <if cond="session">
-                    <send targetexpr="'#_scxml_' + session" event="quit" />
-                </if>
+<!--                 <if cond="session"> -->
+<!--                     <send targetexpr="'#_scxml_' + session" event="quit" /> -->
+<!--                 </if> -->
                 <assign location="session" expr="'session_' + str(counter)" />
+                <assign location="counter" expr="counter + 1" />
                 <spyderbrain:start_session sessionidexpr="session">
                     <content><![CDATA[
                     
@@ -47,7 +43,7 @@
                             
                             <state id="waiting">
                                 <onentry>
-                                    <send target="#_scxml_server" eventexpr="'init.session.' + _sessionid" />
+                                    <send target="#_scxml_server" eventexpr="'init.session.' + _sessionid" namelist="_sessionid" />
                                 </onentry>
                                 <transition event="websocket.connect" target="connected" />
                             </state>
@@ -63,8 +59,9 @@
                                                 _x["self"].send("log", data=record.getMessage() )
                                             
                                         log_handler = EventHandler()
-                                        logging.getLogger("pyscxml.i").addHandler(log_handler)
-                                        #_x["self"].datamodel["i"].sm.interpreter.logger.addHandler(log_handler)
+                                        logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
+                                        #TODO: this doesn't work, i is not instantiated.
+                                        #_x["self"].datamodel["i"].sm.compiler.log_function = lambda label, expr: _x["self"].send("log.element", data=expr)
                                     </script>
                                 
                                 </onentry>
@@ -92,7 +89,7 @@
                                 </transition>
                                 
                                 <transition event="*">
-                                    <send target="#_i" eventexpr="'.'.join(_event.name)" />
+                                    <send target="#_i" eventexpr="_event.name" />
                                 </transition>
                                 <onexit>
                                     <send target="#_websocket" event="close" />
@@ -105,16 +102,25 @@
                     </content>
                     
                 </spyderbrain:start_session>
-                
 <!--                 <send target="#_response" namelist="session headers" /> -->
             </transition>
             
             <transition event="init.session">
-                <send target="#_response" namelist="session headers" event="success" />
-                <assign location="counter" expr="counter + 1" />
+                <send target="#_response" namelist="headers" event="success">
+                    <param name="session" expr="_event.data['_sessionid']" />
+                </send>
+                
             </transition>
+            
+            <transition event="error.communication">
+                <log label="error.communication" />
+            </transition>
+            
+            
             <transition event="error">
-                <send target="#_response" namelist="headers" eventexpr="'.'.join(_event.name)" />
+                <send target="#_response" namelist="headers" eventexpr="_event.name">
+                    <param name="exception" expr="str(_event.data['exception'])" /> 
+                </send>
             </transition>
         </state>
     </parallel>

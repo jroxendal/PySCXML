@@ -2,6 +2,8 @@
 <html>
 <head>
 <title>PySCXML console</title>
+
+<link rel="stylesheet" href="lib/themes/base/jquery.ui.all.css">
 <link rel="stylesheet" href="lib/codemirror/lib/codemirror.css">
 <link rel="stylesheet" href="lib/codemirror/theme/default.css">
 <link rel="stylesheet" href="lib/codemirror/theme/eclipse.css">
@@ -9,6 +11,7 @@
 <link rel="stylesheet" href="styles.css">
 
 <script src="lib/jquery.js"></script>
+<script src="lib/jquery-ui.min.js"></script>
 <script src="lib/jquery.jLog.min.js"></script>
 <script src="lib/jquery.format.js"></script>
 <script src="SCXMLEventProcessor.js"></script>
@@ -24,20 +27,33 @@
 <!-- <input id="close" type="button" value="close"> -->
 <!-- </div> -->
 <div id="main">
+<div id="header">
+	<img src="img/logo1.png">
+</div>
+<div id="columns">
+	<div id="left_col">
+		<label>SCXML Editor</label>
+		<textarea id="doc" rows="30" cols="80" class="ui-corner-all">
+		</textarea>
+		<div class="col_footer hbox">
+			<button id="sendDoc">Send Document</button>
+			<span class="spacer"></span>
+			<form id="eventForm">
+				<input type="text" id="message" size="40">
+				<input id="sendEvent" type="submit" value="Send event">
+			</form>
+		</div>
+	</div>
+	<div id="right_col">
+		<label>Examples</label>
+		<ul id="menu"></ul>
+	</div>
+	<br>
+</div>
 <div>
+</div>
 <textarea id="log" rows="10" cols="40" readonly></textarea>
 </div>
-<textarea id="doc" rows="30" cols="80">
-	
-</textarea>
-<button id="sendDoc">Send Document</button>
-
-<div>Write an event name here.
-	<form id="eventForm">
-		<input type="text" id="message" size="40">
-		<input id="sendEvent" type="submit" value="send">
-	</form>
-</div>
-</div>
+<img id="logo_bkg" src="img/spider.png">
 </body>
 </html>

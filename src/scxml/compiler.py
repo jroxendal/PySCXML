@@ -73,16 +73,16 @@ class Compiler(object):
         self.dm["_response"] = Queue.Queue() 
         self.dm["_websocket"] = Queue.Queue()
         
-        self.setSessionId("pyscxml_session_" + str(int(time.time() * 1000)))
+#        self.setSessionId()
         
         self.log_function = None
         self.strict_parse = False
         self.timer_mapping = {}
         self.instantiate_datamodel = None
     
-    def setSessionId(self, id):
-        self.dm["_sessionid"] = id
-        self.logger = logging.getLogger("pyscxml.%s.compiler" % id )
+#    def setSessionId(self, id):
+#        self.dm["_sessionid"] = id
+#        self.logger = logging.getLogger("pyscxml.%s.compiler" % id )
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -520,7 +520,6 @@ class Compiler(object):
         
         def start_invoke(wrapper):
             inv = self.parseInvoke(node)
-                
             wrapper.set_invoke(inv)
             self.dm[inv.invokeid] = inv
             dispatcher.connect(self.onInvokeSignal, "init.invoke." + invokeid, inv)
@@ -550,7 +549,7 @@ class Compiler(object):
             if contentNode != None and len(contentNode) == 0 and contentNode.text.strip():
                 inv.content = template(contentNode.text, self.dm)
                 # TODO: support non-cdata content child, but fix datamodel init first. 
-            elif contentNode and len(contentNode) > 0:
+            elif contentNode is not None and len(contentNode) > 0:
                 inv.content = ElementTree.tostring(contentNode[0])
             
         elif type == "x-pyscxml-soap":
@@ -563,6 +562,7 @@ class Compiler(object):
         inv.src = src
         inv.autoforward = node.get("autoforward", "false").lower() == "true"
         inv.type = type   
+        inv.parentSession = self.dm["_sessionid"]
          
         finalizeNode = node.find(prepend_ns("finalize")) 
         if finalizeNode != None and node.find(prepend_ns("param")) != None:
@@ -598,7 +598,7 @@ class Compiler(object):
         if self.doc.binding == "early":
             self.setDataList(tree.getiterator(prepend_ns("data")))
         else:
-            if tree.find(prepend_ns("datamodel")):
+            if tree.find(prepend_ns("datamodel")) is not None:
                 self.setDataList(tree.find(prepend_ns("datamodel")))
             
     
