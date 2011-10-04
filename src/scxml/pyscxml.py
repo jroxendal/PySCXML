@@ -254,7 +254,14 @@ class preprocessor(object):
         compiler.preprocess_mapping[self.namespace] = f
         return f
     
-__all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor"]
+def expr_evaluator(f):
+    compiler._expr_eval = f
+
+def expr_exec(f):
+    compiler._expr_exec = f
+
+    
+__all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor", "expr_evaluator", "expr_exec"]
 
 if __name__ == "__main__":
     
@@ -263,7 +270,7 @@ if __name__ == "__main__":
 #    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
 #    xml = open("../../unittest_xml/parallel3.xml").read()
-    xml = open("../../w3c_tests/test338.scxml").read()
+#    xml = open("../../w3c_tests/test338.scxml").read()
 #    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
@@ -273,9 +280,29 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.NOTSET)
     
     
-    xml = open("../../resources/preemption.xml").read()
+#    xml = open("../../resources/preemption.xml").read()
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <state>
+            <invoke id="i" type="lol">
+                <content>
+                    <scxml>
+                    
+                    </scxml>
+                </content>
+            </invoke>
+            <transition event="error">
+                <log label="invoke error" />
+            </transition>
+        </state>
+        <state id="s2" />
+    </scxml>
+    '''
+    
     with StateMachine(xml) as sm:
         pass
+#    sm = StateMachine(xml)
+#    sm.start()
 #        sm.send("e")
     
 #    sm = StateMachine(xml)

@@ -27,10 +27,8 @@ This file is part of pyscxml.
 from node import *
 import Queue
 from datastructures import OrderedSet
-import logging
 from eventprocessor import Event
 from louie import dispatcher
-from functools import partial
 
 
 
@@ -52,7 +50,7 @@ class Interpreter(object):
         self.dm = None
         self.invokeId = None
         
-        self.timerDict = {}
+#        self.timerDict = {}
         self.logger = None
         
     
@@ -100,7 +98,6 @@ class Interpreter(object):
                     enabledTransitions = self.selectTransitions(internalEvent)
             if enabledTransitions:
                 self.microstep(list(enabledTransitions))
-#        self.mainEventLoop()
     
     
     
@@ -259,7 +256,8 @@ class Interpreter(object):
         filtered = [enabledTransitions[0]]
         while enabledTransitions:
             t = enabledTransitions.pop(0)
-            remainder = filter(partial(self.preemptsTransition, t), enabledTransitions) 
+#            remainder = filter(partial(self.preemptsTransition, t), enabledTransitions) 
+            remainder = filter(lambda t2: self.preemptsTransition(t, t2), enabledTransitions)
             filtered.extend(remainder)
         
         return OrderedSet(filtered)

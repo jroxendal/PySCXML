@@ -8,12 +8,12 @@
         <state id="a" initial="a1">
             <state id="a1" />
             <state id="a2" />
-            <transition event="e" target="a2" />
+            <transition event="e" target="a2" type="internal" />
         </state>
         <state id="b" initial="b1">
             <state id="b1" />
             <state id="b2" />
-            <transition event="e" target="b2" />
+            <transition event="e" target="b2" type="internal" />
         </state>
     </parallel>
     

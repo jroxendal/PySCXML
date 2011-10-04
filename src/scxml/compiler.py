@@ -21,7 +21,7 @@ This file is part of pyscxml.
 
 
 from node import *
-import re, time, Queue, logging
+import re, Queue
 from functools import partial
 from xml.sax.saxutils import unescape
 from messaging import UrlGetter
@@ -33,7 +33,6 @@ from xml.parsers.expat import ExpatError
 from threading import Timer
 from StringIO import StringIO
 from xml.etree import ElementTree, ElementInclude
-import json
     
 
 try: 
@@ -64,6 +63,10 @@ tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transitio
 tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
 preprocess_mapping = {}
+_expr_eval = eval
+#_expr_exec = lambda expr, dm: (exec expr in dm)
+def _expr_exec(expr, dm):
+    exec expr in dm
 
 class Compiler(object):
     '''The class responsible for compiling the statemachine'''
@@ -79,10 +82,6 @@ class Compiler(object):
         self.strict_parse = False
         self.timer_mapping = {}
         self.instantiate_datamodel = None
-    
-#    def setSessionId(self, id):
-#        self.dm["_sessionid"] = id
-#        self.logger = logging.getLogger("pyscxml.%s.compiler" % id )
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -458,13 +457,7 @@ class Compiler(object):
                 parentState.addTransition(t)
     
             elif node_tag == "invoke":
-                try:
-                    parentState.addInvoke(self.make_invoke_wrapper(node, parentState.id))
-                except NotImplementedError:
-                    e = NotImplementedError("Line %s: The invoke type %s is not supported by the platform. "  
-                    "As a result, the invoke was not instantiated." % (node.lineno, type ))
-                    self.logger.error(e)
-                    self.raiseError("error.execution.invoke.type", e)
+                parentState.addInvoke(self.make_invoke_wrapper(node, parentState.id))
             elif node_tag == "onentry":
                 s = Onentry()
                 
@@ -488,7 +481,7 @@ class Compiler(object):
         if not expr or not expr.strip(): return 
         try:
             expr = normalizeExpr(expr)
-            exec expr in self.dm
+            _expr_exec(expr, self.dm)
         except Exception, e:
             self.logger.error("Exception while executing expression in a script block: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
@@ -502,7 +495,7 @@ class Compiler(object):
         expr = unescape(expr)
         
         try:
-            return eval(expr, self.dm)
+            return _expr_eval(expr, self.dm)
         except Exception, e:
             if throwErrors:
                 raise e
@@ -519,7 +512,11 @@ class Compiler(object):
             self.dm[node.get("idlocation")] = invokeid
         
         def start_invoke(wrapper):
-            inv = self.parseInvoke(node)
+            try:
+                inv = self.parseInvoke(node)
+            except Exception, e:
+                self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
+                return
             wrapper.set_invoke(inv)
             self.dm[inv.invokeid] = inv
             dispatcher.connect(self.onInvokeSignal, "init.invoke." + invokeid, inv)
@@ -557,7 +554,7 @@ class Compiler(object):
         elif type == "x-pyscxml-httpserver":
             inv = InvokeHTTP()
         else:
-            raise NotImplementedError
+            raise NotImplementedError("The invoke type '%s' is not supported by the platform." % type)
             
         inv.src = src
         inv.autoforward = node.get("autoforward", "false").lower() == "true"
