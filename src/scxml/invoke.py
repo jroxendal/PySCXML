@@ -34,6 +34,7 @@ class InvokeWrapper(object):
     def __init__(self, id):
         self.logger = logging.getLogger("pyscxml.invoke.%s" % type(self).__name__)
         self.invoke = lambda: None
+        self.cancel = lambda x: None
         self.invokeid = id
         self.invoke_obj = None
         
@@ -99,7 +100,7 @@ class InvokeSCXML(BaseFetchingInvoke):
     
     def _start(self, doc):
         from pyscxml import StateMachine
-        self.sm = StateMachine(doc, sessionid=self.parentSession + "." + self.invokeid)
+        self.sm = StateMachine(doc, sessionid=self.invokeid)
         
         self.sm.start_threaded(self.parentQueue, self.invokeid)
         dispatcher.send("init.invoke." + self.invokeid, self)

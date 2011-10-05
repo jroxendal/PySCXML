@@ -73,7 +73,8 @@ handler_mapping = {}
 
 class PySCXMLServer(object):
     
-    def __init__(self, host, port, default_scxml_doc=None, server_type=TYPE_DEFAULT, init_sessions={}):
+    def __init__(self, host, port, default_scxml_doc=None, server_type=TYPE_DEFAULT, 
+                 init_sessions={}, session_path="/"):
         '''
         @param host: the hostname on which to serve.
         @param port: the port on which to serve.
@@ -109,6 +110,7 @@ class PySCXMLServer(object):
         
         
         '''
+        self.session_path = session_path.strip("/") + "/"
         self.server_type = server_type
         assert not (self.is_type(TYPE_DEFAULT) and self.is_type(TYPE_RESPONSE))
         self.logger = logging.getLogger("pyscxml.pyscxml_server")
@@ -148,11 +150,11 @@ class PySCXMLServer(object):
         return sm
     
     def set_processors(self, sm):
-        sm.datamodel["_ioprocessors"] = dict( (type, "http://%s:%s/%s/%s" % (self.host, self.port, sm.datamodel["_sessionid"], type) )  
+        sm.datamodel["_ioprocessors"] = dict( (type, "http://%s:%s/%s%s/%s" % (self.host, self.port, self.session_path, sm.datamodel["_sessionid"], type) )  
                                               for type in handler_mapping)
         
         if self.is_type(TYPE_WEBSOCKET):
-            sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s/websocket" % (self.host, self.port, sm.datamodel["_sessionid"])
+            sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s%s/websocket" % (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])
     
     
     def websocket_handler(self, ws, environ):
@@ -227,28 +229,28 @@ class PySCXMLServer(object):
                 start_response(status, headers.items())
             elif self.is_type(TYPE_RESPONSE):
                 sm.interpreter.externalQueue.put(event)
-                if type != "sse":
-                    output, headers = sm.datamodel["_response"].get() #blocks
-                    start_response(status, headers.items())
-                    output = output["content"].strip() if "content" in output else output
-                else:
-                    output, headers = sm.datamodel["_response"].get() #blocks
-                    
-                    start_response(status, headers.items())
-                    content = output["content"].strip() if "content" in output else output
-                    def gen():
-                        output = content
-                        print repr(output) 
-                        yield output
-                        yield "data:hello\n"
-                        print "after"
-                        while output != "\n\n":
-                            output, headers = sm.datamodel["_response"].get() #blocks
-                            print output
-                            yield output["content"].strip() if "content" in output else output
-                        yield output
-                        
-                    return gen()
+#                if type != "sse":
+                output, headers = sm.datamodel["_response"].get() #blocks
+                start_response(status, headers.items())
+                output = output["content"].strip() if "content" in output else output
+#                else:
+#                    output, headers = sm.datamodel["_response"].get() #blocks
+#                    
+#                    start_response(status, headers.items())
+#                    content = output["content"].strip() if "content" in output else output
+#                    def gen():
+#                        output = content
+#                        print repr(output) 
+#                        yield output
+#                        yield "data:hello\n"
+#                        print "after"
+#                        while output != "\n\n":
+#                            output, headers = sm.datamodel["_response"].get() #blocks
+#                            print output
+#                            yield output["content"].strip() if "content" in output else output
+#                        yield output
+#                        
+#                    return gen()
 #                        write([output])
                         
                     
@@ -298,9 +300,9 @@ def type_scxml(session, data, sm, environ):
         event = Processor.fromxml(data["request"])
     return event
 
-@ioprocessor("sse")
-def type_sse(*args):
-    return Event(["sse", "connect"])
+#@ioprocessor("sse")
+#def type_sse(*args):
+#    return Event(["sse", "connect"])
         
 
 if __name__ == "__main__":

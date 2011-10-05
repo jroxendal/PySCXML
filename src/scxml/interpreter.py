@@ -61,13 +61,6 @@ class Interpreter(object):
         self.dm = self.doc.datamodel
         self.dm["In"] = self.In
         self.dm["_parent"] = optionalParentExternalQueue
-#        if invokeId:
-#            print invokeId, self.dm["_sessionid"]
-#            self.dm["_invokeid"] = invokeId
-#            self.logger = logging.getLogger("pyscxml.%s.interpreter" % (invokeId) )
-#        else:
-#        if not invokeId:
-#            self.logger = logging.getLogger("pyscxml.%s.interpreter" % self.dm["_sessionid"] )
 
         self.invokeId = invokeId
         
@@ -123,14 +116,6 @@ class Interpreter(object):
                         self.applyFinalize(inv, externalEvent)
                     if inv.autoforward:
                         inv.send(externalEvent)
-            
-#            if externalEvent.invokeid:
-#                for state in self.configuration:
-#                    for inv in state.invoke:
-#                        if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
-#                            self.applyFinalize(inv, externalEvent)
-#                        if inv.autoforward:
-#                            inv.send(externalEvent.name, None, 0, externalEvent.data);
             
             enabledTransitions = self.selectTransitions(externalEvent)
             if enabledTransitions:
@@ -192,38 +177,16 @@ class Interpreter(object):
                         enabledTransitions.add(t)
                         done = True
                         break
-        enabledTransitions = self.filterPreempted(enabledTransitions)
-        return enabledTransitions
+        filteredTransitions = self.filterPreempted(enabledTransitions)
+        return filteredTransitions
     
     
-#    def selectTransitions(self, event):
-#        enabledTransitions = OrderedSet()
-#        atomicStates = filter(isAtomicState, self.configuration)
-#        atomicStates = sorted(atomicStates, key=documentOrder)
-#        for state in atomicStates:
-#            if not self.isPreempted(state, enabledTransitions):
-#                done = False
-#                for s in [state] + getProperAncestors(state, None):
-#                    if done: break
-#                    for t in s.transition:
-#                        if t.event and nameMatch(t.event, event.name) and self.conditionMatch(t):
-#                            enabledTransitions.add(t)
-#                            done = True
-#                            break 
-#        return enabledTransitions
-
-#        flatten = partial(reduce, operator.concat)
-#        
-#        allAncestors = flatten(map(lambda s: [s] + getProperAncestors(s, None), atomicStates))
-#        allTransitions = flatten(map(lambda s: s.t, allAncestors))
-#        relevantTransitions = filter(lambda t: t.event and nameMatch(t.event, event.name) and self.conditionMatch(t))
     def selectTransitions(self, event):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
         atomicStates = sorted(atomicStates, key=documentOrder)
 
         for state in atomicStates:
-#            if not self.isPreempted(state, enabledTransitions):
             done = False
             for s in [state] + getProperAncestors(state, None):
                 if done: break
@@ -233,8 +196,9 @@ class Interpreter(object):
                         done = True
                         break
                     
-        enabledTransitions = self.filterPreempted(enabledTransitions)
-        return enabledTransitions
+        filteredTransitions = self.filterPreempted(enabledTransitions)
+        
+        return filteredTransitions
     
     
     def getStatesToExit(self, transition):
@@ -250,20 +214,20 @@ class Interpreter(object):
                 if isDescendant(s,ancestor):
                     statesToExit.add(s)
         return statesToExit
+
+    def preemptsTransition(self, t, t2):
+        return bool(set(self.getStatesToExit(t)).intersection(self.getStatesToExit(t2)))
+    
     
     def filterPreempted(self, enabledTransitions):
-        if not enabledTransitions: return OrderedSet() 
-        filtered = [enabledTransitions[0]]
-        while enabledTransitions:
-            t = enabledTransitions.pop(0)
-#            remainder = filter(partial(self.preemptsTransition, t), enabledTransitions) 
-            remainder = filter(lambda t2: self.preemptsTransition(t, t2), enabledTransitions)
-            filtered.extend(remainder)
+        filteredTransitions = []
+        for t in enabledTransitions:
+            # does any t2 in filteredTransitions preempt t? if not, add t to filteredTransitions
+            if not any(map(lambda t2: self.preemptsTransition(t2, t), filteredTransitions)):
+                filteredTransitions.append(t)
         
-        return OrderedSet(filtered)
+        return OrderedSet(filteredTransitions)
     
-    def preemptsTransition(self, t, t2):
-        return not bool(set(self.getStatesToExit(t)).intersection(self.getStatesToExit(t2))) 
     
 #    def isPreempted(self, s, transitionList):
 #        preempted = False

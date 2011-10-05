@@ -266,11 +266,11 @@ __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor", 
 if __name__ == "__main__":
     
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
-#    xml = open("../../resources/colors.xml").read()
+    xml = open("../../unittest_xml/colors.xml").read()
 #    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
 #    xml = open("../../unittest_xml/parallel3.xml").read()
-#    xml = open("../../w3c_tests/test338.scxml").read()
+    xml = open("../../w3c_tests/testPreemption2.scxml").read()
 #    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     
     
 #    xml = open("../../resources/preemption.xml").read()
-    xml = '''
+    xml2 = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml">
         <state>
             <invoke id="i" type="lol">
