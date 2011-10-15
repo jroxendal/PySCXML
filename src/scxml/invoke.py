@@ -31,18 +31,18 @@ import logging
 
 class InvokeWrapper(object):
     
-    def __init__(self, id):
+    def __init__(self):
         self.logger = logging.getLogger("pyscxml.invoke.%s" % type(self).__name__)
         self.invoke = lambda: None
-        self.cancel = lambda x: None
-        self.invokeid = id
+        self.cancel = lambda: None
         self.invoke_obj = None
+        self.autoforward = False
         
     def set_invoke(self, inv):
         inv.logger = self.logger
         self.invoke_obj = inv
-        inv.invokeid = self.invokeid
-        self.autoforward = inv.autoforward
+        self.invokeid = inv.invokeid 
+        inv.autoforward = self.autoforward 
         self.cancel = inv.cancel
         self.send = getattr(inv, "send", None)
         
@@ -85,11 +85,13 @@ class BaseFetchingInvoke(BaseInvoke):
     
 
 class InvokeSCXML(BaseFetchingInvoke):
-    def __init__(self):
+    def __init__(self, data):
         BaseFetchingInvoke.__init__(self)
         self.sm = None
         self.parentQueue = None
         self.content = None
+        self.initData = data
+        self.cancelled = False
     
     def start(self, parentQueue):
         self.parentQueue = parentQueue
@@ -99,11 +101,12 @@ class InvokeSCXML(BaseFetchingInvoke):
             self._start(self.content)
     
     def _start(self, doc):
+        if self.cancelled: return
         from pyscxml import StateMachine
         self.sm = StateMachine(doc, sessionid=self.invokeid)
-        
+        self.sm.datamodel.update(self.initData)
         self.sm.start_threaded(self.parentQueue, self.invokeid)
-        dispatcher.send("init.invoke." + self.invokeid, self)
+#        dispatcher.send("init.invoke." + self.invokeid, self)
     
     def send(self, eventobj):
         self.sm.interpreter.externalQueue.put(eventobj)
@@ -113,6 +116,8 @@ class InvokeSCXML(BaseFetchingInvoke):
         self._start(result)
         
     def cancel(self):
+        self.cancelled = True
+        if not self.sm: return;
         self.sm.interpreter.g_continue = False
         self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
     

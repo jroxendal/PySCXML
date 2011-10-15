@@ -59,7 +59,7 @@ class StateMachine(object):
         self.compiler.logger = logging.getLogger("pyscxml.%s.compiler" % self.sessionid)
         self.doc = self.compiler.parseXML(xml, self.interpreter)
         self.doc.datamodel["_x"] = {"self" : self}
-        self.doc.datamodel["_sessionid"] = sessionid 
+        self.doc.datamodel["_sessionid"] = self.sessionid 
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
         
@@ -122,15 +122,15 @@ class StateMachine(object):
 #    
 #    sessionid = property(_sessionid_getter, _sessionid_setter)
     
-    def on_exit(self, sender):
+    def on_exit(self, sender, final):
         with self._lock:
             if sender is self.interpreter:
                 self.is_finished = True
-                for timer in self.compiler.timer_mapping.items():
+                for timer in self.compiler.timer_mapping.values():
                     timer.cancel()
                     del timer
                 dispatcher.disconnect(self, "signal_exit", self.interpreter)
-                dispatcher.send("signal_exit", self)
+                dispatcher.send("signal_exit", self, final=final)
     
     def __enter__(self):
         self.start_threaded()
@@ -271,6 +271,7 @@ if __name__ == "__main__":
 #    xml = open("../../resources/foreach.xml").read()
 #    xml = open("../../unittest_xml/parallel3.xml").read()
     xml = open("../../w3c_tests/testPreemption2.scxml").read()
+    xml = open("../../w3c_tests/assertions/failed/test187sub1.xml").read()
 #    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()

@@ -33,6 +33,8 @@ from xml.parsers.expat import ExpatError
 from threading import Timer
 from StringIO import StringIO
 from xml.etree import ElementTree, ElementInclude
+import time
+import md5
     
 
 try: 
@@ -200,7 +202,7 @@ class Compiler(object):
                 self.do_execute_content(execList)
                 break
     
-    def parseData(self, child):
+    def parseData(self, child, getContent=True):
         '''
         Given a parent node, returns a data object corresponding to 
         its param child nodes, namelist attribute or content child element.
@@ -219,7 +221,7 @@ class Compiler(object):
             for name in child.get("namelist").split(" "):
                 output[name] = self.getExprValue(name, True)
         
-        if child.find(prepend_ns("content")) != None:
+        if getContent and child.find(prepend_ns("content")) != None:
             output = template(child.find(prepend_ns("content")).text, self.dm)
 #        if child.find(pyscxml_ns + "tmpl") != None:
 #            output = template(child.find(pyscxml_ns + "tmpl").text, self.dm)
@@ -232,17 +234,20 @@ class Compiler(object):
             try:
                 n, unit = re.search("(\d+)(\w+)", delay).groups()
                 assert unit in ("s", "ms") 
-            except AttributeError, AssertionError:
+            except (AttributeError, AssertionError):
                 e = RuntimeError("Line %s: delay format error: the delay attribute should be " 
                 "specified using the CSS time format, you supplied the faulty value: %s" % (sendNode.lineno, delay))
                 self.logger.error(str(e))
                 self.raiseError("error.execution.send.delay", e)
                 return
             delay = float(n) if unit == "s" else float(n) / 1000
+            gen_id = "send_id_" + str(id(sendNode))
+            sendid = sendNode.get("id", gen_id)
+            if sendNode.get("idlocation"):
+                self.dm[sendNode.get("idlocation")] = gen_id 
             if delay:
                 t = Timer(delay, self.parseSend, args=(sendNode, True))
-                if sendNode.get("id"):
-                    self.timer_mapping[sendNode.get("id")] = t
+                self.timer_mapping[sendid] = t
                 t.start()
                 return 
         
@@ -250,6 +255,7 @@ class Compiler(object):
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None
         eventstr = ".".join(event) if event else "" 
         target = self.parseAttr(sendNode, "target")
+        if target == "#_response": type = "x-pyscxml-response"
         try:
             data = self.parseData(sendNode)
         except Exception, e:
@@ -267,10 +273,13 @@ class Compiler(object):
 #            self.raiseError("error.execution.hints", e)
         scxmlSendType = ("http://www.w3.org/TR/scxml/#SCXMLEventProcessor", "scxml")
         httpSendType = ("http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor", "basichttp")
-        if type in scxmlSendType:
-            if not target:
-                self.interpreter.send(event, data)
-            elif target == "#_parent":
+        if not target:
+            #TODO: a shortcut, we're sending without eventprocessors no matter 
+            # the send type if the target is self. This might break conformance.
+            # see test 201.
+            self.interpreter.send(event, data)
+        elif type in scxmlSendType:
+            if target == "#_parent":
                 self.interpreter.send(event, 
                                       data, 
                                       self.interpreter.invokeId, 
@@ -321,10 +330,10 @@ class Compiler(object):
                 
                 getter.get_sync(target, {"_content" : eventXML})
                 
-#            else:
-#                e = RuntimeError("Line %s: The send target '%s' is malformed or unsupported by the platform." % (sendNode.lineno, target))
-#                self.logger.error(str(e))
-#                self.raiseError("error.send.target", e)
+            else:
+                e = RuntimeError("Line %s: The send target '%s' is malformed or unsupported by the platform." % (sendNode.lineno, target))
+                self.logger.error(str(e))
+                self.raiseError("error.execution.target", e)
             
         elif type in httpSendType:
             
@@ -343,14 +352,7 @@ class Compiler(object):
                 self.logger.error(str(e))
                 self.raiseError("error.execution." + type(e).__name__.lower(), e) 
         
-        # this is where to add parsing for more send types. 
-        else:
-            e = RuntimeError("Line %s: The send type %s is invalid or unsupported by the platform" % (sendNode.lineno, type))
-            self.logger.error(str(e))
-            self.raiseError("error.send.type", e)
-        
-        # send with variable type
-        if target == "#_response":
+        elif type == "x-pyscxml-response":
             self.logger.debug("sending to _response")
             headers = data.pop("headers") if "headers" in data else {} 
 #                if type == "scxml": headers["Content-Type"] = "text/xml"
@@ -361,6 +363,14 @@ class Compiler(object):
                 data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"], sendNode.get("id", ""), language="json")    
                 headers["Content-Type"] = "text/xml" 
             self.dm["_response"].put((data, headers))
+            
+        
+        # this is where to add parsing for more send types. 
+        else:
+            e = RuntimeError("Line %s: The send type %s is invalid or unsupported by the platform" % (sendNode.lineno, type))
+            self.logger.error(str(e))
+            self.raiseError("error.execution.type", e)
+        
     
     def getUrlGetter(self, target):
         getter = UrlGetter()
@@ -457,7 +467,7 @@ class Compiler(object):
                 parentState.addTransition(t)
     
             elif node_tag == "invoke":
-                parentState.addInvoke(self.make_invoke_wrapper(node, parentState.id))
+                parentState.addInvoke(self.make_invoke_wrapper(node, parentState.id, n))
             elif node_tag == "onentry":
                 s = Onentry()
                 
@@ -505,28 +515,28 @@ class Compiler(object):
                 self.raiseError("error.execution." + type(e).__name__.lower(), e)
             return None
     
-    def make_invoke_wrapper(self, node, parentId):
-        invokeid = node.get("id")
-        if not invokeid:
-            invokeid = parentId + "." + self.dm["_sessionid"]
-            self.dm[node.get("idlocation")] = invokeid
+    def make_invoke_wrapper(self, node, parentId, n):
         
         def start_invoke(wrapper):
             try:
-                inv = self.parseInvoke(node)
+                inv = self.parseInvoke(node, parentId, n)
             except Exception, e:
-                self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
-                return
+                #TODO: let's crash for now.
+                raise e
+#                self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
+#                return
             wrapper.set_invoke(inv)
+            
             self.dm[inv.invokeid] = inv
-            dispatcher.connect(self.onInvokeSignal, "init.invoke." + invokeid, inv)
-            dispatcher.connect(self.onInvokeSignal, "result.invoke." + invokeid, inv)
-            dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "init.invoke." + inv.invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "result.invoke." + inv.invokeid, inv)
+            dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + inv.invokeid, inv)
             
             inv.start(self.interpreter.externalQueue)
             
-        wrapper = InvokeWrapper(invokeid)
+        wrapper = InvokeWrapper()
         wrapper.invoke = start_invoke
+        wrapper.autoforward = node.get("autoforward", "false").lower() == "true"
         
         return wrapper
     
@@ -537,12 +547,18 @@ class Compiler(object):
             return
         self.interpreter.send(signal, data=kwargs.get("data", {}), invokeid=sender.invokeid)  
     
-    def parseInvoke(self, node):
+    def parseInvoke(self, node, parentId, n):
+        invokeid = node.get("id")
+        if not invokeid:
+            invokeid = parentId + "." + str(n)
+            self.dm[node.get("idlocation")] = invokeid
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
+        data = self.parseData(node, getContent=False)
         contentNode = node.find(prepend_ns("content"))
-        if type == "scxml": # here's where we add more invoke types. 
-            inv = InvokeSCXML()
+        scxmlType = ["http://www.w3.org/TR/scxml", "scxml"]
+        if type.strip("/") in scxmlType: 
+            inv = InvokeSCXML(data)
             if contentNode != None and len(contentNode) == 0 and contentNode.text.strip():
                 inv.content = template(contentNode.text, self.dm)
                 # TODO: support non-cdata content child, but fix datamodel init first. 
@@ -555,12 +571,11 @@ class Compiler(object):
             inv = InvokeHTTP()
         else:
             raise NotImplementedError("The invoke type '%s' is not supported by the platform." % type)
-            
+        inv.invokeid = invokeid
         inv.src = src
-        inv.autoforward = node.get("autoforward", "false").lower() == "true"
         inv.type = type   
         inv.parentSession = self.dm["_sessionid"]
-         
+        
         finalizeNode = node.find(prepend_ns("finalize")) 
         if finalizeNode != None and node.find(prepend_ns("param")) != None:
             paramList = node.findall(prepend_ns("param"))
@@ -591,7 +606,7 @@ class Compiler(object):
     
     def setDatamodel(self, tree):
         for data in tree.getiterator(prepend_ns("data")):
-            self.dm[data.get("id")] = None
+            self.dm.setdefault(data.get("id"), None)
         if self.doc.binding == "early":
             self.setDataList(tree.getiterator(prepend_ns("data")))
         else:
@@ -601,20 +616,25 @@ class Compiler(object):
     
     def setDataList(self, datalist):
         for node in datalist:
-            self.dm[node.get("id")] = None
+            key = node.get("id")
+            value = None
             if node.get("expr"):
-                self.dm[node.get("id")] = self.getExprValue(node.get("expr"))
+                value = self.getExprValue(node.get("expr"))
             elif node.get("src"):
                 try:
-                    self.dm[node.get("id")] = urlopen(node.get("src")).read()
+                    value = urlopen(node.get("src")).read()
                 except ValueError:
-                    self.dm[node.get("id")] = open(node.get("src")).read()
+                    value = open(node.get("src")).read()
                 except Exception, e:
                     self.logger.error("Data src not found : '%s'\n" % node.get("src"))
                     self.logger.error("%s: %s\n" % (type(e).__name__, str(e)) )
                     raise e
             elif node.text:
-                self.dm[node.get("id")] = template(node.text, self.dm)
+                value = template(node.text, self.dm)
+            #TODO: should we be overwriting values here? see test 226.
+            if not self.dm.get(key): self.dm[key] = value
+#            self.dm.setdefault(key, value)
+#            self.dm[key] = value
             
     def addDefaultNamespace(self, xmlStr):
         if not ElementTree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":
@@ -652,7 +672,7 @@ def preprocess(tree):
     
     for n, parent, node in iter_elems(tree):
         node_ns, node_tag = split_ns(node)
-        if node_tag in ["state", "parallel", "final", "invoke", "history"] and not node.get("id"):
+        if node_tag in ["state", "parallel", "final", "history"] and not node.get("id"):
             id = parent.get("id") + "_%s_child_%s" % (node_tag, n)
             node.set('id',id)
             

@@ -143,26 +143,45 @@ class Interpreter(object):
         self.exitInterpreter()  
          
     
+#    def exitInterpreter(self):
+#        inFinalState = False
+#        statesToExit = sorted(self.configuration, key=exitOrder)
+#
+#        for s in statesToExit:
+#            for content in s.onexit:
+#                self.executeContent(content)
+#            for inv in s.invoke:
+#                self.cancelInvoke(inv)
+#            if isFinalState(s) and isScxmlState(s.parent):
+#                inFinalState = True
+#                doneData = s.donedata()
+#            self.configuration.delete(s)
+#        if inFinalState:
+#            if self.invokeId and self.dm["_parent"]:
+#                self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], doneData))
+#            self.logger.info("Exiting interpreter")
+#            
+#        dispatcher.send("signal_exit", self)
+        
+        
     def exitInterpreter(self):
-        inFinalState = False
         statesToExit = sorted(self.configuration, key=exitOrder)
-
         for s in statesToExit:
             for content in s.onexit:
                 self.executeContent(content)
             for inv in s.invoke:
                 self.cancelInvoke(inv)
-            if isFinalState(s) and isScxmlState(s.parent):
-                inFinalState = True
-                doneData = s.donedata()
             self.configuration.delete(s)
-        if inFinalState:
-            if self.invokeId and self.dm["_parent"]:
-                self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], doneData))
-            self.logger.info("Exiting interpreter")
+            if isFinalState(s) and isScxmlState(s.parent):
+                if self.invokeId and self.dm["_parent"]:
+                    self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], s.donedata()))   
+                self.logger.info("Exiting interpreter")
+                dispatcher.send("signal_exit", self, final=s.id)
+                return
+        
+        dispatcher.send("signal_exit", self, final=None)
             
-        dispatcher.send("signal_exit", self)
-    
+        
     def selectEventlessTransitions(self):
         enabledTransitions = OrderedSet()
         atomicStates = filter(isAtomicState, self.configuration)
