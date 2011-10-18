@@ -29,7 +29,7 @@ from time import time, sleep
 def default_logfunction(label, msg):
     label = label or ""
     msg = msg or ""
-    print "%s%s%s" % (label, ": " if label and msg else "", msg)
+    print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 
 
 class StateMachine(object):
@@ -46,13 +46,13 @@ class StateMachine(object):
         generated if not provided.
         '''
 
-        self.is_finished = False
         self._lock = RLock()
+        self.is_finished = False
         # makes sure the scxml done event reaches this class. 
         self.compiler = compiler.Compiler()
         self.compiler.log_function = log_function
         
-        self.sessionid = sessionid or "pyscxml_session_" + str(int(time() * 1000))
+        self.sessionid = sessionid or "pyscxml_session_" + str(id(self))
         self.interpreter = Interpreter()
         dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
         self.interpreter.logger = logging.getLogger("pyscxml.%s.interpreter" % self.sessionid)
@@ -70,9 +70,10 @@ class StateMachine(object):
             
     def start(self, parentQueue=None, invokeid=None):
         '''Takes the statemachine to its initial state'''
-        if not self.interpreter.g_continue:
-            raise RuntimeError("The StateMachine instance may only be started once.")
-        self._start(parentQueue, invokeid)
+        with self._lock:
+            if not self.interpreter.g_continue:
+                raise RuntimeError("The StateMachine instance may only be started once.")
+            self._start(parentQueue, invokeid)
         self.interpreter.mainEventLoop()
     
     def start_threaded(self, parentQueue=None, invokeid=None):
@@ -133,7 +134,7 @@ class StateMachine(object):
                 dispatcher.send("signal_exit", self, final=final)
     
     def __enter__(self):
-        self.start_threaded()
+        self.start()
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
@@ -270,8 +271,8 @@ if __name__ == "__main__":
 #    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
 #    xml = open("../../unittest_xml/parallel3.xml").read()
-    xml = open("../../w3c_tests/testPreemption2.scxml").read()
-    xml = open("../../w3c_tests/assertions/failed/test187sub1.xml").read()
+#    xml = open("../../w3c_tests/testPreemption2.scxml").read()
+#    xml = open("../../w3c_tests/assertions/failed/test187sub1.xml").read()
 #    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
@@ -281,7 +282,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.NOTSET)
     
     
-#    xml = open("../../resources/preemption.xml").read()
+    sm = StateMachine(open("../../unittest_xml/invoke.xml").read())
+    sm.start()
+    
     xml2 = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml">
         <state>
@@ -300,10 +303,10 @@ if __name__ == "__main__":
     </scxml>
     '''
     
-    with StateMachine(xml) as sm:
-        pass
-#    sm = StateMachine(xml)
-#    sm.start()
+#    with StateMachine(xml) as sm:
+#        sm.send("hello")
+    sm = StateMachine(xml)
+    sm.start()
 #        sm.send("e")
     
 #    sm = StateMachine(xml)

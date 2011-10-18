@@ -9,6 +9,9 @@
 					</datamodel>
 					
 					<state>
+                        <onentry>
+                            <send event="init" target="#_parent" />
+                        </onentry>
 						<transition event="calculate" target="loop">
 							<assign location="x" expr="_event.data['val']" />
 						</transition>
@@ -31,7 +34,7 @@
 				</scxml>
 			</content>
 		</invoke>
-		<transition event="init.invoke">
+		<transition event="init">
             <log label="init" />
 			<send type="scxml" target="#_i" event="calculate">
 				<param name="val" expr="6" />

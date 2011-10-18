@@ -26,7 +26,7 @@ from functools import partial
 from xml.sax.saxutils import unescape
 from messaging import UrlGetter
 from louie import dispatcher
-from urllib2 import urlopen
+from urllib2 import urlopen, URLError
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import *
 from xml.parsers.expat import ExpatError
@@ -34,7 +34,6 @@ from threading import Timer
 from StringIO import StringIO
 from xml.etree import ElementTree, ElementInclude
 import time
-import md5
     
 
 try: 
@@ -79,11 +78,20 @@ class Compiler(object):
         self.dm["_websocket"] = Queue.Queue()
         
 #        self.setSessionId()
+        # used by data passed to invoked processes
+        self.initData = {}
         
         self.log_function = None
         self.strict_parse = False
         self.timer_mapping = {}
         self.instantiate_datamodel = None
+        
+        
+        def dataModelErrorCallback(key, value):
+            e = DataModelError("The field %s in the datamodel cannot be modified." % key)
+            self.raiseError("error.execution.datamodelerror", e)
+            
+        self.dm.errorCallback = dataModelErrorCallback
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -255,6 +263,9 @@ class Compiler(object):
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None
         eventstr = ".".join(event) if event else "" 
         target = self.parseAttr(sendNode, "target")
+        sendid = sendNode.get("id")
+        #TODO: what about event.origin and the others?
+        defaultSend = partial(self.interpreter.send, sendid=sendid)
         if target == "#_response": type = "x-pyscxml-response"
         try:
             data = self.parseData(sendNode)
@@ -277,21 +288,21 @@ class Compiler(object):
             #TODO: a shortcut, we're sending without eventprocessors no matter 
             # the send type if the target is self. This might break conformance.
             # see test 201.
-            self.interpreter.send(event, data)
+            defaultSend(event, data)
         elif type in scxmlSendType:
             if target == "#_parent":
-                self.interpreter.send(event, 
-                                      data, 
-                                      self.interpreter.invokeId, 
-                                      toQueue=self.dm["_parent"])
+                defaultSend(event, 
+                              data, 
+                              self.interpreter.invokeId, 
+                              toQueue=self.dm["_parent"])
             elif target == "#_internal":
-                self.interpreter.raiseFunction(event, data)
+                self.interpreter.raiseFunction(event, data, sendid=sendid)
                 
             elif target.startswith("#_scxml_"): #sessionid
                 sessionid = target.split("#_scxml_")[-1]
                 try:
                     toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
-                    self.interpreter.send(event, data, toQueue=toQueue)
+                    defaultSend(event, data, toQueue=toQueue)
                 except KeyError:
                     e = RuntimeError("Line %s: The session '%s' is inaccessible." % (sendNode.lineno, sessionid))
                     self.logger.error(str(e))
@@ -310,14 +321,15 @@ class Compiler(object):
             elif target.startswith("#_") and not target == "#_response": # invokeid
                 try:
                     inv = self.dm[target[2:]]
-                    evt = Event(event, data, self.interpreter.invokeId)
-                    evt.origin = self.dm["_sessionid"]
-                    evt.origintype = "scxml"
-                    inv.send(evt)
-                except Exception:
+                except KeyError:
                     e = RuntimeError("Line %s: No valid target at '%s'." % (sendNode.lineno, target[2:]))
                     self.logger.error(str(e))
                     self.raiseError("error.communication", e)
+                evt = Event(event, data, self.interpreter.invokeId)
+                evt.origin = self.dm["_sessionid"]
+                evt.origintype = "scxml"
+                evt.sendid = sendid
+                inv.send(evt)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 try:
@@ -420,9 +432,23 @@ class Compiler(object):
                 s = State(node.get("id"), None, n)
                 s.initial = self.parseInitial(node)
                 self.doc.name = node.get("name", "")
-                    
-                if node.find(prepend_ns("script")) != None:
-                    self.execExpr(node.find(prepend_ns("script")).text)
+                if "name" in node.attrib:
+                    self.dm["_name"] = node.get("name")
+                scriptChild = node.find(prepend_ns("script"))
+                if scriptChild != None:
+                    src = ""
+                    if scriptChild.get("src"):
+                        try:
+                            src = urlopen(scriptChild.get("src")).read()
+                        except URLError, e:
+                            msg = ("A URL error in a top level script element at line %s "
+                            "prevented the document from executing. Error: %s") % (scriptChild.lineno, e)
+                            
+                            raise ScriptFetchError(msg)
+                            
+                    else:
+                        src = node.find(prepend_ns("script")).text
+                    self.execExpr(src)
                 self.doc.rootState = s    
                 
             elif node_tag == "state":
@@ -580,9 +606,9 @@ class Compiler(object):
         if finalizeNode != None and node.find(prepend_ns("param")) != None:
             paramList = node.findall(prepend_ns("param"))
             def f():
-                for param in (p for p in paramList if not p.get("expr")): # get all param nodes without the expr attr
-                    if param.get("name") in self.dm["_event"].data:
-                        self.dm[param.get("name")] = self.dm["_event"].data[param.get("name")]
+                for param in (p for p in paramList if p.get("location")): # get all param nodes without the expr attr
+                    if param.get("location") in self.dm["_event"].data:
+                        self.dm[param.get("location")] = self.dm["_event"].data[param.get("location")]
             inv.finalize = f
         elif finalizeNode != None:
             inv.finalize = partial(self.do_execute_content, finalizeNode)
@@ -606,12 +632,14 @@ class Compiler(object):
     
     def setDatamodel(self, tree):
         for data in tree.getiterator(prepend_ns("data")):
-            self.dm.setdefault(data.get("id"), None)
+            self.dm[data.get("id")] = None
         if self.doc.binding == "early":
             self.setDataList(tree.getiterator(prepend_ns("data")))
         else:
             if tree.find(prepend_ns("datamodel")) is not None:
                 self.setDataList(tree.find(prepend_ns("datamodel")))
+        for key, value in self.initData.items():
+            if key in self.dm: self.dm[key] = value
             
     
     def setDataList(self, datalist):
@@ -632,9 +660,9 @@ class Compiler(object):
             elif node.text:
                 value = template(node.text, self.dm)
             #TODO: should we be overwriting values here? see test 226.
-            if not self.dm.get(key): self.dm[key] = value
+#            if not self.dm.get(key): self.dm[key] = value
 #            self.dm.setdefault(key, value)
-#            self.dm[key] = value
+            self.dm[key] = value
             
     def addDefaultNamespace(self, xmlStr):
         if not ElementTree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":
@@ -723,4 +751,10 @@ class ParseError(Exception):
     pass
 
 class ExprEvalError(Exception):
+    pass
+
+class ScriptFetchError(Exception):
+    pass
+
+class DataModelError(Exception):
     pass

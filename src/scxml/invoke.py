@@ -104,12 +104,16 @@ class InvokeSCXML(BaseFetchingInvoke):
         if self.cancelled: return
         from pyscxml import StateMachine
         self.sm = StateMachine(doc, sessionid=self.invokeid)
-        self.sm.datamodel.update(self.initData)
+        self.sm.compiler.initData = self.initData
+#        self.sm.datamodel.update(self.initData)
         self.sm.start_threaded(self.parentQueue, self.invokeid)
 #        dispatcher.send("init.invoke." + self.invokeid, self)
     
     def send(self, eventobj):
-        self.sm.interpreter.externalQueue.put(eventobj)
+        #TODO: why can self.sm be None here?
+#        if not self.sm or self.sm.isFinished():
+        if not self.sm.isFinished():
+            self.sm.interpreter.externalQueue.put(eventobj)
     
     def onHttpResult(self, signal, result, **named):
         self.logger.debug("onHttpResult " + str(named))

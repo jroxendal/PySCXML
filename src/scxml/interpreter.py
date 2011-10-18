@@ -49,10 +49,10 @@ class Interpreter(object):
         self.historyValue = {}
         self.dm = None
         self.invokeId = None
-        
+        self.n = 0
 #        self.timerDict = {}
         self.logger = None
-        
+    
     
     def interpret(self, document, optionalParentExternalQueue=None, invokeId=None):
         '''Initializes the interpreter given an SCXMLDocument instance'''
@@ -87,7 +87,7 @@ class Interpreter(object):
                     
                     self.logger.info("internal event found: %s", internalEvent.name)
                     
-                    self.dm["_event"] = internalEvent
+                    self.dm["__event"] = internalEvent
                     enabledTransitions = self.selectTransitions(internalEvent)
             if enabledTransitions:
                 self.microstep(list(enabledTransitions))
@@ -108,7 +108,7 @@ class Interpreter(object):
             
             self.logger.info("external event found: %s", externalEvent.name)
             
-            self.dm["_event"] = externalEvent
+            self.dm["__event"] = externalEvent
             
             for state in self.configuration:
                 for inv in state.invoke:
@@ -133,7 +133,7 @@ class Interpreter(object):
                             
                             self.logger.info("internal event found: %s", internalEvent.name)
                             
-                            self.dm["_event"] = internalEvent
+                            self.dm["__event"] = internalEvent
                             enabledTransitions = self.selectTransitions(internalEvent)
     
                     if enabledTransitions:
@@ -174,7 +174,10 @@ class Interpreter(object):
             self.configuration.delete(s)
             if isFinalState(s) and isScxmlState(s.parent):
                 if self.invokeId and self.dm["_parent"]:
-                    self.dm["_parent"].put(Event(["done", "invoke", self.invokeId], s.donedata()))   
+                    evt = Event(["done", "invoke", self.invokeId], s.donedata())
+                    evt.origintype = "scxml"
+                    evt.invokeid = self.invokeId
+                    self.dm["_parent"].put(evt)   
                 self.logger.info("Exiting interpreter")
                 dispatcher.send("signal_exit", self, final=s.id)
                 return
@@ -415,7 +418,7 @@ class Interpreter(object):
         return name in map(lambda x: x.id, self.configuration)
     
     
-    def send(self, name, data={}, invokeid = None, toQueue = None):
+    def send(self, name, data={}, invokeid = None, toQueue = None, sendid=None):
         """Send an event to the statemachine 
         @param name: a dot delimited string, the event name
         @param data: the data associated with the event
@@ -425,21 +428,22 @@ class Interpreter(object):
         """
         if isinstance(name, basestring): name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
-        evt = Event(name, data, invokeid)
+        evt = Event(name, data, invokeid, sendid=sendid)
         evt.origin = self.dm["_sessionid"]
-        evt.origintype = "scxml"
+        evt.origintype = "http://www.w3.org/TR/scxml/#SCXMLEventProcessor"
+        evt.language = "python"
         toQueue.put(evt)
         
             
-    def raiseFunction(self, event, data, type="internal"):
-        self.internalQueue.put(Event(event, data, eventtype=type))
+    def raiseFunction(self, event, data, sendid=None, type="internal"):
+        self.internalQueue.put(Event(event, data, eventtype=type, sendid=sendid))
 
 
-def getProperAncestors(state,root, skipParallel=False):
-    ancestors = [root] if root else []
+def getProperAncestors(state,root):
+#    ancestors = [root] if root else []
+    ancestors = []
     while hasattr(state,'parent') and state.parent and state.parent != root:
         state = state.parent
-        if skipParallel and isParallelState(state): continue;
         ancestors.append(state)
     return ancestors
     

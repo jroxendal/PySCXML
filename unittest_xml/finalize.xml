@@ -4,9 +4,12 @@
             <scxml xmlns="http://www.w3.org/2005/07/scxml">
                 <datamodel>
                     <data id="slot1" expr="1" />
-                    <data id="slot2" expr="2" />
+                    <data id="slot2" />
                 </datamodel>
                 <state>
+                    <onentry>
+                        <assign location="slot2" expr="2" />
+                    </onentry>
                     <transition target="inner_f" >
                         <send target="#_parent" event="quit" namelist="slot1 slot2" />
                     </transition>
@@ -31,7 +34,7 @@
         <invoke id="i2">
             <content><![CDATA[$doc]]></content>
             <finalize />
-            <param name="slot2" />
+            <param name="slot2" location="slot2" />
         </invoke>
         <transition event="quit" target="f" cond="slot1 + slot2 == 3" />
     </state>

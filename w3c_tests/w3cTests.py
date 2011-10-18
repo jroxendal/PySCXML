@@ -1,5 +1,6 @@
 from scxml.pyscxml import StateMachine
 import threading, os
+from scxml.compiler import ScriptFetchError
 
 ASSERTION_DIR = "./"
 TIMEOUT = 3
@@ -15,36 +16,63 @@ class W3CTester(StateMachine):
 
 def runtest(doc_uri):
     xml = open(ASSERTION_DIR + doc_uri).read()
-    sm = W3CTester(xml)
-    sm.name = doc_uri
 #    def timeout():
 #        sm.send("timeout")
 #        sm.cancel()
 #    threading.Timer(TIMEOUT, timeout).start()
-    sm.start()
-    return (doc_uri, sm.didPass)
+    try:
+        sm = W3CTester(xml)
+        sm.name = doc_uri
+        sm.start()
+        didPass = sm.didPass
+    except ScriptFetchError, e:
+        print "caught ", str(e)
+        didPass = True
+    return (doc_uri, didPass)
 
 
 def parallelize(filelist):
     with futures.ThreadPoolExecutor(max_workers=5) as executor:
         for doc, didPass in executor.map(runtest, filelist):
             if didPass:
-                print doc
+                print "passed", doc
+            else:
+                print "failed", doc
 
 def sequentialize(filelist):
     for file in filelist:
-        print "running " + file
+#        print "running " + file
         doc, didPass = runtest(file)
         if didPass:
             print "didPass", file
+#            pass
         else:
             print "failed", file
         
 
 if __name__ == '__main__':
+    '''
+    Supposed to fail:
+    test230
+    test250
+    test307
+    
+    
+    '''
     import futures, os
-    filelist = filter(lambda x: "sub" not in x and not os.path.isdir(x) and x.endswith("xml"), os.listdir(ASSERTION_DIR))
+    os.chdir("assertions_jim2/passed")
+    import re
+    stoplist = re.split("\s+", '''
+        test267.scxml
+        test268.scxml
+        test269.scxml
+        test500.scxml
+        test501.scxml
+    ''')
+    filelist = filter(lambda x: "sub" not in x and not os.path.isdir(x) and x.endswith("xml") and x not in stoplist, os.listdir(ASSERTION_DIR))
     
-    sequentialize(filelist)
+#    sequentialize(filelist)
+    parallelize(filelist)
     
-                
+    
+    
