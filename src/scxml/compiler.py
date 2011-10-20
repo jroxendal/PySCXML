@@ -119,7 +119,12 @@ class Compiler(object):
                         eventName = node.get("event").split(".")
                         self.interpreter.raiseFunction(eventName, self.parseData(node))
                     elif node_name == "send":
-                        self.parseSend(node)
+                        try:
+                            self.parseSend(node)
+                        except AttributeError, e:
+                            msg = "Line %s: Parsing of send failed with an unknown error." % node.lineno
+                            self.logger.error(msg)
+                            self.raiseError("error.execution", e)
                     elif node_name == "cancel":
                         sendid = self.parseAttr(node, "sendid")
                         if sendid in self.timer_mapping:
@@ -284,7 +289,7 @@ class Compiler(object):
 #            self.raiseError("error.execution.hints", e)
         scxmlSendType = ("http://www.w3.org/TR/scxml/#SCXMLEventProcessor", "scxml")
         httpSendType = ("http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor", "basichttp")
-        if not target:
+        if type in scxmlSendType and not target:
             #TODO: a shortcut, we're sending without eventprocessors no matter 
             # the send type if the target is self. This might break conformance.
             # see test 201.
@@ -603,12 +608,14 @@ class Compiler(object):
         inv.parentSession = self.dm["_sessionid"]
         
         finalizeNode = node.find(prepend_ns("finalize")) 
-        if finalizeNode != None and node.find(prepend_ns("param")) != None:
+        if finalizeNode != None and not len(finalizeNode):
             paramList = node.findall(prepend_ns("param"))
+            namelist = map(lambda x: (x, x), node.get("namelist", "").split(" "))
+            paramMapping = [(param.get("name"), param.get("location")) for param in (p for p in paramList if p.get("location"))]
             def f():
-                for param in (p for p in paramList if p.get("location")): # get all param nodes without the expr attr
-                    if param.get("location") in self.dm["_event"].data:
-                        self.dm[param.get("location")] = self.dm["_event"].data[param.get("location")]
+                for name, location in namelist + paramMapping:
+                    if name in self.dm["_event"].data:
+                        self.dm[location] = self.dm["_event"].data[name]
             inv.finalize = f
         elif finalizeNode != None:
             inv.finalize = partial(self.do_execute_content, finalizeNode)
