@@ -124,7 +124,7 @@ class Compiler(object):
                         except AttributeError, e:
                             msg = "Line %s: Parsing of send failed with an unknown error." % node.lineno
                             self.logger.error(msg)
-                            self.raiseError("error.execution", e)
+                            self.raiseError("error.execution", e, sendid=node.get("id"))
                     elif node_name == "cancel":
                         sendid = self.parseAttr(node, "sendid")
                         if sendid in self.timer_mapping:
@@ -242,6 +242,10 @@ class Compiler(object):
         return output
     
     def parseSend(self, sendNode, skip_delay=False):
+        gen_id = "send_id_" + str(id(sendNode))
+        sendid = sendNode.get("id", gen_id)
+        if sendNode.get("idlocation"):
+            self.dm[sendNode.get("idlocation")] = sendid
         if not skip_delay:
             delay = self.parseAttr(sendNode, "delay", "0s")
             try:
@@ -251,13 +255,10 @@ class Compiler(object):
                 e = RuntimeError("Line %s: delay format error: the delay attribute should be " 
                 "specified using the CSS time format, you supplied the faulty value: %s" % (sendNode.lineno, delay))
                 self.logger.error(str(e))
-                self.raiseError("error.execution.send.delay", e)
+                self.raiseError("error.execution.send.delay", e, sendid=sendid)
                 return
             delay = float(n) if unit == "s" else float(n) / 1000
-            gen_id = "send_id_" + str(id(sendNode))
-            sendid = sendNode.get("id", gen_id)
-            if sendNode.get("idlocation"):
-                self.dm[sendNode.get("idlocation")] = gen_id 
+             
             if delay:
                 t = Timer(delay, self.parseSend, args=(sendNode, True))
                 self.timer_mapping[sendid] = t
@@ -268,7 +269,7 @@ class Compiler(object):
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None
         eventstr = ".".join(event) if event else "" 
         target = self.parseAttr(sendNode, "target")
-        sendid = sendNode.get("id")
+        
         #TODO: what about event.origin and the others?
         defaultSend = partial(self.interpreter.send, sendid=sendid)
         if target == "#_response": type = "x-pyscxml-response"
@@ -277,7 +278,7 @@ class Compiler(object):
         except Exception, e:
 #            print sendNode.find(prepend_ns("content")).text
             self.logger.error("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "lineno", 'unknown'))
-            self.raiseError("error.execution", e)
+            self.raiseError("error.execution", e, sendid=sendid)
             raise e
             return
 #        try:
@@ -311,7 +312,7 @@ class Compiler(object):
                 except KeyError:
                     e = RuntimeError("Line %s: The session '%s' is inaccessible." % (sendNode.lineno, sessionid))
                     self.logger.error(str(e))
-                    self.raiseError("error.communication", e)
+                    self.raiseError("error.communication", e, sendid=sendid)
                 
             elif target == "#_websocket":
                 self.logger.debug("sending to _websocket")
@@ -329,7 +330,7 @@ class Compiler(object):
                 except KeyError:
                     e = RuntimeError("Line %s: No valid target at '%s'." % (sendNode.lineno, target[2:]))
                     self.logger.error(str(e))
-                    self.raiseError("error.communication", e)
+                    self.raiseError("error.communication", e, sendid=sendid)
                 evt = Event(event, data, self.interpreter.invokeId)
                 evt.origin = self.dm["_sessionid"]
                 evt.origintype = "scxml"
@@ -350,7 +351,7 @@ class Compiler(object):
             else:
                 e = RuntimeError("Line %s: The send target '%s' is malformed or unsupported by the platform." % (sendNode.lineno, target))
                 self.logger.error(str(e))
-                self.raiseError("error.execution.target", e)
+                self.raiseError("error.execution.target", e, sendid=sendid)
             
         elif type in httpSendType:
             
@@ -367,7 +368,7 @@ class Compiler(object):
             except Exception:
                 e = RuntimeError("Line %s: No StateMachine instance at datamodel location '%s'" % (sendNode.lineno, target))
                 self.logger.error(str(e))
-                self.raiseError("error.execution." + type(e).__name__.lower(), e) 
+                self.raiseError("error.execution." + type(e).__name__.lower(), e, sendid=sendid) 
         
         elif type == "x-pyscxml-response":
             self.logger.debug("sending to _response")
@@ -386,7 +387,7 @@ class Compiler(object):
         else:
             e = RuntimeError("Line %s: The send type %s is invalid or unsupported by the platform" % (sendNode.lineno, type))
             self.logger.error(str(e))
-            self.raiseError("error.execution.type", e)
+            self.raiseError("error.execution.type", e, sendid=sendid)
         
     
     def getUrlGetter(self, target):
@@ -409,8 +410,8 @@ class Compiler(object):
     def onHttpResult(self, signal, **named):
         self.logger.info("onHttpResult " + str(named))
     
-    def raiseError(self, err, exception=None):
-        self.interpreter.raiseFunction(err.split("."), {"exception" : exception}, type="platform")
+    def raiseError(self, err, exception=None, sendid=None):
+        self.interpreter.raiseFunction(err.split("."), {"exception" : exception}, sendid=sendid, type="platform")
     
     
     def parseXML(self, xmlStr, interpreterRef):

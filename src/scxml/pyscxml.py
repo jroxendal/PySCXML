@@ -282,8 +282,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.NOTSET)
     
     
-    sm = StateMachine(open("../../unittest_xml/invoke.xml").read())
-    sm.start()
+#    sm = StateMachine(open("../../unittest_xml/invoke.xml").read())
+#    sm.start()
     
     xml2 = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml">
@@ -300,6 +300,20 @@ if __name__ == "__main__":
             </transition>
         </state>
         <state id="s2" />
+    </scxml>
+    '''
+    
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <state>
+            <onentry><send event="foo" /></onentry>
+            <parallel id="p1">
+                <transition type="internal" event="foo" target="p1s2 p1s3"/>
+                <state id="p1s1"><onexit><log label="onexit1" /></onexit></state>
+                <state id="p1s2"><onexit><log label="onexit2" /></onexit></state>
+                <state id="p1s3"><onexit><log label="onexit3" /></onexit></state>
+            </parallel>
+        </state>
     </scxml>
     '''
     
