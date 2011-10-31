@@ -79,10 +79,11 @@ if __name__ == '__main__':
     test307
     '''
     import futures, os
-    os.chdir("assertions_akolkar2/")
+    os.chdir("assertions_all/")
     try:
         os.mkdir("passed")
         os.mkdir("failed")
+        os.mkdir("rejected")
     except:
         pass
     
@@ -99,6 +100,8 @@ if __name__ == '__main__':
         "test325.scxml",
         "test326.scxml",
         "test336.scxml",
+        "test349.scxml",
+        "test350.scxml",
     ]
     supposed_to_fail = [
         "test230.scxml",

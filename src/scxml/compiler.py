@@ -242,10 +242,9 @@ class Compiler(object):
         return output
     
     def parseSend(self, sendNode, skip_delay=False):
-        gen_id = "send_id_" + str(id(sendNode))
-        sendid = sendNode.get("id", gen_id)
+        sendid = sendNode.get("id")
         if sendNode.get("idlocation"):
-            self.dm[sendNode.get("idlocation")] = sendid
+            self.dm[sendNode.get("idlocation")] = sendid or "send_id_" + str(id(sendNode))
         if not skip_delay:
             delay = self.parseAttr(sendNode, "delay", "0s")
             try:
