@@ -70,7 +70,7 @@ class Interpreter(object):
         
         self.executeTransitionContent([transition])
         self.enterStates([transition])
-        self.startEventLoop()
+#        self.startEventLoop()
         
         
     
@@ -93,14 +93,101 @@ class Interpreter(object):
                 self.microstep(list(enabledTransitions))
     
     
+#    def mainEventLoop(self):
+#        self.startEventLoop()
+#        while self.g_continue:
+#            
+#            for state in self.statesToInvoke:
+#                for inv in state.invoke:
+#                    inv.invoke(inv)
+#            self.statesToInvoke.clear()
+#            
+#            self.previousConfiguration = self.configuration
+#            
+#            externalEvent = self.externalQueue.get() # this call blocks until an event is available
+#            
+#            self.logger.info("external event found: %s", externalEvent.name)
+#            
+#            self.dm["__event"] = externalEvent
+#            
+#            for state in self.configuration:
+#                for inv in state.invoke:
+#                    if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
+#                        self.applyFinalize(inv, externalEvent)
+#                    if inv.autoforward:
+#                        inv.send(externalEvent)
+#            
+#            enabledTransitions = self.selectTransitions(externalEvent)
+#            if enabledTransitions:
+#                self.microstep(list(enabledTransitions))
+#                
+#                # now take any newly enabled null transitions and any transitions triggered by internal events
+#                macroStepComplete = False;
+#                while not macroStepComplete:
+#                    enabledTransitions = self.selectEventlessTransitions()
+#                    if enabledTransitions.isEmpty():
+#                        if self.internalQueue.empty(): 
+#                            macroStepComplete = True
+#                        else:
+#                            internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
+#                            
+#                            self.logger.info("internal event found: %s", internalEvent.name)
+#                            
+#                            self.dm["__event"] = internalEvent
+#                            enabledTransitions = self.selectTransitions(internalEvent)
+#    
+#                    if enabledTransitions:
+#                        self.microstep(list(enabledTransitions))
+#              
+#        # if we get here, we have reached a top-level final state or some external entity has set g_continue to False        
+#        self.exitInterpreter()  
+    
     
     def mainEventLoop(self):
+        enabledTransitions = None
+        initialStepComplete = False
         while self.g_continue:
+            
+            if enabledTransitions or not initialStepComplete:
+                if initialStepComplete:
+                    self.microstep(list(enabledTransitions))
+                
+                # now take any newly enabled null transitions and any transitions triggered by internal events
+                macroStepComplete = False
+                while not macroStepComplete:
+                    initialStepComplete = True
+                    enabledTransitions = self.selectEventlessTransitions()
+                    if enabledTransitions.isEmpty():
+                        if self.internalQueue.empty(): 
+                            macroStepComplete = True
+                        else:
+                            internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
+                            
+                            self.logger.info("internal event found: %s", internalEvent.name)
+                            
+                            self.dm["__event"] = internalEvent
+                            enabledTransitions = self.selectTransitions(internalEvent)
+    
+                    if enabledTransitions:
+                        self.microstep(list(enabledTransitions))
+            
             
             for state in self.statesToInvoke:
                 for inv in state.invoke:
                     inv.invoke(inv)
             self.statesToInvoke.clear()
+            
+            if not self.internalQueue.empty():
+                internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
+                            
+                self.logger.info("internal event found: %s", internalEvent.name)
+                
+                self.dm["__event"] = internalEvent
+                enabledTransitions = self.selectTransitions(internalEvent)
+                continue
+            
+            if not self.g_continue:
+                break
             
             self.previousConfiguration = self.configuration
             
@@ -118,26 +205,7 @@ class Interpreter(object):
                         inv.send(externalEvent)
             
             enabledTransitions = self.selectTransitions(externalEvent)
-            if enabledTransitions:
-                self.microstep(list(enabledTransitions))
-                
-                # now take any newly enabled null transitions and any transitions triggered by internal events
-                macroStepComplete = False;
-                while not macroStepComplete:
-                    enabledTransitions = self.selectEventlessTransitions()
-                    if enabledTransitions.isEmpty():
-                        if self.internalQueue.empty(): 
-                            macroStepComplete = True
-                        else:
-                            internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
-                            
-                            self.logger.info("internal event found: %s", internalEvent.name)
-                            
-                            self.dm["__event"] = internalEvent
-                            enabledTransitions = self.selectTransitions(internalEvent)
-    
-                    if enabledTransitions:
-                        self.microstep(list(enabledTransitions))
+            
               
         # if we get here, we have reached a top-level final state or some external entity has set g_continue to False        
         self.exitInterpreter()  
@@ -479,7 +547,7 @@ def isAtomicState(s):
 
 
 def isCompoundState(s):
-    return isinstance(s,State) and (s.state != [] or s.final != [])
+    return (isinstance(s,State) and (s.state != [] or s.final != []) ) or s.parent is None #incluce root state
 
 
 def enterOrder(s):

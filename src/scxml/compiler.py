@@ -553,9 +553,9 @@ class Compiler(object):
                 inv = self.parseInvoke(node, parentId, n)
             except Exception, e:
                 #TODO: let's crash for now.
-                raise e
-#                self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
-#                return
+#                raise e
+                self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
+                return
             wrapper.set_invoke(inv)
             
             self.dm[inv.invokeid] = inv

@@ -79,7 +79,7 @@ if __name__ == '__main__':
     test307
     '''
     import futures, os
-    os.chdir("assertions_all/")
+    os.chdir("assertions_jim3/")
     try:
         os.mkdir("passed")
         os.mkdir("failed")
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         "test268.scxml",
         "test269.scxml",
         "test500.scxml",
-        "test501.scxml"
+        "test501.scxml",
         
         
         "test320.scxml",
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         "test250.scxml",
         "test307.scxml"
     ]
-
+    
     filelist = [fn for fn in os.listdir(ASSERTION_DIR) if 
                 "sub" not in fn and 
                 not os.path.isdir(fn) and 

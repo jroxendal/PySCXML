@@ -319,7 +319,8 @@ if __name__ == "__main__":
     
 #    with StateMachine(xml) as sm:
 #        sm.send("hello")
-    sm = StateMachine(xml)
+    xml = open("../../unittest_xml/parallel2.xml").read()
+    sm = StateMachine(xml2)
     sm.start()
 #        sm.send("e")
     
