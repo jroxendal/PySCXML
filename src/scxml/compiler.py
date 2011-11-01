@@ -34,6 +34,7 @@ from threading import Timer
 from StringIO import StringIO
 from xml.etree import ElementTree, ElementInclude
 import time
+from datamodel import *
     
 
 try: 
@@ -73,9 +74,7 @@ class Compiler(object):
     '''The class responsible for compiling the statemachine'''
     def __init__(self):
         self.doc = SCXMLDocument()
-        self.dm = self.doc.datamodel
-        self.dm["_response"] = Queue.Queue() 
-        self.dm["_websocket"] = Queue.Queue()
+        
         
 #        self.setSessionId()
         # used by data passed to invoked processes
@@ -86,6 +85,19 @@ class Compiler(object):
         self.timer_mapping = {}
         self.instantiate_datamodel = None
         
+    
+    def setupDatamodel(self, datamodel):
+        if datamodel == "ecmascript":
+            self.doc.datamodel = ECMAScriptDataModel()
+            global _expr_exec, _expr_eval
+            _expr_eval = self.doc.datamodel.eval
+            _expr_exec = self.doc.datamodel.eval
+        else:
+            self.doc.datamodel = DataModel()
+            
+        self.dm = self.doc.datamodel
+        self.dm["_response"] = Queue.Queue() 
+        self.dm["_websocket"] = Queue.Queue()
         
         def dataModelErrorCallback(key, value):
             e = DataModelError("The field %s in the datamodel cannot be modified." % key)
@@ -132,14 +144,15 @@ class Compiler(object):
                             del self.timer_mapping[sendid]
                     elif node_name == "assign":
                         
-                        if node.get("location") not in self.dm:
+                        if not self.dm.hasLocation(node.get("location")):
                             msg = "Line %s: The location expression %s was not instantiated in the datamodel." % (node.lineno, node.get("location"))
                             self.logger.error(msg)
                             self.raiseError("error.execution.nameerror", NameError(msg))
                             continue
                         
+                        
                         expression = node.get("expr") or node.text.strip()
-                        self.dm[node.get("location")] = self.getExprValue(expression)
+                        self.execExpr(node.get("location") + " = " + expression)
                     elif node_name == "script":
                         if node.get("src"):
                             self.execExpr(urlopen(node.get("src")).read())
@@ -415,6 +428,7 @@ class Compiler(object):
     
     def parseXML(self, xmlStr, interpreterRef):
         self.interpreter = interpreterRef
+        
         xmlStr = self.addDefaultNamespace(xmlStr)
         try:
             tree = xml_from_string(xmlStr)
@@ -426,6 +440,7 @@ class Compiler(object):
         self.strict_parse = tree.get("exmode", "lax") == "strict"
         self.doc.binding = tree.get("binding", "early")
         preprocess(tree)
+        self.setupDatamodel(tree.get("datamodel"))
         self.instantiate_datamodel = partial(self.setDatamodel, tree)
         
         for n, parent, node in iter_elems(tree):

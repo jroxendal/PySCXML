@@ -1,7 +1,7 @@
 from scxml.pyscxml_server import PySCXMLServer, TYPE_WEBSOCKET, TYPE_DEFAULT, TYPE_RESPONSE, ioprocessor
 from scxml.pyscxml import expr_evaluator, expr_exec
 import logging
-import os, json
+import os, json, sys
 logging.basicConfig(level=logging.NOTSET)
 
 
@@ -13,10 +13,12 @@ pyscxml = PySCXMLServer("localhost", 8081,
                         )
 
 
+
+
 #server.serve_forever()
 
 
-import gevent.pywsgi
+#import gevent.pywsgi
 from ws4py.server.geventserver import UpgradableWSGIHandler
 from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
 class WebSocketServer(gevent.pywsgi.WSGIServer):
@@ -35,3 +37,6 @@ class WebSocketServer(gevent.pywsgi.WSGIServer):
 server = WebSocketServer(("localhost", 8081), pyscxml.websocket_handler, pyscxml.request_handler)
 
 server.serve_forever()
+
+
+

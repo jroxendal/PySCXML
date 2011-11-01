@@ -286,19 +286,26 @@ if __name__ == "__main__":
 #    sm.start()
     
     xml2 = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="ecmascript">
+    
+        <datamodel>
+            <data id="var1"  />
+        </datamodel>
+        
         <state>
-            <invoke id="i" type="lol">
-                <content>
-                    <scxml>
-                    
-                    </scxml>
-                </content>
-            </invoke>
-            <transition event="error">
-                <log label="invoke error" />
-            </transition>
-        </state>
+            <onentry>
+                <script>
+                    var hello = "yeah";
+                    var d = {
+                        "a" : 123,
+                        "b" : 456
+                    };
+                </script>
+                <assign location="d.a" expr="987" />
+                <log label="entry" expr="d.a"/>
+            
+            </onentry>
+            </state>
         <state id="s2" />
     </scxml>
     '''
@@ -316,11 +323,27 @@ if __name__ == "__main__":
         </state>
     </scxml>
     '''
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="python" >
+            <datamodel>
+                <data id="var1" expr="[[1, 1], [1, 1]]"/>
+            </datamodel>
+                
+            <state id="s0">
+              <onentry>
+              <foreach item="var2" index="var3" array="var1">
+                <assign location="var2[1]" expr="0"/>
+              </foreach>
+              <log expr="var1" />
+              </onentry>
+            </state>
+    </scxml>
+    '''
     
 #    with StateMachine(xml) as sm:
 #        sm.send("hello")
-    xml = open("../../unittest_xml/parallel2.xml").read()
-    sm = StateMachine(xml2)
+#    xml = open("../../unittest_xml/parallel2.xml").read()/
+    sm = StateMachine(xml)
     sm.start()
 #        sm.send("e")
     

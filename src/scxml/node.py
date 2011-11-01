@@ -18,9 +18,6 @@ This file is part of pyscxml.
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
 '''
-from scxml.datastructures import DataModel
-
- 
 
 
 class SCXMLNode(object):
@@ -159,7 +156,6 @@ class SCXMLDocument(object):
         self.initial = None
         self.stateDict = {}
         self._rootState = None
-        self.datamodel = DataModel()
         self.name = ""
         self.binding = None
     
