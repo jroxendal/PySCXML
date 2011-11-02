@@ -65,6 +65,7 @@ tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transitio
 tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
 preprocess_mapping = {}
+#TODO: these can't be here
 _expr_eval = eval
 #_expr_exec = lambda expr, dm: (exec expr in dm)
 def _expr_exec(expr, dm):
@@ -248,7 +249,7 @@ class Compiler(object):
                 output[name] = self.getExprValue(name, True)
         
         if getContent and child.find(prepend_ns("content")) != None:
-            output = template(child.find(prepend_ns("content")).text, self.dm)
+            output["_content"] = template(child.find(prepend_ns("content")).text, self.dm)
 #        if child.find(pyscxml_ns + "tmpl") != None:
 #            output = template(child.find(pyscxml_ns + "tmpl").text, self.dm)
         
@@ -330,12 +331,12 @@ class Compiler(object):
                 self.logger.debug("sending to _websocket")
                 eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
                 self.dm["_websocket"].put(eventXML)
-            elif target == "#_sse":
-                self.logger.debug("sending to sse")
-                headers = data.pop("headers") if "headers" in data else {}
-                headers.update({"Content-Type" : "text/event-stream", "Cache-Control" : "no-cache"})
-                eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
-                self.dm["_response"].put(("data:" + eventXML + "\n", headers))
+#            elif target == "#_sse":
+#                self.logger.debug("sending to sse")
+#                headers = data.pop("headers") if "headers" in data else {}
+#                headers.update({"Content-Type" : "text/event-stream", "Cache-Control" : "no-cache"})
+#                eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
+#                self.dm["_response"].put(("data:" + eventXML + "\n", headers))
             elif target.startswith("#_") and not target == "#_response": # invokeid
                 try:
                     inv = self.dm[target[2:]]
@@ -384,14 +385,16 @@ class Compiler(object):
         
         elif type == "x-pyscxml-response":
             self.logger.debug("sending to _response")
-            headers = data.pop("headers") if "headers" in data else {} 
+            headers = data.pop("headers") if "headers" in data else {}
+            
+             
 #                if type == "scxml": headers["Content-Type"] = "text/xml"
 #            if headers.get("Content-Type", "/").split("/")[1] == "json": 
 #                data = json.dumps(data)  
             
-            if type in scxmlSendType:
-                data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"], sendNode.get("id", ""), language="json")    
-                headers["Content-Type"] = "text/xml" 
+#            if type in scxmlSendType:
+            data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"], sendNode.get("id", ""), language="json")    
+            headers["Content-Type"] = "text/xml" 
             self.dm["_response"].put((data, headers))
             
         
@@ -546,6 +549,7 @@ class Compiler(object):
     
     def getExprValue(self, expr, throwErrors=False):
         """These expression are always one-line, so their value is evaluated and returned."""
+        throwErrors = True
         if not expr: 
             return None
         expr = unescape(expr)
@@ -618,9 +622,9 @@ class Compiler(object):
         else:
             raise NotImplementedError("The invoke type '%s' is not supported by the platform." % type)
         inv.invokeid = invokeid
+        inv.parentSessionid = self.dm["_sessionid"]
         inv.src = src
         inv.type = type   
-        inv.parentSession = self.dm["_sessionid"]
         
         finalizeNode = node.find(prepend_ns("finalize")) 
         if finalizeNode != None and not len(finalizeNode):

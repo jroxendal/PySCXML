@@ -13,12 +13,7 @@ pyscxml = PySCXMLServer("localhost", 8081,
                         )
 
 
-
-
-#server.serve_forever()
-
-
-#import gevent.pywsgi
+import gevent.pywsgi
 from ws4py.server.geventserver import UpgradableWSGIHandler
 from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
 class WebSocketServer(gevent.pywsgi.WSGIServer):

@@ -27,6 +27,7 @@ from messaging import exec_async
 from functools import partial
 from scxml.messaging import UrlGetter
 import logging
+from threading import Thread
 
 
 class InvokeWrapper(object):
@@ -34,6 +35,7 @@ class InvokeWrapper(object):
     def __init__(self):
         self.logger = logging.getLogger("pyscxml.invoke.%s" % type(self).__name__)
         self.invoke = lambda: None
+        self.invokeid = None
         self.cancel = lambda: None
         self.invoke_obj = None
         self.autoforward = False
@@ -41,7 +43,6 @@ class InvokeWrapper(object):
     def set_invoke(self, inv):
         inv.logger = self.logger
         self.invoke_obj = inv
-        self.invokeid = inv.invokeid 
         inv.autoforward = self.autoforward 
         self.cancel = inv.cancel
         self.send = getattr(inv, "send", None)
@@ -53,6 +54,7 @@ class InvokeWrapper(object):
 class BaseInvoke(object):
     def __init__(self):
         self.invokeid = None
+        self.parentSessionid = None
         self.autoforward = False
         self.src = None
         self.finalize = lambda:None
@@ -103,15 +105,20 @@ class InvokeSCXML(BaseFetchingInvoke):
     def _start(self, doc):
         if self.cancelled: return
         from pyscxml import StateMachine
-        self.sm = StateMachine(doc, sessionid=self.invokeid)
+        self.sm = StateMachine(doc, sessionid=self.parentSessionid + "." + self.invokeid)
         self.sm.compiler.initData = self.initData
 #        self.sm.datamodel.update(self.initData)
-        self.sm.start_threaded(self.parentQueue, self.invokeid)
+#        self.sm.start_threaded(self.parentQueue, self.invokeid)
+#        logger = "pyscxml.%s.interpreter" % self.sessionid
+#        self.sm.interpreter.logger = logging.getLogger(name)
+        
+        self.sm._start_invoke(self.parentQueue, self.invokeid)
+        t = Thread(target=self.sm.interpreter.mainEventLoop)
+        t.start()
 #        dispatcher.send("init.invoke." + self.invokeid, self)
+
     
     def send(self, eventobj):
-        #TODO: why can self.sm be None here?
-#        if not self.sm or self.sm.isFinished():
         if not self.sm.isFinished():
             self.sm.interpreter.externalQueue.put(eventobj)
     

@@ -64,20 +64,25 @@ class StateMachine(object):
         self.name = self.doc.name
         
     
-    def _start(self, parentQueue=None, invokeid=None):
+    def _start(self):
         self.compiler.instantiate_datamodel()
-        self.interpreter.interpret(self.doc, parentQueue, invokeid)
-            
-    def start(self, parentQueue=None, invokeid=None):
+        self.interpreter.interpret(self.doc)
+    
+    def _start_invoke(self, parentQueue=None, invokeid=None):
+        self.compiler.instantiate_datamodel()
+        self.interpreter.interpret(self.doc)
+    
+    
+    def start(self):
         '''Takes the statemachine to its initial state'''
         with self._lock:
             if not self.interpreter.g_continue:
                 raise RuntimeError("The StateMachine instance may only be started once.")
-            self._start(parentQueue, invokeid)
+            self._start()
         self.interpreter.mainEventLoop()
     
-    def start_threaded(self, parentQueue=None, invokeid=None):
-        self._start(parentQueue, invokeid)
+    def start_threaded(self):
+        self._start()
         t = Thread(target=self.interpreter.mainEventLoop)
         t.start()
         

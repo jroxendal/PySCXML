@@ -50,12 +50,14 @@
                             
                             <state id="connected">
                                 <onentry>
+                                    <log label="entered connected" />
                                     <script>
                                         class EventHandler(logging.Handler):
                                             def __init__(self, level=logging.NOTSET):
                                                 logging.Handler.__init__(self, level=level)
                                                 
                                             def handle(self, record):
+                                                print "handle", record.getMessage()
                                                 _x["self"].send("log", data=record.getMessage() )
                                             
                                         log_handler = EventHandler()

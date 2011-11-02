@@ -119,23 +119,24 @@ class PySCXMLServer(object):
         self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
         for sm in self.sm_mapping:
             self.set_processors(sm)
-        
+            
         
         #the connected websocket clients
         self.clients = {}
+        self.sm_mapping.start()
         
     
     def is_type(self, type):
         return self.server_type & type == type 
     
     
-    def serve_forever(self):
-        """Start the server."""
-        self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
-        self.sm_mapping.start()
+#    def serve_forever(self):
+#        """Start the server."""
+#        self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
         
-        self.httpd = get_server(self.is_type(TYPE_WEBSOCKET))((self.host, self.port), self.websocket_handler, self.request_handler)
-        self.httpd.serve_forever()
+        
+#        self.httpd = get_server(self.is_type(TYPE_WEBSOCKET))((self.host, self.port), self.websocket_handler, self.request_handler)
+#        self.httpd.serve_forever()
         
 #        if self.is_type(TYPE_WEBSOCKET):
 #            wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
@@ -232,33 +233,7 @@ class PySCXMLServer(object):
 #                if type != "sse":
                 output, headers = sm.datamodel["_response"].get() #blocks
                 start_response(status, headers.items())
-                output = output["content"].strip() if "content" in output else output
-#                else:
-#                    output, headers = sm.datamodel["_response"].get() #blocks
-#                    
-#                    start_response(status, headers.items())
-#                    content = output["content"].strip() if "content" in output else output
-#                    def gen():
-#                        output = content
-#                        print repr(output) 
-#                        yield output
-#                        yield "data:hello\n"
-#                        print "after"
-#                        while output != "\n\n":
-#                            output, headers = sm.datamodel["_response"].get() #blocks
-#                            print output
-#                            yield output["content"].strip() if "content" in output else output
-#                        yield output
-#                        
-#                    return gen()
-#                        write([output])
-                        
-                    
-#                if headers.get("status"):
-#                    status = str(hints.get("status"))
-#                else:
-                        
-                
+#                output = output["content"].strip() if "content" in output else output
             
         except AssertionError:
             self.logger.error("No default xml is declared, so sessions can't be dynamically initialized.")
