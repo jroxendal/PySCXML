@@ -65,11 +65,6 @@ tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transitio
 tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
 preprocess_mapping = {}
-#TODO: these can't be here
-_expr_eval = eval
-#_expr_exec = lambda expr, dm: (exec expr in dm)
-def _expr_exec(expr, dm):
-    exec expr in dm
 
 class Compiler(object):
     '''The class responsible for compiling the statemachine'''
@@ -91,8 +86,6 @@ class Compiler(object):
         if datamodel == "ecmascript":
             self.doc.datamodel = ECMAScriptDataModel()
             global _expr_exec, _expr_eval
-            _expr_eval = self.doc.datamodel.eval
-            _expr_exec = self.doc.datamodel.eval
         else:
             self.doc.datamodel = DataModel()
             
@@ -540,7 +533,7 @@ class Compiler(object):
         if not expr or not expr.strip(): return 
         try:
             expr = normalizeExpr(expr)
-            _expr_exec(expr, self.dm)
+            self.dm.execExpr(expr)
         except Exception, e:
             self.logger.error("Exception while executing expression in a script block: '%s'" % expr)
             self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
@@ -555,7 +548,7 @@ class Compiler(object):
         expr = unescape(expr)
         
         try:
-            return _expr_eval(expr, self.dm)
+            return self.dm.evalExpr(expr)
         except Exception, e:
             if throwErrors:
                 raise e
