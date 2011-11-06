@@ -39,14 +39,21 @@ $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonAr
 		mode : {"name" : "xml", htmlMode : false},
 		theme : "eclipse",
 		tabMode : "shift",
-		lineNumbers : true
+		lineNumbers : true,
+		onChange : function() {
+			$.bbq.pushState({"doc" : editor.getValue()})
+		}
 	});
+	if($.bbq.getState("doc"))
+		doc = $.bbq.getState("doc");
 	editor.setValue(doc);
 	$("#close").click(closeSocket);
 	$("#connect").click(connect);
 	$("#eventForm").submit(send);
 	$("#sendDoc").click(sendDoc);
 	sendDoc();
+	
+	
 });
 
 
