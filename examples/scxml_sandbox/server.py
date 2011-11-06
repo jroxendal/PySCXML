@@ -9,7 +9,8 @@ json.dump(["example_docs/" + x for x in os.listdir("example_docs") if x.endswith
 
 pyscxml = PySCXMLServer("localhost", 8081, 
                         init_sessions={"server" : open("sandbox_server.xml").read()},
-                        server_type=TYPE_RESPONSE | TYPE_WEBSOCKET
+                        server_type=TYPE_RESPONSE | TYPE_WEBSOCKET,
+                        default_datamodel="ecmascript"
                         )
 
 

@@ -1,5 +1,8 @@
 <scxml>
   <state id="s1">
+    <onentry>
+        <log label="entering" expr="'first state'" />
+    </onentry>
     <transition event="next" target="s2" />
   </state>
   <state id="s2">

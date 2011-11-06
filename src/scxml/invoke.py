@@ -28,6 +28,7 @@ from functools import partial
 from scxml.messaging import UrlGetter
 import logging
 from threading import Thread
+#from scxml.pyscxml import default_logfunction
 
 
 class InvokeWrapper(object):
@@ -94,6 +95,7 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.content = None
         self.initData = data
         self.cancelled = False
+        self.default_datamodel = "python"
     
     def start(self, parentQueue):
         self.parentQueue = parentQueue
@@ -105,7 +107,12 @@ class InvokeSCXML(BaseFetchingInvoke):
     def _start(self, doc):
         if self.cancelled: return
         from pyscxml import StateMachine
-        self.sm = StateMachine(doc, sessionid=self.parentSessionid + "." + self.invokeid)
+        self.sm = StateMachine(doc, 
+                               sessionid=self.parentSessionid + "." + self.invokeid, 
+                               default_datamodel=self.default_datamodel,
+                               log_function=lambda label, val: dispatcher.send(signal="invoke_log", sender=self, label=label, val=val))
+            
+        
         self.sm.compiler.initData = self.initData
 #        self.sm.datamodel.update(self.initData)
 #        self.sm.start_threaded(self.parentQueue, self.invokeid)
@@ -114,7 +121,12 @@ class InvokeSCXML(BaseFetchingInvoke):
         
         self.sm._start_invoke(self.parentQueue, self.invokeid)
         t = Thread(target=self.sm.interpreter.mainEventLoop)
-        t.start()
+        if self.sm.compiler.datamodel == "ecmascript":
+            from PyV8 import JSLocker #@UnresolvedImport
+            with JSLocker():
+                t.start()
+        else:
+            t.start()
 #        dispatcher.send("init.invoke." + self.invokeid, self)
 
     

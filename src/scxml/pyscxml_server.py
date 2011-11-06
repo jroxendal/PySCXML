@@ -74,7 +74,7 @@ handler_mapping = {}
 class PySCXMLServer(object):
     
     def __init__(self, host, port, default_scxml_doc=None, server_type=TYPE_DEFAULT, 
-                 init_sessions={}, session_path="/"):
+                 init_sessions={}, session_path="/", default_datamodel="python"):
         '''
         @param host: the hostname on which to serve.
         @param port: the port on which to serve.
@@ -116,11 +116,10 @@ class PySCXMLServer(object):
         self.logger = logging.getLogger("pyscxml.pyscxml_server")
         self.host = host
         self.port = port
-        self.sm_mapping = MultiSession(default_scxml_doc, init_sessions)
+        self.sm_mapping = MultiSession(default_scxml_doc, init_sessions, default_datamodel)
         for sm in self.sm_mapping:
             self.set_processors(sm)
             
-        
         #the connected websocket clients
         self.clients = {}
         self.sm_mapping.start()

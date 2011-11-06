@@ -80,9 +80,11 @@ class Compiler(object):
         self.strict_parse = False
         self.timer_mapping = {}
         self.instantiate_datamodel = None
+        self.default_datamodel = None
         
     
     def setupDatamodel(self, datamodel):
+        self.datamodel = datamodel
         if datamodel == "ecmascript":
             self.doc.datamodel = ECMAScriptDataModel()
             global _expr_exec, _expr_eval
@@ -120,7 +122,16 @@ class Compiler(object):
                 node_ns, node_name = split_ns(node)  
                 if node_ns == ns: 
                     if node_name == "log":
-                        self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
+                        #TODO: for when custom log functions crash. consider removing this and letting them crash.   
+                        try:
+                            self.log_function(node.get("label"), self.getExprValue(node.get("expr"), False))
+                        except Exception, e:
+                            msg = "Line %s: Error when executing log element" % node.lineno
+                            self.logger.error(msg)
+                            self.logger.error(str(e))
+                            self.raiseError("error.execution." + type(e).__name__.lower() , e)
+                            continue
+                            
                     elif node_name == "raise":
                         eventName = node.get("event").split(".")
                         self.interpreter.raiseFunction(eventName, self.parseData(node))
@@ -436,7 +447,7 @@ class Compiler(object):
         self.strict_parse = tree.get("exmode", "lax") == "strict"
         self.doc.binding = tree.get("binding", "early")
         preprocess(tree)
-        self.setupDatamodel(tree.get("datamodel"))
+        self.setupDatamodel(tree.get("datamodel", self.default_datamodel))
         self.instantiate_datamodel = partial(self.setDatamodel, tree)
         
         for n, parent, node in iter_elems(tree):
@@ -542,7 +553,6 @@ class Compiler(object):
     
     def getExprValue(self, expr, throwErrors=False):
         """These expression are always one-line, so their value is evaluated and returned."""
-        throwErrors = True
         if not expr: 
             return None
         expr = unescape(expr)
@@ -617,7 +627,8 @@ class Compiler(object):
         inv.invokeid = invokeid
         inv.parentSessionid = self.dm["_sessionid"]
         inv.src = src
-        inv.type = type   
+        inv.type = type
+        inv.default_datamodel = self.default_datamodel   
         
         finalizeNode = node.find(prepend_ns("finalize")) 
         if finalizeNode != None and not len(finalizeNode):

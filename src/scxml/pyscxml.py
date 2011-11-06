@@ -24,6 +24,7 @@ from louie import dispatcher
 from threading import Thread, RLock
 import logging
 from time import time, sleep
+from scxml import datamodel
 
 
 def default_logfunction(label, msg):
@@ -37,7 +38,7 @@ class StateMachine(object):
     This class provides the entry point for the pyscxml library. 
     '''
     
-    def __init__(self, xml, log_function=default_logfunction, sessionid=None):
+    def __init__(self, xml, log_function=default_logfunction, sessionid=None, default_datamodel="python"):
         '''
         @param xml: the scxml document to parse, expressed as a string.
         @param log_function: the function to execute on a <log /> element. 
@@ -50,6 +51,7 @@ class StateMachine(object):
         self.is_finished = False
         # makes sure the scxml done event reaches this class. 
         self.compiler = compiler.Compiler()
+        self.compiler.default_datamodel = default_datamodel
         self.compiler.log_function = log_function
         
         self.sessionid = sessionid or "pyscxml_session_" + str(id(self))
@@ -84,7 +86,12 @@ class StateMachine(object):
     def start_threaded(self):
         self._start()
         t = Thread(target=self.interpreter.mainEventLoop)
-        t.start()
+        if self.compiler.datamodel == "ecmascript":
+            from PyV8 import JSLocker #@UnresolvedImport
+            with JSLocker():
+                t.start()
+        else:
+            t.start()
         
     def isFinished(self):
         '''Returns True if the statemachine has reached it 
@@ -149,7 +156,7 @@ class StateMachine(object):
 
 class MultiSession(object):
     
-    def __init__(self, default_scxml_doc=None, init_sessions={}):
+    def __init__(self, default_scxml_doc=None, init_sessions={}, default_datamodel="python"):
         '''
         MultiSession is a local runtime for multiple StateMachine sessions. Use 
         this class for supporting the send target="_scxml_sessionid" syntax described
@@ -166,6 +173,7 @@ class MultiSession(object):
         self.default_scxml_doc = default_scxml_doc
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
+        self.default_datamodel = default_datamodel
         self.logger = logging.getLogger("pyscxml.multisession")
         for sessionid, xml in init_sessions.items():
             self.make_session(sessionid, xml)
@@ -203,7 +211,7 @@ class MultiSession(object):
         not been started, only initialized.
          '''
         assert xml or self.default_scxml_doc
-        sm = StateMachine(xml or self.default_scxml_doc, sessionid=sessionid)
+        sm = StateMachine(xml or self.default_scxml_doc, sessionid=sessionid, default_datamodel=self.default_datamodel)
         self.sm_mapping[sessionid] = sm
         sm.datamodel["_x"]["sessions"] = self
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
@@ -329,19 +337,19 @@ if __name__ == "__main__":
     </scxml>
     '''
     xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="python" >
-            <datamodel>
-                <data id="var1" expr="[[1, 1], [1, 1]]"/>
-            </datamodel>
-                
-            <state id="s0">
-              <onentry>
-              <foreach item="var2" index="var3" array="var1">
-                <assign location="var2[1]" expr="0"/>
-              </foreach>
-              <log expr="var1" />
-              </onentry>
-            </state>
+    <scxml datamodel="ecmascript">
+        <initial>
+            <transition target="s1">
+                <send event="next" />
+            </transition>
+        </initial>
+      <state id="s1">
+        <transition event="next" target="s2" />
+      </state>
+      <state id="s2">
+        <transition event="quit" target="f" />                
+      </state>
+      <final id="f" />
     </scxml>
     '''
     
@@ -349,7 +357,7 @@ if __name__ == "__main__":
 #        sm.send("hello")
 #    xml = open("../../unittest_xml/parallel2.xml").read()/
     sm = StateMachine(xml)
-    sm.start()
+    sm.start_threaded()
 #        sm.send("e")
     
 #    sm = StateMachine(xml)

@@ -4,11 +4,18 @@ Created on Nov 1, 2011
 @author: johan
 '''
 from scxml.eventprocessor import Event
+from threading import Thread
+
+
+try:
+    from PyV8 import JSContext, JSLocker, JSUnlocker #@UnresolvedImport
+except:
+    pass
 
 assignOnce = ["_sessionid", "_x", "_name", "_ioprocessors"]
 hidden = ["_event"]
 
-        
+
         
 
 class DataModel(dict):
@@ -41,46 +48,56 @@ class DataModel(dict):
     def execExpr(self, expr):
         exec expr in self
 
+
+class GlobalEcmaContext(object):
+    pass
+
 class ECMAScriptDataModel(object):
     def __init__(self):
-        import PyV8 #@UnresolvedImport
-        self.c = PyV8.JSContext()
-        self.c.enter()
+        self.g = GlobalEcmaContext()
         self.errorCallback = lambda x, y:None
-        
+    
     def __getitem__(self, key):
         if key in hidden:
             if key == "_event":
                 e = Event("")
-                e.__dict__ = self.c.locals["__event"]
+                e.__dict__ = self.g.dm["__event"]
                 return e
-            return self.c.locals["_" + key]
-        return self.c.locals[key]
+            return getattr(self.g, "_" + key)
+        return getattr(self.g, key)
     
     def __setitem__(self, key, val):
         if (key in assignOnce and key in self) or key in hidden:
             self.errorCallback(key, val)
         else:
             if key == "__event":
-                #TODO: replace the event here.
                 val = val.__dict__
-            self.c.locals[key] = val
+            setattr(self.g, key, val)
         
     def __contains__(self, key):
-        return key in self.c.locals
+        return hasattr(self.g, key)
+    
+    def __str__(self):
+        return str(self.g.__dict__)
     
     def keys(self):
-        return self.c.locals.keys()
+        return self.g.__dict__.keys()
     
     def hasLocation(self, location):
-        return self.c.eval("typeof(%s) != 'undefined'" % location)
+        return self.evalExpr("typeof(%s) != 'undefined'" % location)
     
     def evalExpr(self, expr):
-        return self.c.eval(expr)
+        with JSLocker():
+            with JSContext(self.g) as c:
+                ret = c.eval(expr)
+                for key in c.locals.keys(): setattr(self.g, key, c.locals[key])
+                return ret
     
     def execExpr(self, expr):
-        return self.evalExpr(expr)
-
+        self.evalExpr(expr)
+    
+    
+    
 
 #try:
 #    import PyV8
@@ -100,6 +117,7 @@ class ECMAScriptDataModel(object):
 #    pass
     
 if __name__ == '__main__':
+    import PyV8 #@UnresolvedImport
     d = ECMAScriptDataModel()
     
     
@@ -113,16 +131,28 @@ if __name__ == '__main__':
     
     def crash(key, value):
         print "error", key, value
-#    d = DataModel()
-#    d["hello"] = "yeah"
-#    print d.hasLocation("hello")
-#    print d.hasLocation("lol")
+        
     d.errorCallback = crash
-    e = Event("lol")
-    d["__event"] = e 
-    print d["_event"] 
-#    d["__event"] = "lol"
-#    d["__event"] = "lol2"
-#    print d["_event"]
-#    d["_event"] = "lol3"
+#    d = DataModel()
+    d["hello"] = "yeah"
+    print d.hasLocation("hello")
+    print d["hello"]
+    
+#    print d.hasLocation("lol")
+    
+#    c = PyV8.JSContext()
+#    c.enter()
+    
+    
+    def add():
+        d["thread"] = 1234
+            
+    t = Thread(target=add)
+    with JSLocker():
+        t.start()
+    
+    
+    t.join()
+    print d["thread"]
+    d["_event"] = "lol3"
     

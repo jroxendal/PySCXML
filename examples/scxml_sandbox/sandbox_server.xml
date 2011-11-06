@@ -2,7 +2,8 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://www.w3.org/2011/04/SCXML/scxml.xsd"
     xmlns:spyderbrain="http://code.google.com/p/pyscxml"
-    version="1.0">
+    version="1.0"
+    datamodel="python">
 
     <datamodel>
         <data id="session" />
@@ -33,9 +34,12 @@
                 <spyderbrain:start_session sessionidexpr="session">
                     <content><![CDATA[
                     
-                        <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" >
+                        <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" datamodel="python">
                             <script>
                                 import logging
+                                from louie import dispatcher
+                                def log(data):
+                                    _x["self"].send("log", data=data )
                             </script>
                             <datamodel>
                                 <data id="log_handler" /> 
@@ -50,20 +54,23 @@
                             
                             <state id="connected">
                                 <onentry>
-                                    <log label="entered connected" />
                                     <script>
+                                        
                                         class EventHandler(logging.Handler):
                                             def __init__(self, level=logging.NOTSET):
                                                 logging.Handler.__init__(self, level=level)
                                                 
                                             def handle(self, record):
-                                                print "handle", record.getMessage()
-                                                _x["self"].send("log", data=record.getMessage() )
+                                                log(record.getMessage()) 
                                             
                                         log_handler = EventHandler()
                                         logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
-                                        #TODO: this doesn't work, i is not instantiated.
-                                        #_x["self"].datamodel["i"].sm.compiler.log_function = lambda label, expr: _x["self"].send("log.element", data=expr)
+                                        
+                                        def log_func(signal, sender, label, val):
+                                            if sender is _x["self"].datamodel["i"]:
+                                                log(label + ": " + val) 
+                                        
+                                        dispatcher.connect(log_func, "invoke_log")
                                     </script>
                                 
                                 </onentry>
