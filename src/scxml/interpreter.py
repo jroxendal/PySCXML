@@ -319,8 +319,6 @@ class Interpreter(object):
     def exitStates(self, enabledTransitions):
         statesToExit = OrderedSet()
         for t in enabledTransitions:
-#            if "s1" in t.target:
-#                pass
             if t.target:
                 tstates = self.getTargetStates(t.target)
                 if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
