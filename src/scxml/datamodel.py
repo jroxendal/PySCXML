@@ -32,7 +32,10 @@ class DataModel(dict):
 
     def __getitem__(self, key):
         if key in hidden:
-            return dict.__getitem__(self, "_" + key)
+            try:
+                return dict.__getitem__(self, "_" + key)
+            except KeyError:
+                raise KeyError, key
         return dict.__getitem__(self, key)
     
     def hasLocation(self, location):
@@ -61,7 +64,10 @@ class ECMAScriptDataModel(object):
         if key in hidden:
             if key == "_event":
                 e = Event("")
-                e.__dict__ = self.g.dm["__event"]
+                try:
+                    e.__dict__ = getattr(self.g, "__event")
+                except:
+                    raise KeyError, key
                 return e
             return getattr(self.g, "_" + key)
         return getattr(self.g, key)
@@ -118,7 +124,8 @@ class ECMAScriptDataModel(object):
     
 if __name__ == '__main__':
     import PyV8 #@UnresolvedImport
-    d = ECMAScriptDataModel()
+#    d = ECMAScriptDataModel()
+    d = DataModel()
     
     
 #    print d["hello"]
@@ -154,5 +161,6 @@ if __name__ == '__main__':
     
     t.join()
     print d["thread"]
-    d["_event"] = "lol3"
+    d["__event"] = Event("hello")
+    print d["_event"]
     
