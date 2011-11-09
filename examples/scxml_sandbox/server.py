@@ -4,10 +4,12 @@ import logging
 import os, json, sys
 logging.basicConfig(level=logging.NOTSET)
 
+HOST = "109.74.200.229"
+PORT = 8081
 
 json.dump(["example_docs/" + x for x in os.listdir("example_docs") if x.endswith("xml")], open("example_list.json", "w"))
 
-pyscxml = PySCXMLServer("localhost", 8081, 
+pyscxml = PySCXMLServer(HOST, PORT, 
                         init_sessions={"server" : open("sandbox_server.xml").read()},
                         server_type=TYPE_RESPONSE | TYPE_WEBSOCKET,
                         default_datamodel="ecmascript"
@@ -46,7 +48,7 @@ def eventletHandler(environ, start_response):
     else:
         return pyscxml.request_handler(environ, start_response)
 
-wsgi.server(eventlet.listen(("localhost", 8081)), eventletHandler)
+wsgi.server(eventlet.listen((HOST, PORT)), eventletHandler)
 
 
 import gevent.pywsgi
@@ -65,7 +67,7 @@ class WebSocketServer(gevent.pywsgi.WSGIServer):
                             fallback_app=fallback_app)
         
 
-server = WebSocketServer(("localhost", 8081), pyscxml.websocket_handler, pyscxml.request_handler)
+server = WebSocketServer((HOST, PORT), pyscxml.websocket_handler, pyscxml.request_handler)
 
 server.serve_forever()
 
