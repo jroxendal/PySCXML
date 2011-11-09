@@ -21,11 +21,20 @@ Created on Dec 15, 2010
 
 from eventprocessor import SCXMLEventProcessor as Processor, Event
 from scxml.pyscxml import MultiSession
+from wsgiref.simple_server import make_server
 from xml.parsers.expat import ExpatError
 import cgi
 import logging
 import threading, time
 from functools import partial
+#import os
+#import inspect
+#try:
+#    from eventlet import wsgi, websocket
+#    import eventlet
+#    
+#except ImportError:
+#    pass
 
 def get_server(isWebSocket):
     try:
@@ -158,6 +167,7 @@ class PySCXMLServer(object):
     
     
     def websocket_handler(self, ws, environ):
+        #TODO: bring back eventlet by duplicating this handler with small eventlet changes.
 #        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
         pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
         

@@ -14,6 +14,28 @@ pyscxml = PySCXMLServer("localhost", 8081,
                         )
 
 
+# with eventlet
+
+from eventlet import wsgi, websocket
+import eventlet
+
+def eventletHandler(environ, start_response):
+    pathlist = filter(bool, environ["PATH_INFO"].split("/"))
+    session = pathlist[0]
+    type = pathlist[1]
+    
+    def dummyhandler(ws):
+        ws.wait = lambda: ws.receive(msg_obj=True)
+        
+        pyscxml.websocket_handler(ws, environ)
+    
+    if type == "websocket":
+        handler = websocket.WebSocketWSGI(dummyHandler)
+        return handler(environ, start_response)
+
+wsgi.server(eventlet.listen(("localhost", 8081)), eventletHandler)
+
+
 import gevent.pywsgi
 from ws4py.server.geventserver import UpgradableWSGIHandler
 from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
