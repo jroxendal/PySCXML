@@ -161,6 +161,6 @@ if __name__ == '__main__':
     
     t.join()
     print d["thread"]
-    d["__event"] = Event("hello")
+    d["_event"] = Event("hello")
     print d["_event"]
     

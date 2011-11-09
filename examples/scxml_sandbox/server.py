@@ -24,14 +24,27 @@ def eventletHandler(environ, start_response):
     session = pathlist[0]
     type = pathlist[1]
     
+    class DummyMessage(object):
+        def __init__(self, msg):
+            self.data = msg
+    
     def dummyhandler(ws):
-        ws.wait = lambda: ws.receive(msg_obj=True)
+        
+        def receive(msg_obj):
+            w = ws.wait()
+            if w is None:
+                return None
+            return DummyMessage(w)
+        
+        ws.receive = receive 
         
         pyscxml.websocket_handler(ws, environ)
     
     if type == "websocket":
-        handler = websocket.WebSocketWSGI(dummyHandler)
+        handler = websocket.WebSocketWSGI(dummyhandler)
         return handler(environ, start_response)
+    else:
+        return pyscxml.request_handler(environ, start_response)
 
 wsgi.server(eventlet.listen(("localhost", 8081)), eventletHandler)
 
