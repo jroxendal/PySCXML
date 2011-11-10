@@ -16,7 +16,7 @@
 
             <state id="B2" />
         </state>
-        <transition target="f" cond="In('A2') and In('B2')" />
+        <transition target="f" cond="In('A2') &amp;&amp; In('B2')" />
     </parallel>
 
     <final id="f" />

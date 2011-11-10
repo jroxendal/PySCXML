@@ -66,6 +66,8 @@ tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
 preprocess_mapping = {}
 
+
+
 class Compiler(object):
     '''The class responsible for compiling the statemachine'''
     def __init__(self):
@@ -193,6 +195,13 @@ class Compiler(object):
                             multisession = self.dm["_x"]["sessions"]
                             sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
                             sm.start_threaded()
+                            print node.get("timeout", "0s")
+                            timeout = self.parseCSSTime(node.get("timeout", "0s"))
+                            if timeout:
+                                def cancel():
+                                    if not sm.isFinished():
+                                        sm.cancel()
+                                Timer(timeout, cancel).start()
                         except AssertionError:
                             raise ParseError("You supplied no xml for <pyscxml:start_session /> " 
                                                 "and no default has been declared.")
@@ -259,6 +268,11 @@ class Compiler(object):
         
         return output
     
+    def parseCSSTime(self, timestr):
+        n, unit = re.search("(\d+)(\w+)", timestr).groups()
+        assert unit in ("s", "ms") 
+        return float(n) if unit == "s" else float(n) / 1000
+    
     def parseSend(self, sendNode, skip_delay=False):
         sendid = sendNode.get("id")
         if sendNode.get("idlocation"):
@@ -266,15 +280,14 @@ class Compiler(object):
         if not skip_delay:
             delay = self.parseAttr(sendNode, "delay", "0s")
             try:
-                n, unit = re.search("(\d+)(\w+)", delay).groups()
-                assert unit in ("s", "ms") 
+                delay = self.parseCSSTime(delay)
             except (AttributeError, AssertionError):
                 e = RuntimeError("Line %s: delay format error: the delay attribute should be " 
                 "specified using the CSS time format, you supplied the faulty value: %s" % (sendNode.lineno, delay))
                 self.logger.error(str(e))
                 self.raiseError("error.execution.send.delay", e, sendid=sendid)
                 return
-            delay = float(n) if unit == "s" else float(n) / 1000
+            
              
             if delay:
                 t = Timer(delay, self.parseSend, args=(sendNode, True))

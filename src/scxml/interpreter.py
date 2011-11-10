@@ -154,7 +154,7 @@ class Interpreter(object):
                 
                 # now take any newly enabled null transitions and any transitions triggered by internal events
                 macroStepComplete = False
-                while not macroStepComplete:
+                while not macroStepComplete and self.g_continue:
                     initialStepComplete = True
                     enabledTransitions = self.selectEventlessTransitions()
                     if enabledTransitions.isEmpty():
