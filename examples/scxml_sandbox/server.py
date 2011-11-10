@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.NOTSET)
 
 HOST = "109.74.200.229"
 PORT = 8081
-
+os.chdir("/var/www/pyscxml/examples/scxml_sandbox/")
 json.dump(["example_docs/" + x for x in os.listdir("example_docs") if x.endswith("xml")], open("example_list.json", "w"))
 
 pyscxml = PySCXMLServer(HOST, PORT, 
