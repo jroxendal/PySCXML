@@ -18,7 +18,6 @@
     </script>
     
 
-    <parallel>
 <!--         <state id="webserver"> -->
 <!--             <transition event="http.get"> -->
 <!--                 <script> -->
@@ -35,10 +34,10 @@
 <!--                 <if cond="session"> -->
 <!--                     <send targetexpr="'#_scxml_' + session" event="quit" /> -->
 <!--                 </if> -->
-                <assign location="session" expr="'session_' + str(counter)" />
-                <assign location="counter" expr="counter + 1" />
-                <spyderbrain:start_session sessionidexpr="session" timeout="5s">
-                    <content><![CDATA[
+            <assign location="session" expr="'session_' + str(counter)" />
+            <assign location="counter" expr="counter + 1" />
+            <spyderbrain:start_session sessionidexpr="session" timeout="5s">
+                <content><![CDATA[
                     
                         <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" datamodel="python">
                             <script>
@@ -124,25 +123,24 @@
                     
                 </spyderbrain:start_session>
 <!--                 <send target="#_response" namelist="session headers" /> -->
-            </transition>
+        </transition>
+        
+        <transition event="init.session">
+            <send target="#_response" namelist="headers" event="success">
+                <param name="session" expr="_event.data['_sessionid']" />
+            </send>
             
-            <transition event="init.session">
-                <send target="#_response" namelist="headers" event="success">
-                    <param name="session" expr="_event.data['_sessionid']" />
-                </send>
-                
-            </transition>
-            
-            <transition event="error.communication">
-                <log label="error.communication" />
-            </transition>
-            
-            
-            <transition event="error">
-                <send target="#_response" namelist="headers" eventexpr="_event.name">
-                    <param name="exception" expr="str(_event.data['exception'])" /> 
-                </send>
-            </transition>
-        </state>
-    </parallel>
+        </transition>
+        
+        <transition event="error.communication">
+            <log label="error.communication" />
+        </transition>
+        
+        
+        <transition event="error">
+            <send target="#_response" namelist="headers" eventexpr="_event.name">
+                <param name="exception" expr="str(_event.data['exception'])" /> 
+            </send>
+        </transition>
+    </state>
 </scxml>

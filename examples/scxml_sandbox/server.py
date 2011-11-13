@@ -68,6 +68,16 @@ def main(address):
     def eventletHandler(environ, start_response):
         pathlist = filter(bool, environ["PATH_INFO"].split("/"))
         session = pathlist[0]
+        
+        if session == "info":
+            headers = {"Content-Type" : "text/plain"}
+            start_response("200 OK", headers.items())
+            output = ["Things seem to be running smoothly. There are currently %s document(s) running." % len(list(pyscxml.sm_mapping)),
+                      "Session\t\tConfiguration\t\tisFinished"]
+            for sessionid, sm in pyscxml.sm_mapping.sm_mapping.items():
+                output.append("%s\t\t%s\t\t%s" % (sessionid, "{" + ", ".join([s.id for s in sm.interpreter.configuration if s.id != "__main__"]) + "}", sm.isFinished()))
+            return ["\n".join(output)]
+        
         type = pathlist[1]
         
         class DummyMessage(object):
@@ -89,14 +99,6 @@ def main(address):
         if type == "websocket":
             handler = websocket.WebSocketWSGI(dummyhandler)
             return handler(environ, start_response)
-        elif pathlist[0] == "info":
-            headers = {"Content-Type" : "text/plain"}
-            start_response("200 OK", headers.items())
-            output = ["Things seem to be running smoothly. There are currently %s documents running." % len(list(pyscxml.sm_mapping)),
-                      "Session\t\tConfiguration\t\tisFinished"]
-            for sessionid, sm in pyscxml.sm_mapping.sm_mapping.items():
-                output.append("%s\t\t%s\t\t%s" % (sessionid, sm.interpreter.configuration, sm.isFinished()))
-            return output
         else:
             return pyscxml.request_handler(environ, start_response)
         
