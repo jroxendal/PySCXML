@@ -52,7 +52,6 @@ def eventletHandler(environ, start_response):
 
 wsgi.server(eventlet.listen((HOST, PORT)), eventletHandler)
 
-
 #import gevent.pywsgi
 #from ws4py.server.geventserver import UpgradableWSGIHandler
 #from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware

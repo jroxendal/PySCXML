@@ -338,8 +338,13 @@ if __name__ == "__main__":
     '''
     xml = '''
     <scxml datamodel="ecmascript">
+        <datamodel>
+            <data id="fn" expr="function(a) {return a+a};" />
+            <!--<data id="fn" expr="1234" />-->
+        </datamodel>
         <initial>
             <transition target="s1">
+                <log expr="fn(10)" />
                 <send event="next" />
             </transition>
         </initial>
@@ -357,7 +362,8 @@ if __name__ == "__main__":
 #        sm.send("hello")
 #    xml = open("../../unittest_xml/parallel2.xml").read()/
     sm = StateMachine(xml)
-    sm.start_threaded()
+    sm.start()
+#    sm.start_threaded()
 #        sm.send("e")
     
 #    sm = StateMachine(xml)

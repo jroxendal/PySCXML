@@ -95,7 +95,7 @@ class ECMAScriptDataModel(object):
     def evalExpr(self, expr):
         with JSLocker():
             with JSContext(self.g) as c:
-                ret = c.eval(expr)
+                ret = c.eval("(%s);" % expr.rstrip(";"))
                 for key in c.locals.keys(): setattr(self.g, key, c.locals[key])
                 return ret
     
@@ -124,8 +124,8 @@ class ECMAScriptDataModel(object):
     
 if __name__ == '__main__':
     import PyV8 #@UnresolvedImport
-#    d = ECMAScriptDataModel()
-    d = DataModel()
+    d = ECMAScriptDataModel()
+#    d = DataModel()
     
     
 #    print d["hello"]
@@ -141,9 +141,9 @@ if __name__ == '__main__':
         
     d.errorCallback = crash
 #    d = DataModel()
-    d["hello"] = "yeah"
-    print d.hasLocation("hello")
-    print d["hello"]
+    fn = d.evalExpr("function(a) {return a + a;};");
+    
+    print fn
     
 #    print d.hasLocation("lol")
     
@@ -151,16 +151,16 @@ if __name__ == '__main__':
 #    c.enter()
     
     
-    def add():
-        d["thread"] = 1234
-            
-    t = Thread(target=add)
-    with JSLocker():
-        t.start()
+#    def add():
+#        d["thread"] = 1234
+#            
+#    t = Thread(target=add)
+#    with JSLocker():
+#        t.start()
     
     
-    t.join()
-    print d["thread"]
-    d["_event"] = Event("hello")
-    print d["_event"]
+#    t.join()
+#    print d["thread"]
+#    d["_event"] = Event("hello")
+#    print d["_event"]
     
