@@ -25,6 +25,7 @@ from threading import Thread, RLock
 import logging
 from time import time, sleep
 from scxml import datamodel
+from scxml.datamodel import DataModel
 
 
 def default_logfunction(label, msg):
@@ -268,11 +269,16 @@ class preprocessor(object):
         compiler.preprocess_mapping[self.namespace] = f
         return f
     
-def expr_evaluator(f):
-    compiler._expr_eval = f
-
-def expr_exec(f):
-    compiler._expr_exec = f
+def register_datamodel(id, klass):
+    ''' registers a datamodel class to an id for use with the 
+    datamodel attribute of the scxml element.
+    Datamodel class must satisfy the interface:
+    __setitem__ # modifies 
+    __getitem__ # gets
+    evalExpr(expr) # returns value
+    execExpr(expr) # returns None
+    '''
+    compiler.datamodel_mapping[id] = klass
 
     
 __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor", "expr_evaluator", "expr_exec"]
@@ -363,6 +369,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/parallel2.xml").read()/
     sm = StateMachine(xml)
     sm.start()
+    
 #    sm.start_threaded()
 #        sm.send("e")
     

@@ -4,7 +4,6 @@ Created on Nov 1, 2011
 @author: johan
 '''
 from scxml.eventprocessor import Event
-from threading import Thread
 
 
 try:
@@ -52,14 +51,23 @@ class DataModel(dict):
         exec expr in self
 
 
-class GlobalEcmaContext(object):
-    pass
 
 class ECMAScriptDataModel(object):
     def __init__(self):
+        class GlobalEcmaContext(object):
+            pass
         self.g = GlobalEcmaContext()
         self.errorCallback = lambda x, y:None
     
+    
+    def __setitem__(self, key, val):
+        if (key in assignOnce and key in self) or key in hidden:
+            self.errorCallback(key, val)
+        else:
+            if key == "__event":
+                val = val.__dict__
+            setattr(self.g, key, val)
+        
     def __getitem__(self, key):
         if key in hidden:
             if key == "_event":
@@ -71,15 +79,7 @@ class ECMAScriptDataModel(object):
                 return e
             return getattr(self.g, "_" + key)
         return getattr(self.g, key)
-    
-    def __setitem__(self, key, val):
-        if (key in assignOnce and key in self) or key in hidden:
-            self.errorCallback(key, val)
-        else:
-            if key == "__event":
-                val = val.__dict__
-            setattr(self.g, key, val)
-        
+
     def __contains__(self, key):
         return hasattr(self.g, key)
     

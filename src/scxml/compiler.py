@@ -65,7 +65,10 @@ tagsForTraversal = ["scxml", "state", "parallel", "history", "final", "transitio
 tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
 preprocess_mapping = {}
-
+datamodel_mapping = {
+    "python" : DataModel,
+    "ecmascript" : ECMAScriptDataModel
+}
 
 
 class Compiler(object):
@@ -87,11 +90,7 @@ class Compiler(object):
     
     def setupDatamodel(self, datamodel):
         self.datamodel = datamodel
-        if datamodel == "ecmascript":
-            self.doc.datamodel = ECMAScriptDataModel()
-            global _expr_exec, _expr_eval
-        else:
-            self.doc.datamodel = DataModel()
+        self.doc.datamodel = datamodel_mapping[datamodel]()
             
         self.dm = self.doc.datamodel
         self.dm["_response"] = Queue.Queue() 
@@ -195,7 +194,6 @@ class Compiler(object):
                             multisession = self.dm["_x"]["sessions"]
                             sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
                             sm.start_threaded()
-                            print node.get("timeout", "0s")
                             timeout = self.parseCSSTime(node.get("timeout", "0s"))
                             if timeout:
                                 def cancel():

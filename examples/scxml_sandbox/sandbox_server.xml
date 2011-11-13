@@ -4,13 +4,19 @@
     xmlns:spyderbrain="http://code.google.com/p/pyscxml"
     version="1.0"
     datamodel="python">
-
+    
     <datamodel>
         <data id="session" />
         <data id="counter" expr="0" />
         <data id="headers" expr="{'Access-Control-Allow-Origin' : '*'}" />
     </datamodel>
-
+    
+    <script>
+        import re
+        def filterDatamodel(doc):
+            return re.sub(r" datamodel=['\"]python['\"]", " datamodel='safe_python'", doc)  
+    </script>
+    
 
     <parallel>
 <!--         <state id="webserver"> -->
@@ -40,6 +46,7 @@
                                 from louie import dispatcher
                                 def log(data):
                                     _x["self"].send("log", data=data )
+                                
                             </script>
                             <datamodel>
                                 <data id="log_handler" /> 
@@ -77,7 +84,7 @@
                                 </onentry>
                                 <invoke id="i">
                                     <content>
-                                        $_event.data["doc"]
+                                        $filterDatamodel($_event.data["doc"])
                                     </content>
                                 </invoke>
                                 
