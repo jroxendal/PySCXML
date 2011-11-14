@@ -25,7 +25,7 @@ class SafePythonDataModel(DataModel):
         return self["_x"]["__output"]
     
     def execExpr(self, expr):
-        safe_eval(expr)
+        safe_eval(expr, self)
 
 register_datamodel("safe_python", SafePythonDataModel)
 
