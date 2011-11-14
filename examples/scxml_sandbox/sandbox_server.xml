@@ -36,7 +36,7 @@
 <!--                 </if> -->
             <assign location="session" expr="'session_' + str(counter)" />
             <assign location="counter" expr="counter + 1" />
-            <spyderbrain:start_session sessionidexpr="session" timeout="5s">
+            <spyderbrain:start_session sessionidexpr="session" timeout="10s">
                 <content><![CDATA[
                     
                         <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" datamodel="python">
