@@ -1,4 +1,4 @@
-<scxml xmlns="http://www.w3.org/2005/07/scxml">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="ecmascript">
 	<state>
 		<invoke id="i" type="scxml">
 			<content>
@@ -22,13 +22,11 @@
 							<assign location="fac" expr="x * fac" />
 							<assign location="x" expr="x-1" />
 						</transition>
-						<transition target="result">
-							<log label="'Result'" expr="fac" />
-						</transition>
+						<transition target="result" />
 					</state>
 					<final id="result">
 						<donedata>
-							<param name="fac" />
+							<param name="result" expr="fac"  />
 						</donedata>
 					</final>
 				</scxml>

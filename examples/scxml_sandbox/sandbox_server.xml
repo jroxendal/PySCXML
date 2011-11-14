@@ -17,18 +17,6 @@
             return re.sub(r" datamodel=['\"]python['\"]", " datamodel='safe_python'", doc)  
     </script>
     
-
-<!--         <state id="webserver"> -->
-<!--             <transition event="http.get"> -->
-<!--                 <script> -->
-<!--                     filename, ext = _event.name[2].split(".") -->
-<!--                 </script> -->
-<!--                 <send target="#_response" hints="{'Content-type' : 'text/html'}"> -->
-<!--                     <param name="content" expr="get(filename)" /> -->
-<!--                 </send> -->
-<!--             </transition> -->
-<!--         </state> -->
-
         <state id="sandbox">
             <transition event="http.post">
 <!--                 <if cond="session"> -->
@@ -36,7 +24,7 @@
 <!--                 </if> -->
             <assign location="session" expr="'session_' + str(counter)" />
             <assign location="counter" expr="counter + 1" />
-            <spyderbrain:start_session sessionidexpr="session" timeout="10s">
+            <spyderbrain:start_session sessionidexpr="session" timeout="20s">
                 <content><![CDATA[
                     
                         <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" datamodel="python">
@@ -53,7 +41,6 @@
                             
                             <state id="waiting">
                                 <onentry>
-<!--                                     <send event="timeout" delay="5s" /> -->
                                     <send target="#_scxml_server" eventexpr="'init.session.' + _sessionid" namelist="_sessionid" />
                                 </onentry>
                                 <transition event="websocket.connect" target="connected" />
@@ -94,11 +81,7 @@
                                         <param name="payload" expr="_event.data" />
                                     </send>
                                 </transition>
-                                <transition event="timeout">
-                                    <send target="#_websocket" event="timeout" />
-                                    <raise event="quit" />
-                                </transition>
-                                <transition event="websocket.disconnect done.invoke quit timeout" target="f">
+                                <transition event="websocket.disconnect done.invoke quit" target="f">
                                     <script>
                                         logging.getLogger("pyscxml.i").removeHandler(log_handler)
                                     </script>

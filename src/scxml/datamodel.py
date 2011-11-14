@@ -65,7 +65,11 @@ class ECMAScriptDataModel(object):
             self.errorCallback(key, val)
         else:
             if key == "__event":
-                val = val.__dict__
+                #TODO: let's try using the Event object as is, and block
+                # access to _event through GlobalEcmaContext.
+                val = val
+                key = "_event"
+#                val = val.__dict__
             setattr(self.g, key, val)
         
     def __getitem__(self, key):
@@ -141,9 +145,7 @@ if __name__ == '__main__':
         
     d.errorCallback = crash
 #    d = DataModel()
-    fn = d.evalExpr("function(a) {return a + a;};");
     
-    print fn
     
 #    print d.hasLocation("lol")
     
@@ -161,6 +163,6 @@ if __name__ == '__main__':
     
 #    t.join()
 #    print d["thread"]
-#    d["_event"] = Event("hello")
-#    print d["_event"]
+    d["__event"] = Event("hello")
+    print d.evalExpr("_event")
     

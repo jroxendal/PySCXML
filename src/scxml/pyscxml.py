@@ -73,7 +73,7 @@ class StateMachine(object):
     
     def _start_invoke(self, parentQueue=None, invokeid=None):
         self.compiler.instantiate_datamodel()
-        self.interpreter.interpret(self.doc)
+        self.interpreter.interpret(self.doc, parentQueue, invokeid)
     
     
     def start(self):
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 #    with StateMachine(xml) as sm:
 #        sm.send("hello")
-#    xml = open("../../unittest_xml/parallel2.xml").read()/
+    xml = open("../../unittest_xml/invoke.xml").read()
     sm = StateMachine(xml)
     sm.start()
     

@@ -245,7 +245,8 @@ class Compiler(object):
         Given a parent node, returns a data object corresponding to 
         its param child nodes, namelist attribute or content child element.
         '''
-        
+        #TODO: how does the param behave in <donedata /> ?
+        #TODO: location: can we express nested (deep) location?
         output = {}
         for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("location"))
@@ -507,6 +508,7 @@ class Compiler(object):
                 
                 if node.find(prepend_ns("donedata")) != None:
                     s.donedata = partial(self.parseData, node.find(prepend_ns("donedata")))
+
                 else:
                     s.donedata = lambda:{}
                 
