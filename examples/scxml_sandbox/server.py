@@ -58,7 +58,7 @@ logging.basicConfig(level=logging.NOTSET)
 def main(address):
     json.dump(["example_docs/" + x for x in os.listdir("example_docs") if x.endswith("xml")], open("example_list.json", "w"))
     
-    pyscxml = PySCXMLServer(address[0], address[1], 
+    pyscxml = PySCXMLServer(address[0], int(address[1]), 
                             init_sessions={"server" : open("sandbox_server.xml").read()},
                             server_type=TYPE_RESPONSE | TYPE_WEBSOCKET,
                             default_datamodel="ecmascript"
