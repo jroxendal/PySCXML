@@ -113,5 +113,5 @@ if __name__ == '__main__':
     address = ("localhost", 8081)
     if len(sys.argv[1:]):
         os.chdir("/var/www/pyscxml/examples/scxml_sandbox/")
-        address = tupe(sys.argv[1:])
+        address = tuple(sys.argv[1:])
     main(address)
