@@ -193,6 +193,9 @@ class Interpreter(object):
             
             externalEvent = self.externalQueue.get() # this call blocks until an event is available
             
+            if externalEvent is None:
+                continue
+            
             self.logger.info("external event found: %s", externalEvent.name)
             
             self.dm["__event"] = externalEvent

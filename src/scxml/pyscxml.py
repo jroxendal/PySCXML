@@ -108,6 +108,7 @@ class StateMachine(object):
         top-level <final /> state in your document instead.  
         '''
         self.interpreter.g_continue = False
+        self.interpreter.externalQueue.put(None)
     
     def send(self, name, data={}):
         '''
