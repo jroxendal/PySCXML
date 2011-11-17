@@ -61,6 +61,7 @@
                                         logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
                                         
                                         def log_func(signal, sender, label, val):
+                                            label = label + ":" if label else ""
                                             if sender is _x["self"].datamodel["i"]:
                                                 log(label + ": " + str(val)) 
                                         
