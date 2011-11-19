@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, send return childToParent to parent with aParam set to 2, then terminate.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="final" datamodel="python">
+
+<final id="final">
+   <onentry>
+    <send target="#_parent" event="childToParent">
+      <param name="aParam" expr="2"/>
+      </send> 
+    </onentry> 
+    
+</final>
+
+</scxml>

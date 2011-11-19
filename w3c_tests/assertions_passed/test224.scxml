@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- we test that the automatically generated id has the form stateid.platformid.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+ <datamodel>
+   <data id="Var1"/>
+   <data id="Var2" expr="'s0.'"/>
+   </datamodel>
+     
+<state id="s0">
+  <onentry>
+    <send event="timeout" delay="1s"/>
+    </onentry>
+ <invoke type="http://www.w3.org/TR/scxml/" idlocation="Var1" src="file:test224sub1.scxml"/> 
+
+  <transition event="*" target="s1"/>
+</state>
+
+<state id="s1">
+  <transition cond="&#xA;Var1.startswith(Var2)" target="pass"/>
+  <transition target="fail"/>
+  </state>
+
+<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+
+</scxml>

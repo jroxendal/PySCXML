@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- test that non-existent datamodel values are not set.  Var2 is not defined in 
+test245sub1's datamodel.  It will will return success if its Var2 remains unbound, failure otherwise.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+<datamodel>
+  <data id="Var2" expr="3"/>
+  </datamodel>
+     
+<state id="s0">
+  <onentry>
+    <send event="timeout" delay="2s"/>
+    </onentry>
+   
+     <invoke type="http://www.w3.org/TR/scxml/" src="file:test245sub1.scxml" namelist="Var2"/>
+     <transition event="success" target="pass"/>
+     <transition event="*" target="fail"/>
+   </state>
+ 
+<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+</scxml>

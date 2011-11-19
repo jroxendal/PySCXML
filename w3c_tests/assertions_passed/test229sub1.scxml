@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, send childToParent to parent.  If it is forwarded back to us, send
+eventReceived to signal success and terminate.  Otherwise wait for timer to expire and terminate.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+
+
+
+<state id="s0">
+   <onentry>
+    <send target="#_parent" event="childToParent"/> 
+    <send event="timeout" delay="3s"/> 
+    </onentry> 
+    
+  <transition event="childToParent" target="final">
+    <send target="#_parent" event="eventReceived"/>
+    </transition>
+    
+  <transition event="*" target="final"/>
+
+  </state>
+  
+<final id="final"/>
+
+</scxml>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- wait to be cancelled, try to send childToParent as you exit.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+   
+<state id="s0" initial="s01">
+ <onentry>
+   <send event="timeout" delay="2s"/>
+   </onentry>
+   
+   <transition event="timeout" target="final"/>
+   
+  <onexit>
+   <send target="#_parent" event="childToParent"/>
+   </onexit>
+ </state>
+     
+<final id="final"/>
+ 
+</scxml>

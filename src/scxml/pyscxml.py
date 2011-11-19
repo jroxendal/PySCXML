@@ -308,7 +308,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/ispreempted.xml").read()
 #    xml = open("../../unittest_xml/ispreempted_complex.xml").read()
 #    xml = open("../../resources/preempted.xml").read()
-#    xml = open("../../unittest_xml/parallel4.xml").read()
+    xml = open("../../unittest_xml/finalize.xml").read()
     
     sm = StateMachine(xml)
     sm.start()

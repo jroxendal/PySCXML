@@ -135,6 +135,7 @@ class Compiler(object):
                             
                     elif node_name == "raise":
                         eventName = node.get("event").split(".")
+#                        TODO: I don't think that we're supposed to have data on raise.
                         self.interpreter.raiseFunction(eventName, self.parseData(node))
                     elif node_name == "send":
                         try:
@@ -184,8 +185,10 @@ class Compiler(object):
                 elif node_ns == pyscxml_ns:
                     if node_name == "start_session":
                         xml = None
-                        if node.find(prepend_ns("content")) != None:
-                            xml = template(node.find(prepend_ns("content")).text, self.dm)
+                        data = self.parseData(node, getContent=False)
+                        contentNode = node.find(prepend_ns("content"))
+                        if contentNode != None:
+                            xml = self.parseContent(contentNode)
                         elif node.get("expr"):
                             xml = self.getExprValue(node.get("expr"))
                         elif self.parseAttr(node, "src"):
@@ -193,6 +196,7 @@ class Compiler(object):
                         try:
                             multisession = self.dm["_x"]["sessions"]
                             sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
+                            sm.compiler.initData = data
                             sm.start_threaded()
                             timeout = self.parseCSSTime(node.get("timeout", "0s"))
                             if timeout:
@@ -207,6 +211,7 @@ class Compiler(object):
                             raise ParseError("You can only use the pyscxml:start_session " 
                                               "element for documents in a MultiSession enviroment")
                         except Exception, e:
+                            self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
                             self.raiseError("error.execution." + type(e).__name__.lower(), e)
                 elif node_ns in custom_exec_mapping:
                     # execute functions registered using scxml.pyscxml.custom_executable
@@ -245,6 +250,10 @@ class Compiler(object):
         Given a parent node, returns a data object corresponding to 
         its param child nodes, namelist attribute or content child element.
         '''
+        contentNode = child.find(prepend_ns("content"))
+        if getContent and contentNode != None:
+            return self.parseContent(contentNode)
+            
         #TODO: how does the param behave in <donedata /> ?
         #TODO: location: can we express nested (deep) location?
         output = {}
@@ -260,11 +269,27 @@ class Compiler(object):
             for name in child.get("namelist").split(" "):
                 output[name] = self.getExprValue(name, True)
         
-        if getContent and child.find(prepend_ns("content")) != None:
-            output["_content"] = template(child.find(prepend_ns("content")).text, self.dm)
+
+                
+#            output["_content"] = template(child.find(prepend_ns("content")).text, self.dm)
 #        if child.find(pyscxml_ns + "tmpl") != None:
 #            output = template(child.find(pyscxml_ns + "tmpl").text, self.dm)
         
+        return output
+    
+    def parseContent(self, contentNode):
+        output = None
+        
+        if contentNode != None:
+            if contentNode.get("expr"):
+                output = self.getExprValue(contentNode.get("expr"))
+            elif len(contentNode) == 0:
+                output = contentNode.text
+            elif len(contentNode) > 0:
+                output = ElementTree.tostring(contentNode[0])
+            else:
+                self.logger.error("Line %s: error when parsing content node." % contentNode.lineno)
+                return 
         return output
     
     def parseCSSTime(self, timestr):
@@ -587,8 +612,8 @@ class Compiler(object):
             try:
                 inv = self.parseInvoke(node, parentId, n)
             except Exception, e:
-                #TODO: let's crash for now.
-#                raise e
+                self.logger.error("Line %s: Exception while parsing invoke." % (node.lineno))
+                self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
                 self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
                 return
             wrapper.set_invoke(inv)
@@ -597,8 +622,12 @@ class Compiler(object):
             dispatcher.connect(self.onInvokeSignal, "init.invoke." + inv.invokeid, inv)
             dispatcher.connect(self.onInvokeSignal, "result.invoke." + inv.invokeid, inv)
             dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + inv.invokeid, inv)
-            
-            inv.start(self.interpreter.externalQueue)
+            try:
+                inv.start(self.interpreter.externalQueue)
+            except Exception, e:
+                self.logger.error("Line %s: Exception while parsing invoke xml." % (node.lineno))
+                self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
+                self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
             
         wrapper = InvokeWrapper()
         wrapper.invoke = start_invoke
@@ -621,16 +650,12 @@ class Compiler(object):
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         data = self.parseData(node, getContent=False)
-        contentNode = node.find(prepend_ns("content"))
         scxmlType = ["http://www.w3.org/TR/scxml", "scxml"]
         if type.strip("/") in scxmlType: 
             inv = InvokeSCXML(data)
-            if contentNode != None and len(contentNode) == 0 and contentNode.text.strip():
-                inv.content = template(contentNode.text, self.dm)
-                # TODO: support non-cdata content child, but fix datamodel init first. 
-            elif contentNode is not None and len(contentNode) > 0:
-                inv.content = ElementTree.tostring(contentNode[0])
-            
+            contentNode = node.find(prepend_ns("content"))
+            if contentNode != None:
+                inv.content = self.parseContent(contentNode)
         elif type == "x-pyscxml-soap":
             inv = InvokeSOAP()
         elif type == "x-pyscxml-httpserver":

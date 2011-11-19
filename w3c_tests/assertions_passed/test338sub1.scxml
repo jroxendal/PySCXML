@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- simple script  that just returns an event to the parent session --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python" name="machineName">  
+   
+ <final id="s0">
+   <onentry>
+     <send target="#_parent" event="event1"/>
+   </onentry>
+</final>
+     
+</scxml>

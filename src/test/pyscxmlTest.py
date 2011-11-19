@@ -21,10 +21,13 @@ This file is part of pyscxml.
 import time
 import unittest
 from scxml.pyscxml import StateMachine, MultiSession
-import os.path
+import os
 from scxml.pyscxml_server import PySCXMLServer, TYPE_RESPONSE
 from threading import Thread
 import logging
+import threading
+from scxml.compiler import ScriptFetchError
+import futures
 xmlDir = "../../unittest_xml/"
 if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
@@ -39,7 +42,7 @@ class RegressionTest(unittest.TestCase):
         runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
                                "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
-                               "cheetah.xml", "internal_transition.xml", "binding.xml", "finalize.xml",
+                               "internal_transition.xml", "binding.xml", "finalize.xml",
                                "internal_parallel.xml"]
         
         for name in runToCompletionList:
@@ -109,14 +112,62 @@ class RegressionTest(unittest.TestCase):
         
 
     def testW3c(self):
-        pass
+        os.chdir("../../w3c_tests/assertions_passed")
+        
+        class W3CTester(StateMachine):
+            def __init__(self, xml, log_function=lambda fn, y:None, sessionid=None):
+                self.didPass = False
+                StateMachine.__init__(self, xml, log_function, None)
+            def on_exit(self, sender, final):
+                self.didPass = final == "pass"
+                StateMachine.on_exit(self, sender, final)
+        
+        def runtest(doc_uri):
+            xml = open(doc_uri).read()
+            try:
+                sm = W3CTester(xml)
+                sm.name = doc_uri
+                didTimeout = False
+                def timeout():
+                    #print "timout", doc_uri
+                    sm.send("timeout")
+                    sm.cancel()
+                    didTimeout = True
+                threading.Timer(12, timeout).start()
+                sm.start()
+                
+                
+                didPass = didTimeout or sm.didPass
+            except ScriptFetchError, e:
+                print "caught ", str(e)
+                didPass = True
+            return didPass
+        
+                        
+        def parallelize(filelist):
+            with futures.ThreadPoolExecutor(max_workers=4) as executor:
+                future_to_url = dict((executor.submit(runtest, url), url)
+                                     for url in filelist)
+            
+                for future in futures.as_completed(future_to_url):
+                    url = future_to_url[future]
+                    e = future.exception()
+                    self.assertTrue(future.result(), url + " failed.")
+                    self.assertIsNone(e, url + " failed, exception caught.")
+                    
+        import glob
+        filelist = filter(lambda x: "sub" not in x, glob.glob("*xml"))
+        print "Running W3C tests"
+        parallelize(filelist)
+        
+        print "completed %s w3c tests" % len(filelist)
 
 def TestSuite():
     return unittest.makeSuite(RegressionTest)    
         
         
 if __name__ == '__main__':
-    
     unittest.main()
+    
     
     

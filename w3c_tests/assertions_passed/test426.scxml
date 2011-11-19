@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- test that the processor automatically generates an id when one is missing.  Both the top-level states
+in the test are missing ids.  So ids should be generated and used in their respective done events.  We check
+that the event names are different --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s01" datamodel="python" name="machineName">
+<datamodel>
+  <data id="Var1"/>
+  <data id="Var2"/>
+  </datamodel>
+    
+ <state>
+   <transition event="done.state" target="s11">
+     <assign location="Var1" expr="_event.name"/>
+     </transition>
+    <transition event="*" target="fail"/>
+    <state id="s01">
+      <transition target="s0final"/>
+      </state>
+    <final id="s0final"/>
+   </state>
+
+ <state>
+   <transition event="done.state" target="s3">
+     <assign location="Var2" expr="_event.name"/>
+     </transition>
+    <transition event="*" target="fail"/>
+    <state id="s11">
+      <transition target="s1final"/>
+      </state>
+    <final id="s1final"/>
+   </state> 
+   
+ <state id="s3">
+   <transition cond="Var1==Var2" target="fail"/>
+   <transition target="pass"/> 
+   </state>
+
+   <final xmlns="http://www.w3.org/2005/07/scxml" id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+   <final xmlns="http://www.w3.org/2005/07/scxml" id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+     
+</scxml>

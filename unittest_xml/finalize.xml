@@ -22,7 +22,7 @@
     </datamodel>
     <state>
         <invoke id="i">
-            <content><![CDATA[$doc]]></content>
+            <content expr="doc" />
             
             <finalize>
                 <assign location="slot1" expr="_event.data['slot1']" />
@@ -32,7 +32,7 @@
     </state>
     <state id="s2">
         <invoke id="i2">
-            <content><![CDATA[$doc]]></content>
+            <content expr="doc" />
             <finalize />
             <param name="slot2" location="slot2" />
         </invoke>

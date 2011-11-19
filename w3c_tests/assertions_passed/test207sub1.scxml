@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, we raise a delayed event1 with sendid 'foo' and notify our parent.  Then we wait.
+If event1 occurs, the parent hasn't succeeded in canceling it and we return pass.  If event2 occurs
+it means event1 was canceled (because event2 is delayed longer than event1) and we return 'fail'.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+
+   
+<state id="s0" initial="s01">
+  <onentry>
+    <send event="event1" sendid="foo" delay="3s"/>
+    <send event="event2" delay="5s"/>
+    <send target="#_parent" event="childToParent"/>
+    </onentry>
+ 
+  <transition event="event1" target="final">
+    <send target="#_parent" event="pass"/>
+    </transition>
+  <transition event="*" target="final">
+      <send target="#_parent" event="fail"/>
+    </transition>
+ 
+ </state>
+
+
+<final id="final"/>
+
+</scxml>

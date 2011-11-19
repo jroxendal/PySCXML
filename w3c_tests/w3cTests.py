@@ -79,7 +79,7 @@ if __name__ == '__main__':
     test307
     '''
     import futures, os
-    os.chdir("assertions_jim3/")
+    os.chdir("assertions_all/")
     try:
         os.mkdir("passed")
         os.mkdir("failed")
@@ -117,5 +117,5 @@ if __name__ == '__main__':
     
 #    sequentialize(filelist)
     parallelize(filelist)
-    print "done"
+    print "Done"
     

@@ -11,12 +11,6 @@
         <data id="headers" expr="{'Access-Control-Allow-Origin' : '*'}" />
     </datamodel>
     
-    <script>
-        import re
-        def filterDatamodel(doc):
-            return re.sub(r" datamodel=['\"]python['\"]", " datamodel='safe_python'", doc)  
-    </script>
-    
         <state id="sandbox">
             <transition event="http.post">
 <!--                 <if cond="session"> -->
@@ -25,17 +19,21 @@
             <assign location="session" expr="'session_' + str(counter)" />
             <assign location="counter" expr="counter + 1" />
             <spyderbrain:start_session sessionidexpr="session" timeout="20s">
-                <content><![CDATA[
-                    
+                <param name="doc" expr="_event.data['doc']" />
+                <content>
                         <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" datamodel="python">
                             <script>
                                 import logging
                                 from louie import dispatcher
-                                def log(data):
-                                    _x["self"].send("log", data=data )
-                                
+                                def log(event, data):
+                                    _x["self"].send("log." + event, data=data )
+                                    
+                                import re
+                                def filterDatamodel(doc):
+                                    return re.sub(r" datamodel=['\"]python['\"]", " datamodel='safe_python'", doc)  
                             </script>
                             <datamodel>
+                                <data id="doc" /> 
                                 <data id="log_handler" /> 
                             </datamodel>
                             
@@ -55,7 +53,7 @@
                                                 logging.Handler.__init__(self, level=level)
                                                 
                                             def handle(self, record):
-                                                log(record.getMessage()) 
+                                                log(record.levelname.lower(), record.getMessage()) 
                                             
                                         log_handler = EventHandler()
                                         logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
@@ -70,15 +68,13 @@
                                 
                                 </onentry>
                                 <invoke id="i">
-                                    <content>
-                                        $filterDatamodel($_event.data["doc"])
-                                    </content>
+                                    <content expr="filterDatamodel(doc)" />
                                 </invoke>
                                 
                                 
                                 
                                 <transition event="log">
-                                    <send target="#_websocket" event="log">
+                                    <send target="#_websocket" eventexpr="_event.name">
                                         <param name="payload" expr="_event.data" />
                                     </send>
                                 </transition>
@@ -102,7 +98,6 @@
                             
                             <final id="f" />
                         </scxml>
-                    ]]>    
                     </content>
                     
                 </spyderbrain:start_session>

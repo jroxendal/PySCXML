@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- we test that delayed <send> is not sent if the sending session terminates.  In this case,
+test187sub1.scxml is invoked, sends the event childToParent delayed by 1 second, and then terminates.  The
+parent session, defined in this file, should not receive childToParent. If it does, we fail.  Otherwise the 
+10 sec timer expires and we pass --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+
+  
+<state id="s0">
+    <onentry>
+      <send event="timeout" delay="10s"/>
+      </onentry>
+    <invoke type="scxml" src="file:test187sub1.scxml"/>
+    <transition event="childToParent" target="fail"/>
+    <transition event="timeout" target="pass"/>
+</state>
+
+   <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+   <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+
+</scxml>

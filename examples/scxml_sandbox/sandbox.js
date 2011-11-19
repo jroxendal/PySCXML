@@ -105,6 +105,7 @@ function connect(address) {
 	socket.onmessage = function(event) {
 		var evt = SCXMLEventProcessor.fromXML(event.data);
 		if(evt.data.payload == "external event found: init.invoke.i") return;
+		if(evt.name == "log.warning") return;
 		addToLog(evt.name + " " + (evt.data.payload || ""));
 		console.log(evt.data);
 		if(evt.name == "close") {

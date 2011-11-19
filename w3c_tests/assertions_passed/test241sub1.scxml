@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- parent will pass in 1 as value for var1.  If we get it return success, otherwise failure, then terminate.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+ <datamodel>
+   <data id="Var1" expr="0"/>
+   </datamodel>
+   
+ <state id="s0">
+   <transition cond="Var1==1" target="final">
+     <send target="#_parent" event="success"/>
+     </transition>
+   <transition target="final">
+     <send target="#_parent" event="failure"/>
+     </transition>
+ </state>
+     
+ <final id="final"/>
+ 
+</scxml>

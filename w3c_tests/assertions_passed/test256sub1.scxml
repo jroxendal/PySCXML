@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, terminate immediately returning Var1=2 Var2=2 in donedata   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="final" datamodel="python">
+<datamodel>
+  <data id="Var1"/>
+  <data id="Var2"/>
+  </datamodel>
+     
+<final id="final">
+  <donedata>
+    <param name="Var1" expr="2"/>
+    <param name="Var2" expr="2"/>
+  </donedata>
+ </final>
+</scxml>
