@@ -1,9 +1,5 @@
 <scxml>
     <parallel id="p">
-        <transition event="b">
-            <log label="p taken" />
-        </transition>
-    
         <state id="s1">
             <!-- type1 -->
             <transition event="e">
@@ -29,7 +25,7 @@
         <state id="s4">
                 <!-- type3 -->
             <transition event="e">
-                <log label="i shouldn't be logged." />
+                <log label="i should be logged because I'm a targetless transition." />
             </transition>
         </state>
         
