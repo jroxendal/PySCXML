@@ -58,7 +58,7 @@ logging.basicConfig(level=logging.NOTSET)
 def main(address):
     from itertools import ifilter, chain
     
-    files = {x : z for (x, y, z) in os.walk("example_docs") if ".svn" not in x}
+    files = dict([(x, z) for (x, y, z) in os.walk("example_docs") if ".svn" not in x])
     json.dump(files, open("example_list.json", "w"))
     
     pyscxml = PySCXMLServer(address[0], address[1], 
