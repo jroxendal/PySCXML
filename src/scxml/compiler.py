@@ -646,7 +646,7 @@ class Compiler(object):
         finalizeNode = node.find(prepend_ns("finalize")) 
         if finalizeNode != None and not len(finalizeNode):
             paramList = node.findall(prepend_ns("param"))
-            namelist = map(lambda x: (x, x), node.get("namelist", "").split(" "))
+            namelist = filter(bool, map(lambda x: (x, x), node.get("namelist", "").split(" ")))
             paramMapping = [(param.get("name"), param.get("location")) for param in (p for p in paramList if p.get("location"))]
             def f():
                 for name, location in namelist + paramMapping:

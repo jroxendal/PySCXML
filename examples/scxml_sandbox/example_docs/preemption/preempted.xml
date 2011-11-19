@@ -1,0 +1,39 @@
+<scxml>
+    <parallel id="p">
+        <transition event="b">
+            <log label="p taken" />
+        </transition>
+    
+        <state id="s1">
+            <!-- type1 -->
+            <transition event="e">
+                <log label="i should be logged" />
+            </transition>
+        </state>
+        <state id="s2">
+            <state id="s21">
+                <!-- type2 -->
+                <transition event="e" target="s22">
+                    <log label="i should be logged because I'm within s2." />
+                </transition>
+            </state>
+            
+            <state id="s22" />
+            
+        </state>
+        
+        <state id="s3">
+                <!-- type3 -->
+            <transition event="e" target="f" />
+        </state>
+        <state id="s4">
+                <!-- type3 -->
+            <transition event="e">
+                <log label="i shouldn't be logged." />
+            </transition>
+        </state>
+        
+    </parallel>
+    
+    <state id="f" />
+</scxml>

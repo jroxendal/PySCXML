@@ -1,1 +1,1 @@
-["example_docs/parallel2.xml"]
+{"example_docs": ["factorial.xml", "invoke.xml", "parallel2.xml"], "example_docs/preemption": ["preempted.xml", "testPreemption.scxml"]}

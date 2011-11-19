@@ -18,11 +18,17 @@ $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonAr
 	var filelist = jsonArray[0];
 	$.log("onready", doc, filelist);
 	
-	$($.map(filelist, function(item) {
-		return $("<li>", {"data-url" : item}).append($.format("<a>%s</a>", item.split("/")[1])).get();
-	})).appendTo("#menu");
 	
-	$("#menu").menu({
+	$.each(filelist, function(foldername, files) {
+		
+		var lst = $("<ul>").appendTo("#menu");
+		lst.before($("<span />", {"class" : "listheader"}).text(foldername.split("/")[1] || ""));
+		$($.map(files, function(item) {
+			return $("<li>", {"data-url" : foldername + "/" + item}).append($.format("<a>%s</a>", item)).get();
+		})).appendTo(lst);
+	})
+	
+	$("#menu ul").menu({
 		select : function(event, ui) {
 			$.log("select menu", ui.item.data("url"));
 			$.get(ui.item.data("url"), null, null, "text").done(function(data) {

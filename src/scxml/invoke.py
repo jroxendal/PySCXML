@@ -44,6 +44,7 @@ class InvokeWrapper(object):
     def set_invoke(self, inv):
         inv.logger = self.logger
         self.invoke_obj = inv
+        self.invokeid = inv.invokeid
         inv.autoforward = self.autoforward 
         self.cancel = inv.cancel
         self.send = getattr(inv, "send", None)
@@ -171,7 +172,7 @@ class InvokeSOAP(BaseInvoke):
         exec_async(self.init)
     
     def init(self):
-        from suds.client import Client
+        from suds.client import Client #@UnresolvedImport
         self.client = Client(self.content)
         dispatcher.send("init.invoke." + self.invokeid, self)
         

@@ -54,13 +54,13 @@ class Interpreter(object):
         self.logger = None
     
     
-    def interpret(self, document, optionalParentExternalQueue=None, invokeId=None):
+    def interpret(self, document, parentQueue=None, invokeId=None):
         '''Initializes the interpreter given an SCXMLDocument instance'''
         
         self.doc = document
         self.dm = self.doc.datamodel
         self.dm["In"] = self.In
-        self.dm["_parent"] = optionalParentExternalQueue
+        self.dm["_parent"] = parentQueue
 
         self.invokeId = invokeId
         
@@ -270,7 +270,6 @@ class Interpreter(object):
                         break
                     
         filteredTransitions = self.filterPreempted(enabledTransitions)
-        
         return filteredTransitions
     
     
@@ -289,7 +288,34 @@ class Interpreter(object):
         return statesToExit
 
     def preemptsTransition(self, t, t2):
-        return bool(set(self.getStatesToExit(t)).intersection(self.getStatesToExit(t2)))
+        
+        if self.isType1(t): return False
+        elif self.isType2(t) and self.isType3(t2): return True
+        elif self.isType3(t): return True
+        
+        return False
+    
+    def getCommonParallel(self, states):
+        ancestors = set(getProperAncestors(states[0], None))
+        
+        for s in states[1:]:
+            ancestors = ancestors.intersection(getProperAncestors(s, None))
+        
+        if ancestors:
+            return sorted(ancestors, key=exitOrder)[0]
+    
+    
+    def isType1(self, t):
+        return not t.target
+    
+    def isType2(self, t):
+        source = t.source if t.type == "internal" else t.source.parent
+        p = self.getCommonParallel([source] + self.getTargetStates(t.target))
+        return not isScxmlState(p)
+            
+    
+    def isType3(self, t):
+        return not self.isType2(t) and not self.isType1(t)
     
     
     def filterPreempted(self, enabledTransitions):
@@ -297,6 +323,7 @@ class Interpreter(object):
         for t in enabledTransitions:
             # does any t2 in filteredTransitions preempt t? if not, add t to filteredTransitions
             if not any(map(lambda t2: self.preemptsTransition(t2, t), filteredTransitions)):
+#                print "take", t.source.id
                 filteredTransitions.append(t)
         
         return OrderedSet(filteredTransitions)

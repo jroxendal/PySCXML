@@ -55,6 +55,11 @@ label {
 	height : 296px;
 }
 
+.listheader {
+	font-size : 90%;
+	font-weight: bold;
+}
+
 #sendDoc {
 /* 	display: block; */
 	

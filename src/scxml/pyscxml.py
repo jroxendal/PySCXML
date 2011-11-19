@@ -23,9 +23,6 @@ from interpreter import Interpreter
 from louie import dispatcher
 from threading import Thread, RLock
 import logging
-from time import time, sleep
-from scxml import datamodel
-from scxml.datamodel import DataModel
 
 
 def default_logfunction(label, msg):
@@ -291,7 +288,7 @@ if __name__ == "__main__":
 #    xml = open("../../resources/issue64.xml").read()
 #    xml = open("../../resources/foreach.xml").read()
 #    xml = open("../../unittest_xml/parallel3.xml").read()
-#    xml = open("../../w3c_tests/testPreemption2.scxml").read()
+    xml = open("../../w3c_tests/testPreemption.scxml").read()
 #    xml = open("../../w3c_tests/assertions/failed/test187sub1.xml").read()
 #    xml = open("../../resources/preempted2.xml").read()
 #    xml = open("../../unittest_xml/invoke.xml").read()
@@ -305,111 +302,18 @@ if __name__ == "__main__":
 #    sm = StateMachine(open("../../unittest_xml/invoke.xml").read())
 #    sm.start()
     
-    xml2 = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="ecmascript">
-    
-        <datamodel>
-            <data id="var1"  />
-        </datamodel>
-        
-        <state>
-            <onentry>
-                <script>
-                    var hello = "yeah";
-                    var d = {
-                        "a" : 123,
-                        "b" : 456
-                    };
-                </script>
-                <assign location="d.a" expr="987" />
-                <log label="entry" expr="d.a"/>
-            
-            </onentry>
-            </state>
-        <state id="s2" />
-    </scxml>
-    '''
-    
-    xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-        <state>
-            <onentry><send event="foo" /></onentry>
-            <parallel id="p1">
-                <transition type="internal" event="foo" target="p1s2 p1s3"/>
-                <state id="p1s1"><onexit><log label="onexit1" /></onexit></state>
-                <state id="p1s2"><onexit><log label="onexit2" /></onexit></state>
-                <state id="p1s3"><onexit><log label="onexit3" /></onexit></state>
-            </parallel>
-        </state>
-    </scxml>
-    '''
-    xml = '''
-    <scxml datamodel="ecmascript">
-        <datamodel>
-            <data id="fn" expr="function(a) {return a+a};" />
-            <!--<data id="fn" expr="1234" />-->
-        </datamodel>
-        <initial>
-            <transition target="s1">
-                <log expr="fn(10)" />
-                <send event="next" />
-            </transition>
-        </initial>
-      <state id="s1">
-        <transition event="next" target="s2" />
-      </state>
-      <state id="s2">
-        <transition event="quit" target="f" />                
-      </state>
-      <final id="f" />
-    </scxml>
-    '''
     
 #    with StateMachine(xml) as sm:
 #        sm.send("hello")
-    xml = open("../../unittest_xml/invoke.xml").read()
+#    xml = open("../../unittest_xml/ispreempted.xml").read()
+#    xml = open("../../unittest_xml/ispreempted_complex.xml").read()
+#    xml = open("../../resources/preempted.xml").read()
+#    xml = open("../../unittest_xml/parallel4.xml").read()
+    
     sm = StateMachine(xml)
     sm.start()
     
 #    sm.start_threaded()
-#        sm.send("e")
-    
-#    sm = StateMachine(xml)
-#    t = Thread(target=sm.start)
-#    t.start()
-#    sleep(0.1)
-#    sm.start()
 #    sm.send("e")
-#    sm.cancel()
     
-    
-
-    listener = '''
-        <scxml>
-            <state>
-                <transition event="e1" target="f">
-                    <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
-                </transition>
-            </state>
-            <final id="f" />
-        </scxml>
-    '''
-    sender = '''
-    <scxml>
-        <state>
-            <onentry>
-                <log label="sending event" />
-                <!--<send event="e1" target="#_scxml_session1"  />-->
-            </onentry>
-            <transition event="e2" target="f" />
-        </state>
-        <final id="f" />
-    </scxml>
-    '''
-#    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
-#    with MultiSession(init_sessions={"session1" : listener, "session2" : sender}) as ms:
-#        ms.send("e1")
-#    ms.start()
-#    sleep(0.1)
-#    print all(map(lambda x: x.isFinished(), ms))
     
