@@ -11,6 +11,11 @@ var deferred_domReady = $.Deferred(function( dfd ){
 	$(dfd.resolve);
 }).promise();
 
+deferred_domReady.done(function() {
+	$("#left_col").tabs();
+	$("#right_col").tabs();
+});
+
 var jsonDeferred = $.getJSON("example_list.json");
 
 $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonArray) {

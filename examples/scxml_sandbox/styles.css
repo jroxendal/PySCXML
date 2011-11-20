@@ -2,7 +2,7 @@ html {
 	height : 100%;
 }
 body {
-	width : 900px;
+	width : 80%;
 	height : 100%;
 	margin : 0 auto;
 	background: #666f7c; /* Old browsers */
@@ -78,17 +78,47 @@ form input[type=text] {
 	display : inline-block;
 }
 
+
+
 #left_col {
-	width : 80%;
+	width : 70%;
 }
 #right_col {
 	vertical-align: top;
-	width : 19%;
+	width : 28%;
+}
+
+.ui-widget {
+    font-family: Arial,sans-serif;
+    font-size: 1.1em;
+}
+
+.ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button {
+    font-family: Arial,sans-serif;
+    font-size: 1em;
+}
+
+.ui-tabs .ui-tabs-nav li {
+	margin: 1px 0.1em 0 0;
+}
+.ui-tabs .ui-tabs-nav li a {
+    float: left;
+    padding: 0.2em 0.6em;
+    text-decoration: none;
 }
 
 .ui-corner-all {
 	-moz-border-radius : 2px;
 	border-radius : 2px;	
+	border-top-right-radius: 2px;
+	border-top-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	border-bottom-left-radius: 2px;
+}
+
+.ui-corner-top {
+	border-top-right-radius: 2px;
+	border-top-left-radius: 2px;
 }
 
 .col_footer {

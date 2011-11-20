@@ -34,21 +34,34 @@
 </div>
 <div id="columns">
 	<div id="left_col">
-		<label>SCXML Editor</label>
-		<textarea id="doc" rows="30" cols="80" class="ui-corner-all">
-		</textarea>
-		<div class="col_footer hbox">
-			<button id="sendDoc">Send Document</button>
-			<span class="spacer"></span>
-			<form id="eventForm">
-				<input type="text" id="message" size="40">
-				<input id="sendEvent" type="submit" value="Send event">
-			</form>
+		<ul>
+			<li><a href="#editor">SCXML Editor</a></li>
+		</ul>
+		<div id="editor">
+			<textarea id="doc" rows="30" cols="80" class="ui-corner-all">
+			</textarea>
+			<div class="col_footer hbox">
+				<button id="sendDoc">Send Document</button>
+				<span class="spacer"></span>
+				<form id="eventForm">
+					<input type="text" id="message" size="40">
+					<input id="sendEvent" type="submit" value="Send event">
+				</form>
+			</div>
 		</div>
 	</div>
 	<div id="right_col">
-		<label>Examples</label>
+		<ul>
+			<li><a href="#about">About</a></li>
+			<li><a href="#menu">Examples</a></li>
+		</ul>
+		<div id="about">
+			Welcome to the Spyderbrain SCXML Console. 
+		</div>
 		<div id="menu"></div>
+		
+		
+		
 	</div>
 	<br>
 </div>
