@@ -1,5 +1,5 @@
 <scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance"
-    initialstate="p">
+    initial="p">
     <datamodel>
         <data id="Var1" expr="0" />  <!-- how many times p1 transition has been taken -->
         <data id="Var2" expr="0" />  <!-- how many times p2 transition has been taken -->

@@ -3,7 +3,10 @@
 <head>
 <title>PySCXML console</title>
 
-<link rel="stylesheet" href="lib/themes/base/jquery.ui.all.css">
+<!-- <link rel="stylesheet" href="lib/themes/base/jquery.ui.all.css"> -->
+<link rel="stylesheet" href="lib/themes/Aristo/Aristo.css">
+<link rel="stylesheet" href="lib/themes/base/jquery.ui.menu.css">
+
 <link rel="stylesheet" href="lib/codemirror/lib/codemirror.css">
 <link rel="stylesheet" href="lib/codemirror/theme/default.css">
 <link rel="stylesheet" href="lib/codemirror/theme/eclipse.css">
@@ -32,16 +35,15 @@
 <div id="header">
 	<img src="img/logo1.png">
 </div>
-<div id="columns">
+<div id="columns" class="hbox">
 	<div id="left_col">
 		<ul>
 			<li><a href="#editor">SCXML Editor</a></li>
 		</ul>
 		<div id="editor">
-			<textarea id="doc" rows="30" cols="80" class="ui-corner-all">
-			</textarea>
+			<textarea id="doc" class="ui-corner-all"></textarea>
 			<div class="col_footer hbox">
-				<button id="sendDoc">Send Document</button>
+				<input id="sendDoc" type="submit" value="Run">
 				<span class="spacer"></span>
 				<form id="eventForm">
 					<input type="text" id="message" size="40">
@@ -50,24 +52,26 @@
 			</div>
 		</div>
 	</div>
-	<div id="right_col">
-		<ul>
-			<li><a href="#about">About</a></li>
-			<li><a href="#menu">Examples</a></li>
-		</ul>
-		<div id="about">
-			Welcome to the Spyderbrain SCXML Console. 
+	<div id="right_col" class="vbox">
+		<div id="rightTab">
+			<ul>
+				<li><a href="#about">About</a></li>
+				<li><a href="#menu">Examples</a></li>
+			</ul>
+			<div id="about">
+				The Spyderbrain <span class="capitals">SCXML</span> Console showcases the upcoming <span class="capitals">W3C</span> standard <a href="http://www.w3.org/TR/scxml/"><span class="capitals">SCXML</span></a>, 
+				powered by the open source <a href="http://code.google.com/p/pyscxml"><span class="capitals">PySCXML</span></a> processor.  
+			</div>
+			<div id="menu"></div>
 		</div>
-		<div id="menu"></div>
-		
-		
+		<p class="ui-state-highlight ui-corner-all">
+			<span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+			Supported <code>datamodel</code> values are <code>"ecmascript"</code> (default) and <code>"python"</code>.
+ 		</p>
+		<textarea id="log" readonly></textarea>
 		
 	</div>
-	<br>
 </div>
-<div>
-</div>
-<textarea id="log" rows="10" cols="40" readonly></textarea>
 </div>
 <img id="logo_bkg" src="img/spider.png">
 

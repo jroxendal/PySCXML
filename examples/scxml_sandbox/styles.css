@@ -23,6 +23,19 @@ label {
 	display : block;
 }
 
+a {
+	color : #1C4257 !important;
+	text-decoration: none;
+}
+a:hover {
+	color : #B9E0F5;
+	border-bottom : 1px dotted #B9E0F5;
+}
+
+p {
+	margin : .5em 0;
+}
+
 #logo_bkg {
 	position: relative;
 	bottom: 0;
@@ -42,17 +55,29 @@ label {
 	background-color: white;
 	height : 100%;
 	padding : 8px;
+	overflow : auto;
+	
+}
+.capitals {
+	font-size : 90%;
 }
 .CodeMirror {
-/* 	display : inline-block; */
-	border : solid 1px grey;
-	border-radius : 2px;
+	font-size : 90%;
+	line-height : 1.1em;
+}
+
+.CodeMirror-scroll {
+	height : 500px;
 }
 
 #menu {
-/* 	display : inline-block; */
 /* 	width : 300px; */
-	height : 296px;
+/* 	height : 296px; */
+	padding : 5px;
+	
+}
+#menu ul {
+	
 }
 
 .listheader {
@@ -74,37 +99,45 @@ form input[type=text] {
 	width : 100px;
 }
 
+#columns {
+	width : 100%;
+}
+
+#about {
+	font-size : .9em;
+}
+#rightTab {
+}
+
+#log {
+/* 	width : 100%; */
+	-webkit-box-flex: 1;
+	-moz-box-flex: 1;
+	box-flex: 1;
+	margin : 0;
+}
+
 #columns > div {
-	display : inline-block;
 }
 
 
 
 #left_col {
-	width : 70%;
+	-webkit-box-flex: 2;
+	-moz-box-flex: 2;
+	box-flex: 2;
 }
 #right_col {
 	vertical-align: top;
-	width : 28%;
+	width : 200px;
+	margin-left : 8px;
 }
 
-.ui-widget {
-    font-family: Arial,sans-serif;
-    font-size: 1.1em;
+#editor {
+	padding : 0;
 }
 
-.ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button {
-    font-family: Arial,sans-serif;
-    font-size: 1em;
-}
-
-.ui-tabs .ui-tabs-nav li {
-	margin: 1px 0.1em 0 0;
-}
-.ui-tabs .ui-tabs-nav li a {
-    float: left;
-    padding: 0.2em 0.6em;
-    text-decoration: none;
+.ui-tabs .ui-tabs-panel {
 }
 
 .ui-corner-all {
@@ -123,23 +156,43 @@ form input[type=text] {
 
 .col_footer {
 	width : 100%;
+	margin : 2px 0;
 }
 
 .hbox {
-	display: -webkit-box;
+	display: -webkit-box !important;
 	-webkit-box-orient: horizontal;
 	-webkit-box-align: stretch;
  
-	display: -moz-box;
+	display: -moz-box !important;
 	-moz-box-orient: horizontal;
 	-moz-box-align: stretch;
- 
-	display: box;
+
+	display: box !important;
 	box-orient: horizontal;
+	box-align: stretch;
+}
+.vbox {
+	display: -webkit-box !important;
+	-webkit-box-orient: vertical;
+	-webkit-box-align: stretch;
+ 
+	display: -moz-box !important;
+	-moz-box-orient: vertical;
+	-moz-box-align: stretch;
+
+	display: box !important;
+	box-orient: vertical;
 	box-align: stretch;
 }
 
 .hbox > * {
+	-webkit-box-flex: 0;
+	-moz-box-flex: 0;
+	box-flex: 0;
+	display: block;
+}
+.vbox > * {
 	-webkit-box-flex: 0;
 	-moz-box-flex: 0;
 	box-flex: 0;

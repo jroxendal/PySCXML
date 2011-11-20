@@ -13,7 +13,7 @@ var deferred_domReady = $.Deferred(function( dfd ){
 
 deferred_domReady.done(function() {
 	$("#left_col").tabs();
-	$("#right_col").tabs();
+	$("#rightTab").tabs();
 });
 
 var jsonDeferred = $.getJSON("example_list.json");
@@ -27,7 +27,7 @@ $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonAr
 	$.each(filelist, function(foldername, files) {
 		
 		var lst = $("<ul>").appendTo("#menu");
-		lst.before($("<span />", {"class" : "listheader"}).text(foldername.split("/")[1] || ""));
+		lst.before($("<div />", {"class" : "listheader"}).text(foldername.split("/")[1] || ""));
 		$($.map(files, function(item) {
 			return $("<li>", {"data-url" : foldername + "/" + item}).append($.format("<a>%s</a>", item)).get();
 		})).appendTo(lst);
