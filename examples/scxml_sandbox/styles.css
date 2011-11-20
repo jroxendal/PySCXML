@@ -31,7 +31,9 @@ a:hover {
 	color : #B9E0F5;
 	border-bottom : 1px dotted #B9E0F5;
 }
-
+.ui-state-hover a {
+	border : none;
+}
 p {
 	margin : .5em 0;
 }
@@ -110,7 +112,6 @@ form input[type=text] {
 }
 
 #log {
-/* 	width : 100%; */
 	-webkit-box-flex: 1;
 	-moz-box-flex: 1;
 	box-flex: 1;
