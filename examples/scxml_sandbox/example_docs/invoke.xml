@@ -1,46 +1,46 @@
-<scxml xmlns="http://www.w3.org/2005/07/scxml" >
-	<state>
-		<invoke id="i" type="scxml">
-			<content>
-				<scxml xmlns="http://www.w3.org/2005/07/scxml">
-					<datamodel>
-						<data id="x" />
-						<data id="fac" expr="1" />
-					</datamodel>
-					
-					<state>
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <state>
+        <invoke id="i" type="scxml">
+            <content>
+                <scxml xmlns="http://www.w3.org/2005/07/scxml">
+                    <datamodel>
+                        <data id="x" />
+                        <data id="fac" expr="1" />
+                    </datamodel>
+
+                    <state>
                         <onentry>
                             <send event="init" target="#_parent" />
                         </onentry>
-						<transition event="calculate" target="loop">
-							<assign location="x" expr="_event.data['val']" />
-						</transition>
-					</state>
-					
-					<state id="loop">
-						<transition cond="x &gt; 1">
-							<assign location="fac" expr="x * fac" />
-							<assign location="x" expr="x-1" />
-						</transition>
-						<transition target="result" />
-					</state>
-					<final id="result">
-						<donedata>
-							<param name="result" expr="fac"  />
-						</donedata>
-					</final>
-				</scxml>
-			</content>
-		</invoke>
-		<transition event="init">
+                        <transition event="calculate" target="loop">
+                            <assign location="x" expr="_event.data['val']" />
+                        </transition>
+                    </state>
+
+                    <state id="loop">
+                        <transition cond="x &gt; 1">
+                            <assign location="fac" expr="x * fac" />
+                            <assign location="x" expr="x-1" />
+                        </transition>
+                        <transition target="result" />
+                    </state>
+                    <final id="result">
+                        <donedata>
+                            <param name="result" expr="fac" />
+                        </donedata>
+                    </final>
+                </scxml>
+            </content>
+        </invoke>
+        <transition event="init">
             <log label="init" />
-			<send type="scxml" target="#_i" event="calculate">
-				<param name="val" expr="6" />
-			</send>
-		</transition>
-		<transition event="done" target="f" cond="_event.data">
-			<log label="donedata" expr="_event.data" />
-		</transition>
-	</state>
-	<final id="f" />
+            <send type="scxml" target="#_i" event="calculate">
+                <param name="val" expr="6" />
+            </send>
+        </transition>
+        <transition event="done" target="f" cond="_event.data">
+            <log label="donedata" expr="_event.data" />
+        </transition>
+    </state>
+    <final id="f" />
 </scxml>

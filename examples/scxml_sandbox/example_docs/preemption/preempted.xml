@@ -13,23 +13,24 @@
                     <log label="i should be logged because I'm within s2." />
                 </transition>
             </state>
-            
+
             <state id="s22" />
-            
+
         </state>
-        
+
         <state id="s3">
-                <!-- type3 -->
+            <!-- type3 -->
             <transition event="e" target="f" />
         </state>
         <state id="s4">
-                <!-- type3 -->
+            <!-- type3 -->
             <transition event="e">
-                <log label="i should be logged because I'm a targetless transition." />
+                <log
+                    label="i should be logged because I'm a targetless transition." />
             </transition>
         </state>
-        
+
     </parallel>
-    
+
     <state id="f" />
 </scxml>

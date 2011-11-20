@@ -13,7 +13,8 @@
 
 
         <state id="p1" initial="p11">
-            <transition event="enterp" type="internal" target="p11">
+            <transition event="enterp" type="internal"
+                target="p11">
                 <assign location="Var1" expr="Var1 + 1" />
                 <raise event="event1" />
             </transition>
