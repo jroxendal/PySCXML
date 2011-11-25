@@ -294,7 +294,8 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-#    xml = open("../../unittest_xml/error_management.xml").read()
+#    xml = open("../../resources/exceptions.xml").read()
+    xml = open("../../w3c_tests/assertions_passed/test402.scxml").read()
     
     logging.basicConfig(level=logging.NOTSET)
     
@@ -308,7 +309,8 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/ispreempted.xml").read()
 #    xml = open("../../unittest_xml/ispreempted_complex.xml").read()
 #    xml = open("../../resources/preempted.xml").read()
-    xml = open("../../unittest_xml/finalize.xml").read()
+#    xml = open("../../unittest_xml/finalize.xml").read()
+
     
     sm = StateMachine(xml)
     sm.start()

@@ -102,6 +102,7 @@ if __name__ == '__main__':
         "test336.scxml",
         "test349.scxml",
         "test350.scxml",
+        "test360.scxml", #exmode strict
     ]
     supposed_to_fail = [
         "test230.scxml",

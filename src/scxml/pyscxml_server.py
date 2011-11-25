@@ -273,6 +273,7 @@ def type_basichttp(session, data, sm, environ):
     else:
         pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
         event = Event(["http", environ['REQUEST_METHOD'].lower()] + pth, data=data)
+        event.origintype = "basichttp"
         
     return event
 

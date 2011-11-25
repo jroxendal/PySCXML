@@ -29,6 +29,7 @@ import Queue
 from datastructures import OrderedSet
 from eventprocessor import Event
 from louie import dispatcher
+from scxml.eventprocessor import ScxmlOriginType
 
 
 
@@ -74,23 +75,23 @@ class Interpreter(object):
         
         
     
-    def startEventLoop(self):
-        self.logger.debug("startEventLoop config: {" + ", ".join([s.id for s in self.configuration if s.id != "__main__"]) + "}")
-        initialStepComplete = False;
-        while not initialStepComplete:
-            enabledTransitions = self.selectEventlessTransitions()
-            if enabledTransitions.isEmpty():
-                if self.internalQueue.empty(): 
-                    initialStepComplete = True 
-                else:
-                    internalEvent = self.internalQueue.get()
-                    
-                    self.logger.info("internal event found: %s", internalEvent.name)
-                    
-                    self.dm["__event"] = internalEvent
-                    enabledTransitions = self.selectTransitions(internalEvent)
-            if enabledTransitions:
-                self.microstep(list(enabledTransitions))
+#    def startEventLoop(self):
+#        self.logger.debug("startEventLoop config: {" + ", ".join([s.id for s in self.configuration if s.id != "__main__"]) + "}")
+#        initialStepComplete = False;
+#        while not initialStepComplete:
+#            enabledTransitions = self.selectEventlessTransitions()
+#            if enabledTransitions.isEmpty():
+#                if self.internalQueue.empty(): 
+#                    initialStepComplete = True 
+#                else:
+#                    internalEvent = self.internalQueue.get()
+#                    
+#                    self.logger.info("internal event found: %s", internalEvent.name)
+#                    
+#                    self.dm["__event"] = internalEvent
+#                    enabledTransitions = self.selectTransitions(internalEvent)
+#            if enabledTransitions:
+#                self.microstep(list(enabledTransitions))
     
     
 #    def mainEventLoop(self):
@@ -368,10 +369,10 @@ class Interpreter(object):
         for s in statesToExit:
             for h in s.history:
                 if h.type == "deep":
-                    f = lambda s0: isAtomicState(s0) and isDescendant(s0,s) 
+                    f = lambda s0: isAtomicState(s0) and isDescendant(s0,s)
                 else:
                     f = lambda s0: s0.parent == s
-                self.historyValue[h.id] = filter(f,self.configuration)
+                self.historyValue[h.id] = filter(f,self.configuration) #+ s.parent 
         for s in statesToExit:
             for content in s.onexit:
                 self.executeContent(content)
@@ -437,6 +438,8 @@ class Interpreter(object):
             if state.id in self.historyValue:
                 for s in self.historyValue[state.id]:
                     self.addStatesToEnter(s, statesToEnter, statesForDefaultEntry)
+                    for anc in getProperAncestors(s,state):
+                        statesToEnter.add(anc)
             else:
                 for t in state.transition:
                     for s in self.getTargetStates(t.target):
@@ -506,7 +509,7 @@ class Interpreter(object):
         if not toQueue: toQueue = self.externalQueue
         evt = Event(name, data, invokeid, sendid=sendid)
         evt.origin = self.dm["_sessionid"]
-        evt.origintype = "http://www.w3.org/TR/scxml/#SCXMLEventProcessor"
+        evt.origintype = ScxmlOriginType()
         evt.language = "python"
         toQueue.put(evt)
         
@@ -582,7 +585,7 @@ def enterOrder(s):
     return (getStateDepth(s), s.n)
 
 def exitOrder(s):
-    return (0 - getStateDepth(s), s.n)
+    return (0 - getStateDepth(s), 0 - s.n)
 
 def documentOrder(s):
     key = [s.n]

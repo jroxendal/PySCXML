@@ -94,12 +94,19 @@ class Event(object):
         self.invokeid = invokeid
         self.type = eventtype
         self.origin = None
-        self.origintype = None
+        self.origintype = ScxmlOriginType()
         self.sendid = sendid
         
     def __str__(self):
         return "<eventprocessor.Event>, " + str(self.__dict__)
 
+class ScxmlOriginType(object):
+    def __init__(self):
+        self.types = ("http://www.w3.org/TR/scxml/#SCXMLEventProcessor", "scxml")
+    def __eq__(self, other):
+        return other in self.types
+    def __ne__(self, other):
+        return not self == other
 
 if __name__ == "__main__":
     print SCXMLEventProcessor.toxml("evt", "_parent", {}, "", "", language="json")

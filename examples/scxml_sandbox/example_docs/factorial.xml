@@ -10,7 +10,11 @@
         </transition>
         <transition target="result" />
     </state>
-    <final id="result" />
+    <final id="result">
+        <onentry>
+            <log label="result" expr="fac" />
+        </onentry>
+    </final>
 </scxml>
 
 
