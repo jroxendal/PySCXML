@@ -5,7 +5,7 @@ are pulled off the internal queue in order, and that prefix matching works on th
 <state id="s0" initial="s01">
   <onentry>
      <!-- catch the failure case -->
-     <send event="timeout" delay="1s"/>
+     <send event="timeout" delay="2s"/>
     </onentry>
   <transition event="timeout" target="fail"/>
 
@@ -13,7 +13,7 @@ are pulled off the internal queue in order, and that prefix matching works on th
    <onentry>
       <raise event="event1"/>
      <!-- assigning to a non-existent location should raise an error -->
-    <assign id="Var1" expr="2"/> 
+    <assign location="Var1" expr="2"/> 
      <raise event="event2"/>
    </onentry>
        
