@@ -45,6 +45,12 @@ class ScriptFetchError(PySCXMLError):
 class DataModelError(PySCXMLError):
     pass
 
+class SendError(ExecutableError):
+    def __init__(self, elem, eval_exec=None, sendid=None):
+        ExecutableError.__init__(self, elem, eval_exec)
+        self.sendid = sendid
+        
+
 
 
 if __name__ == '__main__':

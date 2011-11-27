@@ -99,7 +99,8 @@ class ECMAScriptDataModel(object):
     def evalExpr(self, expr):
         with JSLocker():
             with JSContext(self.g) as c:
-                ret = c.eval("(%s);" % expr.rstrip(";"))
+#                ret = c.eval("(%s);" % expr.rstrip(";"))
+                ret = c.eval(expr)
                 for key in c.locals.keys(): setattr(self.g, key, c.locals[key])
                 return ret
     
@@ -163,6 +164,8 @@ if __name__ == '__main__':
     
 #    t.join()
 #    print d["thread"]
-    d["__event"] = Event("hello")
-    print d.evalExpr("_event")
+    
+    d["f"] = d.evalExpr("(function() {return 123;})")
+    
+    print d.evalExpr("f()")
     

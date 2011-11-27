@@ -72,12 +72,6 @@ def sequentialize(filelist):
         
 
 if __name__ == '__main__':
-    '''
-    Supposed to fail:
-    test230
-    test250
-    test307
-    '''
     import futures, os
     os.chdir("assertions_all/")
     try:
@@ -92,10 +86,6 @@ if __name__ == '__main__':
         "test267.scxml",
         "test268.scxml",
         "test269.scxml",
-        "test500.scxml",
-        "test501.scxml",
-        
-        
         "test320.scxml",
         "test325.scxml",
         "test326.scxml",
@@ -103,6 +93,8 @@ if __name__ == '__main__':
         "test349.scxml",
         "test350.scxml",
         "test360.scxml", #exmode strict
+        "test500.scxml",
+        "test501.scxml",
     ]
     supposed_to_fail = [
         "test230.scxml",

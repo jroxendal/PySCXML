@@ -242,7 +242,6 @@ class Interpreter(object):
         atomicStates = filter(isAtomicState, self.configuration)
         atomicStates = sorted(atomicStates, key=documentOrder)
         for state in atomicStates:
-#            if not self.isPreempted(state, enabledTransitions):
             done = False
             for s in [state] + getProperAncestors(state, None):
                 if done: break
@@ -274,20 +273,6 @@ class Interpreter(object):
         return filteredTransitions
     
     
-    def getStatesToExit(self, transition):
-        statesToExit = OrderedSet()
-        if transition.target:
-            tstates = self.getTargetStates(transition.target)
-            if transition.type == "internal" and all(map(lambda s: isDescendant(s,transition.source), tstates)):
-                ancestor = transition.source
-            else:
-                ancestor = self.findLCA([transition.source] + tstates)
-            
-            for s in self.configuration:
-                if isDescendant(s,ancestor):
-                    statesToExit.add(s)
-        return statesToExit
-
     def preemptsTransition(self, t, t2):
         
         if self.isType1(t): return False
@@ -515,7 +500,9 @@ class Interpreter(object):
         
             
     def raiseFunction(self, event, data, sendid=None, type="internal"):
-        self.internalQueue.put(Event(event, data, eventtype=type, sendid=sendid))
+        e = Event(event, data, eventtype=type, sendid=sendid)
+        e.origintype = None
+        self.internalQueue.put(e)
 
 
 def getProperAncestors(state,root):

@@ -1,6 +1,6 @@
 <scxml xmlns="http://www.w3.org/2005/07/scxml">
     <datamodel>
-        <data id="doc"><![CDATA[
+        <data id="doc">
             <scxml xmlns="http://www.w3.org/2005/07/scxml">
                 <datamodel>
                     <data id="slot1" expr="1" />
@@ -16,7 +16,7 @@
                 </state>
                 <final id="inner_f" />
             </scxml>
-        ]]></data>
+        </data>
         <data id="slot1" />
         <data id="slot2" />
     </datamodel>
