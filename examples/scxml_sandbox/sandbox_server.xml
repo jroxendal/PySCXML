@@ -61,7 +61,7 @@
                                         def log_func(signal, sender, label, val):
                                             label = label + ":" if label else ""
                                             if sender is _x["self"].datamodel["i"]:
-                                                log("elem", label + " " + str(val)) 
+                                                log("elem", label + " " + (str(val) if val else "" )) 
                                         
                                         dispatcher.connect(log_func, "invoke_log")
                                     </script>
