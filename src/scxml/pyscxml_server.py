@@ -21,20 +21,11 @@ Created on Dec 15, 2010
 
 from eventprocessor import SCXMLEventProcessor as Processor, Event
 from scxml.pyscxml import MultiSession
-from wsgiref.simple_server import make_server
 from xml.parsers.expat import ExpatError
 import cgi
 import logging
 import threading, time
 from functools import partial
-#import os
-#import inspect
-#try:
-#    from eventlet import wsgi, websocket
-#    import eventlet
-#    
-#except ImportError:
-#    pass
 
 def get_server(isWebSocket):
     try:
@@ -73,9 +64,8 @@ def get_server(isWebSocket):
                 from wsgiref.simple_server import make_server 
                 return lambda tup, ws_handler, handler: make_server(*tup, handler=handler)
 
-TYPE_DEFAULT = 1
-TYPE_RESPONSE = 2
-TYPE_WEBSOCKET = 4
+TYPE_DEFAULT = "default"
+TYPE_RESPONSE = "response"
 
 handler_mapping = {}
 
@@ -121,7 +111,6 @@ class PySCXMLServer(object):
         '''
         self.session_path = session_path.strip("/") + "/"
         self.server_type = server_type
-        assert not (self.is_type(TYPE_DEFAULT) and self.is_type(TYPE_RESPONSE))
         self.logger = logging.getLogger("pyscxml.pyscxml_server")
         self.host = host
         self.port = port
@@ -130,28 +119,14 @@ class PySCXMLServer(object):
             self.set_processors(sm)
             
         #the connected websocket clients
-        self.clients = {}
+        
         self.sm_mapping.start()
         
     
     def is_type(self, type):
-        return self.server_type & type == type 
+        return self.server_type == type 
     
     
-#    def serve_forever(self):
-#        """Start the server."""
-#        self.logger.info("Starting the server at %s:%s" %(self.host, self.port))
-        
-        
-#        self.httpd = get_server(self.is_type(TYPE_WEBSOCKET))((self.host, self.port), self.websocket_handler, self.request_handler)
-#        self.httpd.serve_forever()
-        
-#        if self.is_type(TYPE_WEBSOCKET):
-#            wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
-#        else:
-#            self.httpd = make_server(self.host, self.port, self.request_handler)
-                
-        
     def init_session(self, sessionid):
         sm = self.sm_mapping.make_session(sessionid, None)
         self.set_processors(sm)
@@ -162,38 +137,7 @@ class PySCXMLServer(object):
         sm.datamodel["_ioprocessors"] = dict( (type, "http://%s:%s/%s%s/%s" % (self.host, self.port, self.session_path, sm.datamodel["_sessionid"], type) )  
                                               for type in handler_mapping)
         
-        if self.is_type(TYPE_WEBSOCKET):
-            sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s%s/websocket" % (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])
     
-    
-    def websocket_handler(self, ws, environ):
-        #TODO: bring back eventlet by duplicating this handler with small eventlet changes.
-#        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
-        pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
-        
-        session = pathlist[0]
-        sm = self.sm_mapping.get(session) or self.init_session(session)
-        if not session in self.clients: 
-            self.clients[session] = [ws]
-            threading.Thread(target=self.websocket_response, args=(sm, session)).start()
-        else:
-            self.clients[session].append(ws)
-        sm.send("websocket.connect")
-        while True:
-#            message = ws.wait()
-            message = ws.receive(msg_obj=True)
-            if message is None:
-                break
-            evt = Processor.fromxml(str(message.data), origintype="javascript")
-            sm.interpreter.externalQueue.put(evt)
-        sm.send("websocket.disconnect")
-        self.clients[session].remove(ws)
-
-    def websocket_response(self, sm, session):
-        while self.clients[session]:
-            evt_xml = sm.datamodel["_websocket"].get() # blocks
-            for ws in self.clients[session]:
-                ws.send(evt_xml)
     
     def request_handler(self, environ, start_response):
         status = '200 OK'
@@ -206,9 +150,6 @@ class PySCXMLServer(object):
             self.logger.info(str(e))
             start_response(status, [('Content-type', 'text/plain')])
             return [""]
-#        if self.is_type(TYPE_WEBSOCKET) and type == "websocket" and "websocket" in dir():
-#            handler = websocket.WebSocketWSGI(partial(PySCXMLServer.websocket_handler, self))
-#            return handler(environ, start_response)
         fs = cgi.FieldStorage(fp=environ['wsgi.input'],
                                environ=environ,
                                keep_blank_values=True)
@@ -239,10 +180,8 @@ class PySCXMLServer(object):
                 start_response(status, headers.items())
             elif self.is_type(TYPE_RESPONSE):
                 sm.interpreter.externalQueue.put(event)
-#                if type != "sse":
                 output, headers = sm.datamodel["_response"].get() #blocks
                 start_response(status, headers.items())
-#                output = output["content"].strip() if "content" in output else output
             
         except AssertionError:
             self.logger.error("No default xml is declared, so sessions can't be dynamically initialized.")
@@ -251,10 +190,48 @@ class PySCXMLServer(object):
             self.logger.error("Parsing of incoming scxml message failed for message %s" % fs.getvalue("_content") )
             status = '400 BAD REQUEST'
             output = str(e)
-
-        
         
         return [output]
+
+
+class WebsocketWSGI(PySCXMLServer):
+    
+    def __init__(self, *args, **kwargs):
+        PySCXMLServer.__init__(self, *args, **kwargs)
+        self.clients = {}
+        
+    def set_processors(self, sm):
+        PySCXMLServer.set_processors(self, sm)
+        sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s%s/websocket" % \
+                    (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])
+    
+    def websocket_handler(self, ws, environ):
+#        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
+        pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+        
+        session = pathlist[0]
+        sm = self.sm_mapping.get(session) or self.init_session(session)
+        if not session in self.clients: 
+            self.clients[session] = [ws]
+            threading.Thread(target=self.websocket_response, args=(sm, session)).start()
+        else:
+            self.clients[session].append(ws)
+        sm.send("websocket.connect")
+        while True:
+#            message = ws.wait()
+            message = ws.receive(msg_obj=True)
+            if message is None:
+                break
+            evt = Processor.fromxml(str(message.data), origintype="javascript")
+            sm.interpreter.externalQueue.put(evt)
+        sm.send("websocket.disconnect")
+        self.clients[session].remove(ws)
+
+    def websocket_response(self, sm, session):
+        while self.clients[session]:
+            evt_xml = sm.datamodel["_websocket"].get() # blocks
+            for ws in self.clients[session]:
+                ws.send(evt_xml)
 
 
 class ioprocessor(object):
@@ -285,137 +262,10 @@ def type_scxml(session, data, sm, environ):
         event = Processor.fromxml(data["request"])
     return event
 
-#@ioprocessor("sse")
-#def type_sse(*args):
-#    return Event(["sse", "connect"])
-        
 
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.NOTSET)
-    xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-        <script></script>
-        <state>
-            
-            <transition event="http.get">
-              <send target="#_websocket" hints='{"Content-type" : "text/html"}'>
-                <content><![CDATA[
-                  <html><body>this is my <b>body</b> with variables $_event.data.</body></html>
-                ]]></content>
-              </send>
-            </transition>
-            
-            <transition event="http.get">
-            </transition>
-        </state>
-    </scxml>
-    '''
-    
-    xml = '''
-<scxml xmlns="http://www.w3.org/2005/07/scxml">
-    <state id="s1">
-        <transition event="e1" >
-            <log label="event e1 caught" />
-            <send event="firstEvent" target="#_websocket">
-                <content>this is my response.</content>
-            </send>
-            <send event="delayedEvent" delay="2s" target="#_websocket">
-                <content>this is my delayed response.</content>
-            </send>
-        </transition>
-         <transition event="http.get">
-             <log label="get!" />
-        </transition>
-    </state>
-</scxml>
-'''
-    
-    server = PySCXMLServer("localhost", 8081, 
-                        default_scxml_doc=xml, 
-                        server_type=TYPE_DEFAULT|TYPE_WEBSOCKET,
-                        )
-    
-#    server.serve_forever()
-    
-    
-#    sys.exit()
-    server_xml = open("../../resources/tropo_server.xml").read()
-    dialog_xml = open("../../resources/tropo_colors.xml").read()
-    
-    
-#    @custom_ioprocessor('custom_type')
-#    def my_ioprocessor(session, data, sm, fs):
-#        e = Event(["http", "custom"], data, type="external")
-#        return e
-    
-    
-#    import sys;sys.exit()
-    xml = '''\
-        <scxml>
-            <state>
-                <transition event="http">
-                    <log label="http" expr="_event.name" />
-                    <log label="data" expr="_event.data" />
-                </transition>
-                <transition event="custom">
-                    <log label="got custom event" />
-                </transition>
-            </state>
-        </scxml>
-    '''
-    
-#    xml = open("../../resources/tropo_server.xml").read()
-#    
-    server = PySCXMLServer("localhost", 8081, xml)
-#    server.serve_forever()
-    
-    
-    xml1 = '''\
-        <scxml name="session1">
-            <state id="s1">
-                <transition event="e1" >
-                    <send event="ok" targetexpr="'#_scxml_' + _event.origin" />
-                    <!--<send type="scxml" targetexpr="_ioprocessors['scxml']" event="quit" />-->
-                </transition>
-                <transition event="quit" target="f" />
-            </state>
-            
-            <final id="f" />
-        </scxml>
-    '''
-    
-    
-    xml2 = '''\
-        <scxml name="session2">
-            <state id="s1">
-                <onentry>
-                    <send event="e1" target="#_scxml_session1">
-                        <param name="name" expr="132" />
-                    </send> 
-                </onentry>
-                <transition event="ok" target="f" />
-            </state>
-            
-            <final id="f" />
-        </scxml>    
-    '''
-    
-    @ioprocessor('send')
-    def send_processor(session, data, sm, environ):
-        return Event(data["event"], data)
-    
-    server1 = PySCXMLServer("localhost", 8081, default_scxml_doc=xml2, init_sessions={"session1" : xml1, "session2" : xml2})
-    t = threading.Thread(target=server1.serve_forever)
-    t.start()
-    time.sleep(0.1)
-    
-#    from urllib2 import urlopen
-#    urlopen("http://localhost:8081/session3/basichttp", "hello?")
-    #TODO: fix this -- can't make assertions when the servers are running. 
-#    server2 = PySCXMLServer("localhost", 8082, xml2, init_sessions=("session2",))
-#    t2 = threading.Thread(target=server2.serve_forever)
-#    t2.start()
     
     
     

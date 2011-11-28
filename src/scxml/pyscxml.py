@@ -44,6 +44,9 @@ class StateMachine(object):
         signature is f(label, msg), where label is a string and msg a string.
         @param sessionid: is stored in the _session variable. Will be automatically
         generated if not provided.
+        @param default_datamodel: if omitted, any document started by this instance will have 
+        its datamodel expressions evaluated as Python expressions. Set to 'ecmascript' to assume 
+        EMCAScript expressions.
         '''
 
         self._lock = RLock()
@@ -146,7 +149,7 @@ class StateMachine(object):
                 dispatcher.send("signal_exit", self, final=final)
     
     def __enter__(self):
-        self.start()
+        self.start_threaded()
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
@@ -276,6 +279,7 @@ def register_datamodel(id, klass):
     __getitem__ # gets
     evalExpr(expr) # returns value
     execExpr(expr) # returns None
+    hasLocation(location) # returns bool (check for deep location value)
     '''
     compiler.datamodel_mapping[id] = klass
 
@@ -295,30 +299,48 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-#    xml = open("../../resources/exceptions.xml").read()
-    os.chdir("../../w3c_tests/assertions_passed/")
-    xml = open("../../w3c_tests/assertions_passed/test402.scxml").read()
-#    xml = open("../../resources/parallel5.xml").read()
+    xml = open("../../resources/exceptions.xml").read()
+#    os.chdir("../../w3c_tests/assertions_passed/")
+#    xml = open("../../w3c_tests/assertions_passed/test195.scxml").read()
+    xml = open("../../resources/parallel5.xml").read()
 #    xml = open("../../unittest_xml/issue_626.xml").read()
 
-    
     logging.basicConfig(level=logging.NOTSET)
     
     
-#    sm = StateMachine(open("../../unittest_xml/invoke.xml").read())
-#    sm.start()
+    sm = StateMachine(xml)
+    sm.start()
     
     
 #    with StateMachine(xml) as sm:
-#        sm.send("hello")
+#        pass
 #    xml = open("../../unittest_xml/ispreempted.xml").read()
 #    xml = open("../../unittest_xml/ispreempted_complex.xml").read()
 #    xml = open("../../resources/preempted.xml").read()
 #    xml = open("../../unittest_xml/finalize.xml").read()
-
     
-    sm = StateMachine(xml)
-    sm.start()
+    xml = '''
+    <scxml datamodel="ecmascript">
+    <state id="s1">
+        <onentry>
+            <log label="entering" expr="'first state'" />
+        <script>
+          throw lol
+      </script>
+        </onentry>
+      <transition event="error" target="s2">
+      </transition>
+        <transition event="next" target="s2" />
+    </state>
+    <state id="s2">
+        <transition event="quit" target="f" />
+    </state>
+    <final id="f" />
+</scxml>
+    '''
+    
+#    sm = StateMachine(xml)
+#    sm.start()
     
 #    sm.start_threaded()
 #    sm.send("e")

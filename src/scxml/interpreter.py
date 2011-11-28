@@ -309,7 +309,6 @@ class Interpreter(object):
         for t in enabledTransitions:
             # does any t2 in filteredTransitions preempt t? if not, add t to filteredTransitions
             if not any(map(lambda t2: self.preemptsTransition(t2, t), filteredTransitions)):
-#                print "take", t.source.id
                 filteredTransitions.append(t)
         
         return OrderedSet(filteredTransitions)
@@ -337,7 +336,7 @@ class Interpreter(object):
         for t in enabledTransitions:
             if t.target:
                 tstates = self.getTargetStates(t.target)
-                if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
+                if t.type == "internal" and isCompoundState(t.source) and all(map(lambda s: isDescendant(s,t.source), tstates)):
                     ancestor = t.source
                 else:
                     ancestor = self.findLCA([t.source] + tstates)
@@ -380,7 +379,7 @@ class Interpreter(object):
         for t in enabledTransitions:
             if t.target:
                 tstates = self.getTargetStates(t.target)
-                if t.type == "internal" and all(map(lambda s: isDescendant(s,t.source), tstates)):
+                if t.type == "internal" and isCompoundState(t.source) and all(map(lambda s: isDescendant(s,t.source), tstates)):
                     ancestor = t.source
                 else:
                     ancestor = self.findLCA([t.source] + tstates)

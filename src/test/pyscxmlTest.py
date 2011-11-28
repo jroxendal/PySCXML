@@ -115,7 +115,6 @@ class RegressionTest(unittest.TestCase):
 
     def testW3c(self):
         os.chdir("../../w3c_tests/assertions_passed")
-        logging.basicConfig(level=logging.NOTSET)
         class W3CTester(StateMachine):
             def __init__(self, xml, log_function=lambda fn, y:None, sessionid=None):
                 self.didPass = False
@@ -141,7 +140,7 @@ class RegressionTest(unittest.TestCase):
                     sm.send("timeout")
                     sm.cancel()
                     didTimeout = True
-                threading.Timer(12, timeout, args=(sm,)).start()
+                threading.Timer(12, timeout, (sm,)).start()
                 sm.start()
                 
                 
@@ -160,8 +159,6 @@ class RegressionTest(unittest.TestCase):
                 for future in futures.as_completed(future_to_url):
                     url = future_to_url[future]
                     e = future.exception()
-                    if url == "test252.scxml":
-                        print future.result()
                     self.assertTrue(future.result(), url + " failed.")
                     self.assertIsNone(e, url + " failed, exception caught.")
                     

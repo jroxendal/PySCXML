@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- test that an internal transition 
+    does not exit its source state -->
+<scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance"
+    datamodel="python" name="machineName">
+    <initial>
+        <transition target="p">
+            <raise event="e" />
+        </transition>
+    </initial>
+
+    <parallel id="p">
+        <onexit>
+            <log label="exit p" />
+        </onexit>
+        <onentry>
+            <log label="enter p" />
+        </onentry>
+        <transition event="e" type="internal" target="ps1" />
+        <state id="ps1">
+            <onentry>
+                <log label="enter ps1" />
+            </onentry>
+            <onexit>
+                <log label="exit ps1" />
+            </onexit>
+        </state>
+        <state id="ps2">
+            <onentry>
+                <log label="enter ps2" />
+            </onentry>
+            <onexit>
+                <log label="exit ps2" />
+            </onexit>
+        </state>
+    </parallel>
+    <final id="f" />
+</scxml>

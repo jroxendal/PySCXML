@@ -27,7 +27,7 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
     def get_sync(self, url, data, type=None):
         data = urlencode(data) if data else None
         if type and type.upper() not in ("POST", "GET"):
-            from restlib import RestfulRequest
+            from restlib import RestfulRequest #@UnresolvedImport
             req = RestfulRequest(url, data=data, method=type.upper())
         else:
             req = urllib2.Request(url, data)

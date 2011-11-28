@@ -1,4 +1,4 @@
-from scxml.pyscxml_server import PySCXMLServer, TYPE_WEBSOCKET, TYPE_DEFAULT, TYPE_RESPONSE, ioprocessor
+from scxml.pyscxml_server import WebsocketWSGI, TYPE_DEFAULT, TYPE_RESPONSE, ioprocessor
 from scxml.pyscxml import register_datamodel
 from scxml.datamodel import DataModel
 import logging
@@ -61,9 +61,9 @@ def main(address):
     files = dict([(x, z) for (x, y, z) in os.walk("example_docs") if ".svn" not in x])
     json.dump(files, open("example_list.json", "w"))
     
-    pyscxml = PySCXMLServer(address[0], address[1], 
+    pyscxml = WebsocketWSGI(address[0], address[1], 
                             init_sessions={"server" : open("sandbox_server.xml").read()},
-                            server_type=TYPE_RESPONSE | TYPE_WEBSOCKET,
+                            server_type=TYPE_RESPONSE,
                             default_datamodel="ecmascript"
                             )
 
