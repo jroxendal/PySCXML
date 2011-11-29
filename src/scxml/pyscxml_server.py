@@ -134,7 +134,7 @@ class PySCXMLServer(object):
         return sm
     
     def set_processors(self, sm):
-        sm.datamodel["_ioprocessors"] = dict( (type, "http://%s:%s/%s%s/%s" % (self.host, self.port, self.session_path, sm.datamodel["_sessionid"], type) )  
+        sm.datamodel["_ioprocessors"].update( (type, "http://%s:%s/%s%s/%s" % (self.host, self.port, self.session_path, sm.datamodel["_sessionid"], type) )  
                                               for type in handler_mapping)
         
     

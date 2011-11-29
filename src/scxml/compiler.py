@@ -82,6 +82,9 @@ class Compiler(object):
         self.dm = self.doc.datamodel
         self.dm["_response"] = Queue.Queue() 
         self.dm["_websocket"] = Queue.Queue()
+        self.dm["__event"] = None
+        
+        self.dm["_ioprocessors"] = {}
         
 #        def dataModelErrorCallback(key, value):
 #            e = DataModelError("The field %s in the datamodel cannot be modified." % key)
@@ -134,7 +137,9 @@ class Compiler(object):
                     eventName = node.get("event").split(".")
                     self.interpreter.raiseFunction(eventName, {})
                 elif node_name == "send":
-                    sendid = node.get("id", "send_id_" + str(id(node)))
+                    if not hasattr(node, "id_n"): node.id_n = 0
+                    else: node.id_n += 1
+                    sendid = node.get("id", "send_id_%s_%s" % (id(node), node.id_n))
                     try:
                         self.parseSend(node, sendid)
                     except (AttributeEvalError, SendError):
@@ -187,10 +192,16 @@ class Compiler(object):
                             except ExprEvalError, e:
                                 raise AttributeEvalError(e, node, "index")
                         
-                        for index, item in enumerate(self.getExprValue(node.get("array"))):
-                            self.dm[node.get("item")] = item
-                            if node.get("index"):
-                                self.dm[node.get("index")] = index
+                        try:
+                            lst = self.getExprValue(node.get("array"))
+                        except ExprEvalError, e:
+                            raise AttributeEvalError(e, node, "array")
+                        
+#                        for index, item in enumerate(lst):
+#                            self.dm[node.get("item")] = item
+#                            if node.get("index"):
+#                                self.dm[node.get("index")] = index
+                        for nothing in self.dm.foreach(node.get('item'), node.get("index"), node.get("array")):
                             try:
                                 self.do_execute_content(node)
                             except Exception, e:
@@ -676,7 +687,9 @@ class Compiler(object):
     def parseInvoke(self, node, parentId, n):
         invokeid = node.get("id")
         if not invokeid:
-            invokeid = parentId + "." + str(n)
+            if not hasattr(node, "id_n"): node.id_n = 0
+            else: node.id_n += 1
+            invokeid = "%s.%s.%s" % (parentId, n, node.id_n) 
             self.dm[node.get("idlocation")] = invokeid
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")

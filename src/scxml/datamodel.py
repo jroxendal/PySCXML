@@ -11,6 +11,7 @@ from errors import ExprEvalError, DataModelError
 
 try:
     from PyV8 import JSContext, JSLocker, JSUnlocker #@UnresolvedImport
+    import _PyV8
 except:
     pass
 
@@ -58,6 +59,14 @@ class DataModel(dict):
             return True
         except:
             return False
+        
+    def foreach(self, itemstr, indexstr, array):
+        for i, item in enumerate(self.evalExpr(array)):
+            self[itemstr] = item
+            if indexstr:
+                self[indexstr] = i
+            yield 
+    
     @exceptionFormatter
     def evalExpr(self, expr):
         return eval(expr, self)
@@ -72,12 +81,11 @@ class ECMAScriptDataModel(object):
         class GlobalEcmaContext(object):
             pass
         self.g = GlobalEcmaContext()
-        self.errorCallback = lambda x, y:None
     
     
     def __setitem__(self, key, val):
         if (key in assignOnce and key in self) or key in hidden:
-            self.errorCallback(key, val)
+            raise DataModelError("You can't assign to the field '%s'." % key)
         else:
             if key == "__event":
                 #TODO: let's try using the Event object as is, and block
@@ -91,10 +99,7 @@ class ECMAScriptDataModel(object):
         if key in hidden:
             if key == "_event":
                 e = Event("")
-                try:
-                    e.__dict__ = getattr(self.g, "__event")
-                except:
-                    raise KeyError, key
+                e.__dict__ = getattr(self.g, "__event")
                 return e
             return getattr(self.g, "_" + key)
         return getattr(self.g, key)
@@ -123,23 +128,35 @@ class ECMAScriptDataModel(object):
     def execExpr(self, expr):
         self.evalExpr(expr)
     
-    
+    def foreach(self, itemstr, indexstr, array):
+        with JSLocker():
+            with JSContext(self.g) as c:
+                for i, item in enumerate(c.eval(array)):
+                    self[itemstr] = item
+                    if indexstr:
+                        self[indexstr] = i
+                    yield 
     
 if __name__ == '__main__':
     import PyV8 #@UnresolvedImport
     d = ECMAScriptDataModel()
 #    d = DataModel()
-    def f():
-        assert False
-#    f()
-    d.execExpr("""function f() {
+
+    
+    ctxt = PyV8.JSContext()     
+    ctxt.enter()                
+    ctxt.eval("""function f() {
+                throw "err";
+            }""")
+    ctxt.eval("function g() {f();}")
+    
+    try:
+        ctxt.eval("g();")
+    except Exception, e:
+        print sys.exc_info()[1]
     
     
-    apa;
-    
-    }""")
-    d.execExpr("""function g() {f();}""")
-    
+    sys.exit()
     try:
         d.evalExpr("g()")
     except Exception, e:

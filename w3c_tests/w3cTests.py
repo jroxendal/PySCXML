@@ -9,6 +9,8 @@ TIMEOUT = 12
 class W3CTester(StateMachine):
     def __init__(self, xml, log_function=lambda fn, y:None, sessionid=None):
         self.didPass = False
+#        import re
+#        xml = re.sub("datamodel=.python.", 'datamodel="ecmascript"', xml)
         StateMachine.__init__(self, xml, log_function, None)
     def on_exit(self, sender, final):
         self.didPass = final == "pass"
@@ -72,8 +74,12 @@ def sequentialize(filelist):
         
 
 if __name__ == '__main__':
-    import futures, os
+    import futures, os, glob, sys
     os.chdir("assertions_all/")
+    
+    for fn in glob.glob("*.xml"):
+        shutil.move(fn, fn.split(".")[0] + ".scxml")
+        
     try:
         os.mkdir("passed")
         os.mkdir("failed")
