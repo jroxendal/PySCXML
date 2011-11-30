@@ -91,7 +91,9 @@ class ExecutableContainerError(ExecutableError):
         ExecutableError.__init__(self, exc, elem)
         
     def __str__(self):
-        child_name = split_ns(self.exception.elem)[1]
+        if hasattr(self.exception, "elem"):
+            child_name = split_ns(self.exception.elem)[1]
+        child_name = ""
         return "Stopped executing children of %s on line %s after %s raised an error:\n    %s" % \
             (split_ns(self.elem)[1], self.elem.lineno, child_name, self.exception)
         
