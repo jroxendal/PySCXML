@@ -689,8 +689,9 @@ class Compiler(object):
         if not invokeid:
             if not hasattr(node, "id_n"): node.id_n = 0
             else: node.id_n += 1
-            invokeid = "%s.%s.%s" % (parentId, n, node.id_n) 
-            self.dm[node.get("idlocation")] = invokeid
+            invokeid = "%s.%s.%s" % (parentId, n, node.id_n)
+            if node.get("idlocation"):  
+                self.dm[node.get("idlocation")] = invokeid
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         data = self.parseData(node, getContent=False)

@@ -1,4 +1,4 @@
-<scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="ecmascript">
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
 	<state>
 		<invoke id="i" type="scxml">
 			<content>

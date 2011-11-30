@@ -74,7 +74,8 @@ def sequentialize(filelist):
         
 
 if __name__ == '__main__':
-    import futures, os, glob, sys
+    import futures, os, glob, sys, eventlet
+    eventlet.monkey_patch()
     os.chdir("assertions_all/")
     
     for fn in glob.glob("*.xml"):

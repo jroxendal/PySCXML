@@ -288,6 +288,8 @@ __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor", 
 
 if __name__ == "__main__":
     
+    import eventlet
+    eventlet.monkey_patch()
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
     xml = open("../../unittest_xml/colors.xml").read()
 #    xml = open("../../resources/issue64.xml").read()
@@ -300,9 +302,9 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
     xml = open("../../resources/exceptions.xml").read()
-#    os.chdir("../../w3c_tests/assertions_passed/")
-#    xml = open("../../w3c_tests/assertions_passed/test195.scxml").read()
-    xml = open("../../resources/parallel5.xml").read()
+    os.chdir("../../w3c_tests/assertions_passed/")
+    xml = open("../../w3c_tests/assertions_passed/test252.scxml").read()
+#    xml = open("../../resources/parallel5.xml").read()
 #    xml = open("../../unittest_xml/issue_626.xml").read()
 
     logging.basicConfig(level=logging.NOTSET)

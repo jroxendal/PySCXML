@@ -38,7 +38,7 @@ class RegressionTest(unittest.TestCase):
     This test class is run from the context of the build.xml found in the project root.
     '''
     
-    def testInterpreter(self):
+    def loltestInterpreter(self):
         runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
                                "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
@@ -114,11 +114,18 @@ class RegressionTest(unittest.TestCase):
         
 
     def testW3c(self):
+#        logging.basicConfig(level=logging.NOTSET)
+        import eventlet
+        eventlet.monkey_patch()
+#        os.chdir("../../w3c_tests/assertions_ecmascript/passed")
         os.chdir("../../w3c_tests/assertions_passed")
         class W3CTester(StateMachine):
             def __init__(self, xml, log_function=lambda fn, y:None, sessionid=None):
                 self.didPass = False
                 self.isCancelled = False
+#                import re
+#                xml = re.sub("datamodel=.python.", 'datamodel="ecmascript"', xml)
+                
                 StateMachine.__init__(self, xml, log_function, None)
             def cancel(self):
                 StateMachine.cancel(self)

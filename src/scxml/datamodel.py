@@ -12,7 +12,7 @@ import eventlet
 
 try:
     from PyV8 import JSContext, JSLocker, JSUnlocker #@UnresolvedImport
-    import _PyV8
+#    import _PyV8 #@UnresolvedImport
 except:
     pass
 
@@ -82,6 +82,10 @@ class ECMAScriptDataModel(object):
         class GlobalEcmaContext(object):
             pass
         self.g = GlobalEcmaContext()
+#        self._lock = JSLocker()
+        
+#        self._lock.enter()
+        
     
     
     def __setitem__(self, key, val):
@@ -91,18 +95,18 @@ class ECMAScriptDataModel(object):
             if key == "__event":
                 #TODO: let's try using the Event object as is, and block
                 # access to _event through GlobalEcmaContext.
-                val = val
+#                val = val
                 key = "_event"
 #                val = val.__dict__
             setattr(self.g, key, val)
         
     def __getitem__(self, key):
-        if key in hidden:
-            if key == "_event":
-                e = Event("")
-                e.__dict__ = getattr(self.g, "__event")
-                return e
-            return getattr(self.g, "_" + key)
+#        if key in hidden:
+#            if key == "_event":
+#                e = Event("")
+#                e.__dict__ = getattr(self.g, "__event")
+#                return getattr(self.g, "__event")
+#            return getattr(self.g, "_" + key)
         return getattr(self.g, key)
 
     def __contains__(self, key):
@@ -142,19 +146,22 @@ if __name__ == '__main__':
     import PyV8 #@UnresolvedImport
     d = ECMAScriptDataModel()
 #    d = DataModel()
-
     
-    ctxt = PyV8.JSContext()     
-    ctxt.enter()                
-    ctxt.eval("""function f() {
-                throw "err";
-            }""")
-    ctxt.eval("function g() {f();}")
     
-    try:
-        ctxt.eval("g();")
-    except Exception, e:
-        print sys.exc_info()[1]
+    d["__event"] = Event("yeah")
+    print "scxml" ==  d.evalExpr("_event").origintype
+    
+#    ctxt = PyV8.JSContext()     
+#    ctxt.enter()                
+#    ctxt.eval("""function f() {
+#                throw "err";
+#            }""")
+#    ctxt.eval("function g() {f();}")
+#    
+#    try:
+#        ctxt.eval("g();")
+#    except Exception, e:
+#        print sys.exc_info()[1]
     
     
     sys.exit()
@@ -176,12 +183,6 @@ if __name__ == '__main__':
 #    print d.hasLocation("hello")
 #    print d.hasLocation("lol")
     
-    
-    
-    def crash(key, value):
-        print "error", key, value
-        
-    d.errorCallback = crash
 #    d = DataModel()
     
     

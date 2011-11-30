@@ -494,6 +494,7 @@ class Interpreter(object):
         evt = Event(name, data, invokeid, sendid=sendid)
         evt.origin = self.dm["_sessionid"]
         evt.origintype = ScxmlOriginType()
+        #TODO: and for ecmascript?
         evt.language = "python"
         toQueue.put(evt)
         

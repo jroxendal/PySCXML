@@ -143,6 +143,10 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.cancelled = True
         if not self.sm: return;
         self.sm.interpreter.g_continue = False
+        class DummyQueue(object):
+            def put(self, item):
+                pass
+        self.sm.datamodel["_parent"] = DummyQueue()
         self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
     
     
