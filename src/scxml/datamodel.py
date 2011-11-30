@@ -7,6 +7,7 @@ from eventprocessor import Event
 import sys
 import traceback
 from errors import ExprEvalError, DataModelError
+import eventlet
 
 
 try:
@@ -117,25 +118,25 @@ class ECMAScriptDataModel(object):
         return self.evalExpr("typeof(%s) != 'undefined'" % location)
     
     def evalExpr(self, expr):
-        with JSLocker():
-            with JSContext(self.g) as c:
-                try:
-                    ret = c.eval(expr)
-                except Exception, e:
-                    raise ExprEvalError(e, [])
-                for key in c.locals.keys(): setattr(self.g, key, c.locals[key])
-                return ret
+#        with JSLocker():
+        with JSContext(self.g) as c:
+            try:
+                ret = c.eval(expr)
+            except Exception, e:
+                raise ExprEvalError(e, [])
+            for key in c.locals.keys(): setattr(self.g, key, c.locals[key])
+            return ret
     def execExpr(self, expr):
         self.evalExpr(expr)
     
     def foreach(self, itemstr, indexstr, array):
-        with JSLocker():
-            with JSContext(self.g) as c:
-                for i, item in enumerate(c.eval(array)):
-                    self[itemstr] = item
-                    if indexstr:
-                        self[indexstr] = i
-                    yield 
+#        with JSLocker():
+        with JSContext(self.g) as c:
+            for i, item in enumerate(c.eval(array)):
+                self[itemstr] = item
+                if indexstr:
+                    self[indexstr] = i
+                yield 
     
 if __name__ == '__main__':
     import PyV8 #@UnresolvedImport
@@ -204,4 +205,4 @@ if __name__ == '__main__':
 #    d["f"] = d.evalExpr("1/0")
 #    with JSContext(d.g) as c:
 #        print c.eval("throw 'oops'")
-    
+    eventlet.monkey_patch()
