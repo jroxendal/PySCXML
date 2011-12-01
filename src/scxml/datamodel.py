@@ -206,4 +206,3 @@ if __name__ == '__main__':
 #    d["f"] = d.evalExpr("1/0")
 #    with JSContext(d.g) as c:
 #        print c.eval("throw 'oops'")
-    eventlet.monkey_patch()

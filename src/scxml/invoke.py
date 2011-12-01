@@ -28,6 +28,7 @@ from functools import partial
 from scxml.messaging import UrlGetter
 import logging
 from threading import Thread
+import eventlet
 #from scxml.pyscxml import default_logfunction
 
 
@@ -121,13 +122,16 @@ class InvokeSCXML(BaseFetchingInvoke):
 #        self.sm.interpreter.logger = logging.getLogger(name)
         
         self.sm._start_invoke(self.parentQueue, self.invokeid)
-        t = Thread(target=self.sm.interpreter.mainEventLoop)
+#        t = Thread(target=self.sm.interpreter.mainEventLoop)
         if self.sm.compiler.datamodel == "ecmascript":
-            from PyV8 import JSLocker #@UnresolvedImport
-            with JSLocker():
-                t.start()
+#            from PyV8 import JSLocker #@UnresolvedImport
+#            with JSLocker():
+#            t.start()
+            eventlet.spawn(self.sm.interpreter.mainEventLoop)
+            
+            
         else:
-            t.start()
+            eventlet.spawn(self.sm.interpreter.mainEventLoop)
 #        dispatcher.send("init.invoke." + self.invokeid, self)
 
     

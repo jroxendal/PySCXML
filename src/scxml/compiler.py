@@ -228,7 +228,8 @@ class Compiler(object):
                             def cancel():
                                 if not sm.isFinished():
                                     sm.cancel()
-                            Timer(timeout, cancel).start()
+                            eventlet.spawn_after(timeout, cancel)
+#                            Timer(timeout, cancel).start()
                     except AssertionError:
                         raise ExecutableError(node, "You supplied no xml for <pyscxml:start_session /> " 
                                             "and no default has been declared.")

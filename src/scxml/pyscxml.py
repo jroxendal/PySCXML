@@ -24,6 +24,7 @@ from louie import dispatcher
 from threading import Thread, RLock
 import logging
 import os
+import eventlet
 
 
 def default_logfunction(label, msg):
@@ -79,21 +80,20 @@ class StateMachine(object):
     
     def start(self):
         '''Takes the statemachine to its initial state'''
-        with self._lock:
-            if not self.interpreter.g_continue:
-                raise RuntimeError("The StateMachine instance may only be started once.")
-            self._start()
+#        with self._lock:
+        if not self.interpreter.g_continue:
+            raise RuntimeError("The StateMachine instance may only be started once.")
+        self._start()
         self.interpreter.mainEventLoop()
     
     def start_threaded(self):
         self._start()
-        t = Thread(target=self.interpreter.mainEventLoop)
         if self.compiler.datamodel == "ecmascript":
             from PyV8 import JSLocker #@UnresolvedImport
-            with JSLocker():
-                t.start()
+#            with JSLocker():
+            eventlet.spawn(self.interpreter.mainEventLoop)
         else:
-            t.start()
+            eventlet.spawn(self.interpreter.mainEventLoop)
         
     def isFinished(self):
         '''Returns True if the statemachine has reached it 
@@ -120,16 +120,16 @@ class StateMachine(object):
         self._send(name, data)
             
     def _send(self, name, data={}, invokeid = None, toQueue = None):
-        with self._lock:
-            self.interpreter.send(name, data, invokeid, toQueue)
+#        with self._lock:
+        self.interpreter.send(name, data, invokeid, toQueue)
         
     def In(self, statename):
         '''
         Checks if the state 'statename' is in the current configuration,
         (i.e if the StateMachine instance is currently 'in' that state).
         '''
-        with self._lock:
-            return self.interpreter.In(statename)
+#        with self._lock:
+        return self.interpreter.In(statename)
             
 #    def _sessionid_getter(self):
 #        return self.datamodel["_sessionid"]
@@ -139,14 +139,14 @@ class StateMachine(object):
 #    sessionid = property(_sessionid_getter, _sessionid_setter)
     
     def on_exit(self, sender, final):
-        with self._lock:
-            if sender is self.interpreter:
-                self.is_finished = True
-                for timer in self.compiler.timer_mapping.values():
-                    timer.cancel()
-                    del timer
-                dispatcher.disconnect(self, "signal_exit", self.interpreter)
-                dispatcher.send("signal_exit", self, final=final)
+#        with self._lock:
+        if sender is self.interpreter:
+            self.is_finished = True
+            for timer in self.compiler.timer_mapping.values():
+                timer.cancel()
+                del timer
+            dispatcher.disconnect(self, "signal_exit", self.interpreter)
+            dispatcher.send("signal_exit", self, final=final)
     
     def __enter__(self):
         self.start_threaded()

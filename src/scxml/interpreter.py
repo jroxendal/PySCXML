@@ -30,6 +30,7 @@ from datastructures import OrderedSet
 from eventprocessor import Event
 from louie import dispatcher
 from scxml.eventprocessor import ScxmlOriginType
+import eventlet
 
 
 
@@ -171,7 +172,7 @@ class Interpreter(object):
     
                     if enabledTransitions:
                         self.microstep(list(enabledTransitions))
-            
+                    eventlet.greenthread.sleep(seconds=0)
             
             for state in self.statesToInvoke:
                 for inv in state.invoke:
