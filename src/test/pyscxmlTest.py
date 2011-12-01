@@ -17,7 +17,8 @@ This file is part of pyscxml.
     @author: Johan Roxendal
 '''
 
-
+import eventlet
+eventlet.monkey_patch()
 import time
 import unittest
 from scxml.pyscxml import StateMachine, MultiSession
@@ -115,8 +116,6 @@ class RegressionTest(unittest.TestCase):
 
     def testW3c(self):
 #        logging.basicConfig(level=logging.NOTSET)
-        import eventlet
-        eventlet.monkey_patch()
 #        os.chdir("../../w3c_tests/assertions_ecmascript/passed")
         os.chdir("../../w3c_tests/assertions_passed")
         class W3CTester(StateMachine):
@@ -139,35 +138,44 @@ class RegressionTest(unittest.TestCase):
             try:
                 sm = W3CTester(xml)
                 sm.name = doc_uri
-                didTimeout = False
-                def timeout(sm):
-                    if not sm.is_finished:
-                        print "timout", doc_uri
-                        
-                    sm.send("timeout")
-                    sm.cancel()
-                    didTimeout = True
-                threading.Timer(12, timeout, (sm,)).start()
-                sm.start()
+#                didTimeout = False
+#                def timeout(sm):
+#                    if not sm.is_finished:
+#                        print "timout", doc_uri
+#                        
+#                    sm.send("timeout")
+#                    sm.cancel()
+#                    didTimeout = True
+#                threading.Timer(12, timeout, (sm,)).start()
+
+                with eventlet.timeout.Timeout(12):
+                    sm.start()
                 
-                
-                didPass = not didTimeout and sm.didPass
+                didPass = sm.didPass
+#                didPass = not didTimeout and sm.didPass
+            except eventlet.timeout.Timeout:
+                didPass = False
             except Exception, e:
                 print doc_uri, "caught ", str(e)
                 didPass = True
-            return didPass
+            return (doc_uri, didPass)
         
                         
+#        def parallelize(filelist):
+#            with futures.ThreadPoolExecutor(max_workers=4) as executor:
+#                future_to_url = dict((executor.submit(runtest, url), url)
+#                                     for url in filelist)
+#            
+#                for future in futures.as_completed(future_to_url):
+#                    url = future_to_url[future]
+#                    e = future.exception()
+#                    
+#                    self.assertTrue(future.result(), url + " failed.")
+#                    self.assertIsNone(e, url + " failed, exception caught.")
+
         def parallelize(filelist):
-            with futures.ThreadPoolExecutor(max_workers=4) as executor:
-                future_to_url = dict((executor.submit(runtest, url), url)
-                                     for url in filelist)
-            
-                for future in futures.as_completed(future_to_url):
-                    url = future_to_url[future]
-                    e = future.exception()
-                    self.assertTrue(future.result(), url + " failed.")
-                    self.assertIsNone(e, url + " failed, exception caught.")
+            pool = eventlet.greenpool.GreenPool()
+            print len(list(pool.imap(runtest, filelist)))
                     
         import glob
         filelist = filter(lambda x: "sub" not in x, glob.glob("*xml"))

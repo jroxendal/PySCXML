@@ -1,8 +1,8 @@
 
 from setuptools import setup
 
-version = "0.7.3"
-filename = "0.7.3-20110922-full"
+version = "0.8"
+filename = "0.8-20111128-full"
 
 setup(name="pyscxml",
       version=filename,
@@ -31,5 +31,5 @@ setup(name="pyscxml",
           'Topic :: Text Processing :: Markup :: XML'
           
       ],
-      install_requires=['Louie', 'Cheetah', 'suds', 'eventlet', 'restlib']
+      install_requires=['Louie', 'suds', 'restlib']
      )

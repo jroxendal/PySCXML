@@ -154,7 +154,8 @@ class Compiler(object):
                 elif node_name == "cancel":
                     sendid = self.parseAttr(node, "sendid")
                     if sendid in self.timer_mapping:
-                        self.timer_mapping[sendid].cancel()
+#                        self.timer_mapping[sendid].cancel()
+                        eventlet.greenthread.cancel(self.timer_mapping[sendid])
                         del self.timer_mapping[sendid]
                 elif node_name == "assign":
                     if not self.dm.hasLocation(node.get("location")):
@@ -461,9 +462,9 @@ class Compiler(object):
             return
              
         if delay:
-            t = Timer(delay, sender)
-            self.timer_mapping[sendid] = t
-            t.start()
+#            t = Timer(delay, sender)
+            self.timer_mapping[sendid] = eventlet.spawn_after(delay, sender)
+            
         else:
             sender()
         

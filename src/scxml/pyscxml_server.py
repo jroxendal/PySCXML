@@ -26,6 +26,7 @@ import cgi
 import logging
 import threading, time
 from functools import partial
+import eventlet
 
 def get_server(isWebSocket):
     try:
@@ -175,8 +176,9 @@ class PySCXMLServer(object):
                 raise
                 
             if self.is_type(TYPE_DEFAULT):
-                timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
-                timer.start()
+#                timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
+#                timer.start()
+                eventlet.spawn_after(0.1, sm.interpreter.externalQueue.put, event)
                 start_response(status, headers.items())
             elif self.is_type(TYPE_RESPONSE):
                 sm.interpreter.externalQueue.put(event)
@@ -213,7 +215,8 @@ class WebsocketWSGI(PySCXMLServer):
         sm = self.sm_mapping.get(session) or self.init_session(session)
         if not session in self.clients: 
             self.clients[session] = [ws]
-            threading.Thread(target=self.websocket_response, args=(sm, session)).start()
+#            threading.Thread(target=self.websocket_response, args=(sm, session)).start()
+            eventlet.spawn(self.websocket_response)
         else:
             self.clients[session].append(ws)
         sm.send("websocket.connect")

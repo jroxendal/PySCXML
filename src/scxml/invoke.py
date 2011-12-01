@@ -27,7 +27,7 @@ from messaging import exec_async
 from functools import partial
 from scxml.messaging import UrlGetter
 import logging
-from threading import Thread
+#from threading import Thread
 import eventlet
 #from scxml.pyscxml import default_logfunction
 

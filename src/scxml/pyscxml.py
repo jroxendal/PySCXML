@@ -143,7 +143,7 @@ class StateMachine(object):
         if sender is self.interpreter:
             self.is_finished = True
             for timer in self.compiler.timer_mapping.values():
-                timer.cancel()
+                eventlet.greenthread.cancel(timer)
                 del timer
             dispatcher.disconnect(self, "signal_exit", self.interpreter)
             dispatcher.send("signal_exit", self, final=final)
