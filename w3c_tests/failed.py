@@ -1,8 +1,10 @@
+import eventlet
+#eventlet.monkey_patch()
 from scxml.pyscxml import StateMachine
 import logging
 import os
 #os.chdir("assertions_all/failed")
-os.chdir("assertions_ecmascript/failed")
+os.chdir("assertions_ecma/failed")
 logging.basicConfig(level=logging.NOTSET)
 
 nextFile = filter(lambda x: x.endswith("xml"), os.listdir("."))[0]

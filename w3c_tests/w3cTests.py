@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 from scxml.pyscxml import StateMachine
 import threading, os, shutil
 from scxml.compiler import ScriptFetchError
@@ -9,8 +11,8 @@ TIMEOUT = 12
 class W3CTester(StateMachine):
     def __init__(self, xml, log_function=lambda fn, y:None, sessionid=None):
         self.didPass = False
-#        import re
-#        xml = re.sub("datamodel=.python.", 'datamodel="ecmascript"', xml)
+        import re
+        xml = re.sub("datamodel=.python.", 'datamodel="ecmascript"', xml)
         StateMachine.__init__(self, xml, log_function, None)
     def on_exit(self, sender, final):
         self.didPass = final == "pass"
@@ -76,7 +78,7 @@ def sequentialize(filelist):
 if __name__ == '__main__':
     import futures, os, glob, sys, eventlet
     eventlet.monkey_patch()
-    os.chdir("assertions_all/")
+    os.chdir("assertions_ecma/")
     
     for fn in glob.glob("*.xml"):
         shutil.move(fn, fn.split(".")[0] + ".scxml")

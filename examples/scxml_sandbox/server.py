@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 from scxml.pyscxml_server import WebsocketWSGI, TYPE_DEFAULT, TYPE_RESPONSE, ioprocessor
 from scxml.pyscxml import register_datamodel
 from scxml.datamodel import DataModel
@@ -6,7 +8,6 @@ import os, json, sys
 from threading import Timer
 from safe_eval import safe_eval
 from eventlet import wsgi, websocket
-import eventlet
 
 class SafePythonDataModel(DataModel):
     def hasLocation(self, location):
