@@ -200,8 +200,8 @@ class MultiSession(object):
     def start(self):
         ''' launches the initialized sessions by calling start_threaded() on each sm'''
 #        with self._lock:
-#        for sm in self:
-        sm.start_threaded()
+        for sm in self:
+            sm.start_threaded()
             
     
     def make_session(self, sessionid, xml):
