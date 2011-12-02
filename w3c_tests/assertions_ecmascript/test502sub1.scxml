@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- send childToParent, then terminate  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+   
+<state id="s0">
+  <onentry>
+    <send target="#_parent" event="childToParent"/>
+  </onentry>
+  <transition target="final"/>
+  </state>
+  
+     
+ <final id="final"/>
+ 
+</scxml>

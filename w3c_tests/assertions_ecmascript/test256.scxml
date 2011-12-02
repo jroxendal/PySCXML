@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- test that an empty finalize element causes any datamodel locations that were passed in to 
+be updated.  test256sub1 will return Var1 and Var2 set to 2.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+<datamodel>
+  <data id="Var1" expr="1"/>
+  <data id="Var2" expr="1"/>
+  </datamodel>
+     
+<state id="s0">
+  <onentry>
+    <send event="timeout" delay="2s"/>
+    </onentry>
+    
+    <transition event="timeout" target="fail"/>
+    <!-- test that Var1 was updated -->
+    <transition event="done.invoke" cond="Var1==2" target="s1"/>
+    <!-- var1 has not been updated, so fail -->
+    <transition event="done.invoke" target="fail"/>
+    
+    <invoke type="scxml" src="file:test256sub1.scxml" namelist="Var1">
+      <param name="Var2" location="Var2"/>
+      <finalize/>
+      </invoke>
+</state>
+
+<!-- if we get here, Var1 has the right value, so test Var2 -->    
+<state id="s1">
+    <transition cond="Var2==2" target="pass"/>
+    <transition target="fail"/>
+   </state>
+    
+ 
+<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+</scxml>

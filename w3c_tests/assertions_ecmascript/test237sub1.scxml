@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, sleep for 2 secs then terminate.  Parent will try to cancel this session --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+
+ <state id="s0">
+ <onentry>
+  <send event="timeout" delay="2s"/>
+  </onentry>
+  <transition event="timeout" target="final"/>
+  </state>   
+<final id="final"/>
+
+</scxml>

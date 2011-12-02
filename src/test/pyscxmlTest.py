@@ -138,15 +138,6 @@ class RegressionTest(unittest.TestCase):
             try:
                 sm = W3CTester(xml)
                 sm.name = doc_uri
-#                didTimeout = False
-#                def timeout(sm):
-#                    if not sm.is_finished:
-#                        print "timout", doc_uri
-#                        
-#                    sm.send("timeout")
-#                    sm.cancel()
-#                    didTimeout = True
-#                threading.Timer(12, timeout, (sm,)).start()
 
                 with eventlet.timeout.Timeout(12):
                     sm.start()
@@ -175,7 +166,10 @@ class RegressionTest(unittest.TestCase):
 
         def parallelize(filelist):
             pool = eventlet.greenpool.GreenPool()
-            print len(list(pool.imap(runtest, filelist)))
+            for filename, result in pool.imap(runtest, filelist):
+                print filename, result
+                if not result:
+                    print filename + " failed."
                     
         import glob
         filelist = filter(lambda x: "sub" not in x, glob.glob("*xml"))

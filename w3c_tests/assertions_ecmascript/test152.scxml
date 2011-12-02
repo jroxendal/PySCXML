@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- test that fan illegal array or item value causes error.execution and results in executable content
+not being executed. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+<datamodel>
+  <data id="Var1" expr="0"/>
+  <data id="Var2"/>
+  <data id="Var3"/>
+  </datamodel>
+  
+   <state id="s0">
+      <onentry>
+<!-- invalid array -->
+        <foreach item="Var2" index="Var3" array="7">
+          <assign location="Var1" expr="Var1 + 1"/>
+          </foreach>
+        <raise event="foo"/>
+        </onentry>
+   <transition event="error.execution" target="s1"/>
+   <transition event="*" target="fail"/> 
+   </state>
+   
+   <state id="s1">
+      <onentry>
+<!-- illegal item -->
+        <foreach item="'lambda'" index="Var3" array="[1, 2, 3]">
+          <assign location="Var1" expr="Var1 + 1"/>
+          </foreach>
+        <raise event="foo"/>
+        </onentry>
+   <transition event="error.execution" target="s2"/>
+   <transition event="*" target="fail"/> 
+   </state>
+
+<state id="s2">
+  <!-- check that var1 has its original value (so executable content never got executed -->
+  <transition cond="Var1==0" target="pass"/>
+  <transition target="fail"/>
+  </state> 
+   
+   <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+   <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+   
+
+
+</scxml>

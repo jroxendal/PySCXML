@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, just terminate, generating an childToParent event.  This should preceed the done.invoke event.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="final" datamodel="python">
+
+    
+<final id="final">
+  <onexit>
+    <send target="#_parent" event="childToParent"/>
+    </onexit>
+    </final>
+
+
+</scxml>

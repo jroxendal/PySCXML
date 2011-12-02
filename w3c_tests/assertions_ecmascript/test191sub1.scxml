@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- send an event to the parent session using #_parent as the target --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+
+  
+<state id="s0">
+  <onentry>
+   <send event="childToParent" target="#_parent"/>
+    </onentry>
+    
+  <transition target="final"/>
+
+ </state>
+
+<final id="final"/>
+
+</scxml>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- let the parent session know we're running by sending childToParent, then wait for parentToChild.
+If we get it, send eventReceived.  If we don't we eventually time out --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+
+  
+<state id="s0">
+  <onentry>
+   <send event="childToParent" target="#_parent"/>
+   <send event="timeout" delay="3s"/>
+    </onentry>
+    
+  <transition event="parentToChild" target="final">
+    <send target="#_parent" event="eventReceived"/>
+    </transition>
+    
+  <transition event="timeout" target="final"/>
+ </state>
+
+<final id="final"/>
+
+</scxml>

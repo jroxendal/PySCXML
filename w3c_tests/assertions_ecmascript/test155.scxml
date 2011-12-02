@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- test that foreach executes the executable content once for each item in the list. The executable
+content increments var1 and there are 3 items in the list, so it should be 3 at the end --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+
+<datamodel>
+  <data id="Var1" expr="0"/>
+  <data id="Var2"/>
+  </datamodel>
+  
+   <state id="s0">
+      <onentry>
+        <foreach item="Var2" array="[1, 2, 3]">
+          <assign location="Var1" expr="Var1 + 1"/>
+          </foreach>
+        </onentry>
+
+  <transition cond="Var1==3" target="pass"/>
+  <transition target="fail"/>
+  </state> 
+   
+   <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+   <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+   
+</scxml>

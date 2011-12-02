@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python" name="machineName">  
+   
+ <state id="s0">
+   <onentry>
+     <send type="http://www.w3.org/TR/scxml/#SCXMLEventProcessor" target="#_parent" event="childToParent"/>
+   </onentry>
+   <transition event="parentToChild" target="final"/>
+</state>
+
+<final id="final"/>
+     
+</scxml>

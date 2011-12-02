@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><!--  test that <data> creates a new ecmascript object. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
+  <datamodel>
+    <data id="var1" expr="1"/>
+    </datamodel>
+     
+<state id="s0">
+<!-- if we can access var1 in a conditional expression, the object has been created -->
+  <transition cond="var1==1" target="pass"/>
+  <transition target="fail"/>
+</state>
+
+
+ 
+<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+</scxml>

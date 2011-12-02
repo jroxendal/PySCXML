@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- parent will pass in 1 as value for var2, which is not in our datamodel.  If var2 remains unbound, return success, 
+otherwise failure, then terminate.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+   
+ <state id="s0">
+   <transition cond="Var2" target="final">
+     <send target="#_parent" event="failure"/>
+     </transition>
+   <transition target="final">
+     <send target="#_parent" event="success"/>
+     </transition>
+ </state>
+     
+ <final id="final"/>
+ 
+</scxml>
