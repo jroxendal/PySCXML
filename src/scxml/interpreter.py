@@ -6,13 +6,13 @@ This file is part of pyscxml.
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    pyscxml is distributed in the hope that it will be useful,
+    PySCXML is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    along with PySCXML.  If not, see <http://www.gnu.org/licenses/>.
     
     This is an implementation of the interpreter algorithm described in the W3C standard document, 
     which can be found at:
@@ -25,13 +25,14 @@ This file is part of pyscxml.
 
 
 from node import *
-import Queue
+#from Queue import Queue
+
 from datastructures import OrderedSet
 from eventprocessor import Event
 from louie import dispatcher
 from scxml.eventprocessor import ScxmlOriginType
 import eventlet
-
+from eventlet import Queue
 
 
 class Interpreter(object):
@@ -44,8 +45,8 @@ class Interpreter(object):
         self.configuration = OrderedSet()
         self.previousConfiguration = OrderedSet()
         
-        self.internalQueue = Queue.Queue()
-        self.externalQueue = Queue.Queue()
+        self.internalQueue = Queue()
+        self.externalQueue = Queue()
         
         self.statesToInvoke = OrderedSet()
         self.historyValue = {}
@@ -72,77 +73,6 @@ class Interpreter(object):
         
         self.executeTransitionContent([transition])
         self.enterStates([transition])
-#        self.startEventLoop()
-        
-        
-    
-#    def startEventLoop(self):
-#        self.logger.debug("startEventLoop config: {" + ", ".join([s.id for s in self.configuration if s.id != "__main__"]) + "}")
-#        initialStepComplete = False;
-#        while not initialStepComplete:
-#            enabledTransitions = self.selectEventlessTransitions()
-#            if enabledTransitions.isEmpty():
-#                if self.internalQueue.empty(): 
-#                    initialStepComplete = True 
-#                else:
-#                    internalEvent = self.internalQueue.get()
-#                    
-#                    self.logger.info("internal event found: %s", internalEvent.name)
-#                    
-#                    self.dm["__event"] = internalEvent
-#                    enabledTransitions = self.selectTransitions(internalEvent)
-#            if enabledTransitions:
-#                self.microstep(list(enabledTransitions))
-    
-    
-#    def mainEventLoop(self):
-#        self.startEventLoop()
-#        while self.g_continue:
-#            
-#            for state in self.statesToInvoke:
-#                for inv in state.invoke:
-#                    inv.invoke(inv)
-#            self.statesToInvoke.clear()
-#            
-#            self.previousConfiguration = self.configuration
-#            
-#            externalEvent = self.externalQueue.get() # this call blocks until an event is available
-#            
-#            self.logger.info("external event found: %s", externalEvent.name)
-#            
-#            self.dm["__event"] = externalEvent
-#            
-#            for state in self.configuration:
-#                for inv in state.invoke:
-#                    if inv.invokeid == externalEvent.invokeid:  # event is the result of an <invoke> in this state
-#                        self.applyFinalize(inv, externalEvent)
-#                    if inv.autoforward:
-#                        inv.send(externalEvent)
-#            
-#            enabledTransitions = self.selectTransitions(externalEvent)
-#            if enabledTransitions:
-#                self.microstep(list(enabledTransitions))
-#                
-#                # now take any newly enabled null transitions and any transitions triggered by internal events
-#                macroStepComplete = False;
-#                while not macroStepComplete:
-#                    enabledTransitions = self.selectEventlessTransitions()
-#                    if enabledTransitions.isEmpty():
-#                        if self.internalQueue.empty(): 
-#                            macroStepComplete = True
-#                        else:
-#                            internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
-#                            
-#                            self.logger.info("internal event found: %s", internalEvent.name)
-#                            
-#                            self.dm["__event"] = internalEvent
-#                            enabledTransitions = self.selectTransitions(internalEvent)
-#    
-#                    if enabledTransitions:
-#                        self.microstep(list(enabledTransitions))
-#              
-#        # if we get here, we have reached a top-level final state or some external entity has set g_continue to False        
-#        self.exitInterpreter()  
     
     
     def mainEventLoop(self):
@@ -173,6 +103,8 @@ class Interpreter(object):
                     if enabledTransitions:
                         self.microstep(list(enabledTransitions))
                     eventlet.greenthread.sleep(seconds=0)
+                    
+                    
             
             for state in self.statesToInvoke:
                 for inv in state.invoke:
@@ -192,7 +124,6 @@ class Interpreter(object):
                 break
             
             self.previousConfiguration = self.configuration
-            
             externalEvent = self.externalQueue.get() # this call blocks until an event is available
             
             if externalEvent is None:

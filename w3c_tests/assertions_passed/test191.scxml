@@ -5,7 +5,7 @@ pass, otherwise we fail.  The timer insures that some event is generated and tha
   
 <state id="s0">
     <onentry>
-      <send event="timeout" delay="5s"/>
+<!--       <send event="timeout" delay="5s"/> -->
       </onentry>
     <invoke type="scxml" src="file:test191sub1.scxml"/>
     <transition event="childToParent" target="pass"/>

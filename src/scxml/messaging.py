@@ -6,14 +6,16 @@ Created on Nov 4, 2010
 
 from louie import dispatcher
 import threading
-import urllib2
+from eventlet.green import urllib2
+
 from urllib import urlencode
 from functools import partial
-from urllib2 import HTTPError
+import eventlet
 
 def exec_async(io_function):
-    t = threading.Thread(target=io_function)
-    t.start()
+#    t = threading.Thread(target=io_function)
+#    t.start()
+    eventlet.spawn_n(io_function)
 
 class UrlGetter(urllib2.HTTPDefaultErrorHandler):
     HTTP_RESULT = "HTTP_RESULT"
@@ -38,7 +40,7 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
             if f.code is None or str(f.code)[0] == "2":
                 dispatcher.send(UrlGetter.HTTP_RESULT, self, result=f.read(), source=url)
             else:
-                e = HTTPError(url, f.code, "A code %s HTTP error has ocurred when trying to send to target %s" % (f.code, url), req.headers, f)
+                e = urllib2.HTTPError(url, f.code, "A code %s HTTP error has ocurred when trying to send to target %s" % (f.code, url), req.headers, f)
                 dispatcher.send(UrlGetter.HTTP_ERROR, self, exception=e)
         except urllib2.URLError, e:
             dispatcher.send(UrlGetter.URL_ERROR, self, exception=e)

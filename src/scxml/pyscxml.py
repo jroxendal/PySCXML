@@ -21,7 +21,7 @@ This file is part of pyscxml.
 import compiler
 from interpreter import Interpreter
 from louie import dispatcher
-from threading import Thread, RLock
+#from threading import Thread, RLock
 import logging
 import os
 import eventlet
@@ -50,7 +50,7 @@ class StateMachine(object):
         EMCAScript expressions.
         '''
 
-        self._lock = RLock()
+#        self._lock = RLock()
         self.is_finished = False
         # makes sure the scxml done event reaches this class. 
         self.compiler = compiler.Compiler()
@@ -172,7 +172,7 @@ class MultiSession(object):
         a set of sessions. Set value to None as a shorthand for deferring to the 
         default xml for that session. 
         '''
-        self._lock = RLock()
+#        self._lock = RLock()
         self.default_scxml_doc = default_scxml_doc
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
@@ -288,8 +288,8 @@ __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor", 
 
 if __name__ == "__main__":
     
-    import eventlet
-    eventlet.monkey_patch()
+#    import eventlet
+#    eventlet.monkey_patch()
 #    xml = open("../../examples/websockets/websocket_server.xml").read()
     xml = open("../../unittest_xml/colors.xml").read()
 #    xml = open("../../resources/issue64.xml").read()
@@ -301,9 +301,9 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/invoke.xml").read()
 #    xml = open("../../unittest_xml/invoke_soap.xml").read()
 #    xml = open("../../unittest_xml/factorial.xml").read()
-    xml = open("../../resources/exceptions.xml").read()
+#    xml = open("../../resources/exceptions.xml").read()
     os.chdir("../../w3c_tests/assertions_passed/")
-    xml = open("../../w3c_tests/assertions_passed/test252.scxml").read()
+    xml = open("../../w3c_tests/assertions_passed/test191.scxml").read()
 #    xml = open("../../resources/parallel5.xml").read()
 #    xml = open("../../unittest_xml/issue_626.xml").read()
 

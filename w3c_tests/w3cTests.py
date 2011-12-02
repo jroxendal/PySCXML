@@ -1,5 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
 from scxml.pyscxml import StateMachine
 import threading, os, shutil
 from scxml.compiler import ScriptFetchError
@@ -77,7 +75,6 @@ def sequentialize(filelist):
 
 if __name__ == '__main__':
     import futures, os, glob, sys, eventlet
-    eventlet.monkey_patch()
     os.chdir("assertions_ecma/")
     
     for fn in glob.glob("*.xml"):

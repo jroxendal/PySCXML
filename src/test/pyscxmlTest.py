@@ -16,9 +16,7 @@ This file is part of pyscxml.
     
     @author: Johan Roxendal
 '''
-
 import eventlet
-eventlet.monkey_patch()
 import time
 import unittest
 from scxml.pyscxml import StateMachine, MultiSession
@@ -26,9 +24,7 @@ import os
 from scxml.pyscxml_server import PySCXMLServer, TYPE_RESPONSE
 from threading import Thread
 import logging
-import threading
 from scxml.compiler import ScriptFetchError
-import futures
 xmlDir = "../../unittest_xml/"
 if not os.path.isdir(xmlDir):
     xmlDir = "unittest_xml/"
@@ -116,14 +112,14 @@ class RegressionTest(unittest.TestCase):
 
     def testW3c(self):
 #        logging.basicConfig(level=logging.NOTSET)
-#        os.chdir("../../w3c_tests/assertions_ecmascript/passed")
-        os.chdir("../../w3c_tests/assertions_passed")
+        os.chdir("../../w3c_tests/assertions_ecmascript/")
+#        os.chdir("../../w3c_tests/assertions_passed")
         class W3CTester(StateMachine):
             def __init__(self, xml, log_function=lambda fn, y:None, sessionid=None):
                 self.didPass = False
                 self.isCancelled = False
-#                import re
-#                xml = re.sub("datamodel=.python.", 'datamodel="ecmascript"', xml)
+                import re
+                xml = re.sub("datamodel=.python.", 'datamodel="ecmascript"', xml)
                 
                 StateMachine.__init__(self, xml, log_function, None)
             def cancel(self):
@@ -152,29 +148,25 @@ class RegressionTest(unittest.TestCase):
             return (doc_uri, didPass)
         
                         
-#        def parallelize(filelist):
-#            with futures.ThreadPoolExecutor(max_workers=4) as executor:
-#                future_to_url = dict((executor.submit(runtest, url), url)
-#                                     for url in filelist)
-#            
-#                for future in futures.as_completed(future_to_url):
-#                    url = future_to_url[future]
-#                    e = future.exception()
-#                    
-#                    self.assertTrue(future.result(), url + " failed.")
-#                    self.assertIsNone(e, url + " failed, exception caught.")
-
         def parallelize(filelist):
             pool = eventlet.greenpool.GreenPool()
             for filename, result in pool.imap(runtest, filelist):
-                print filename, result
                 if not result:
                     print filename + " failed."
-                    
+        
+        def sequentialize(filelist):
+            for file in filelist:
+                print file, runtest(file)
+                
+        
         import glob
         filelist = filter(lambda x: "sub" not in x, glob.glob("*xml"))
         print "Running W3C tests"
+        
+        
+        
         parallelize(filelist)
+#        sequentialize(filelist)   
         
         print "completed %s w3c tests" % len(filelist)
 

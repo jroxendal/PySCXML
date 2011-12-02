@@ -21,7 +21,7 @@ This file is part of pyscxml.
 
 
 from node import *
-import re, sys, Queue
+import re, sys
 from functools import partial
 from xml.sax.saxutils import unescape
 from messaging import UrlGetter
@@ -37,6 +37,7 @@ from xml.etree import ElementTree
 import time
 from datamodel import *
 from errors import *
+from eventlet import Queue
     
         
 
@@ -80,17 +81,12 @@ class Compiler(object):
         self.doc.datamodel = datamodel_mapping[datamodel]()
             
         self.dm = self.doc.datamodel
-        self.dm["_response"] = Queue.Queue() 
-        self.dm["_websocket"] = Queue.Queue()
+        self.dm["_response"] = Queue() 
+        self.dm["_websocket"] = Queue()
         self.dm["__event"] = None
         
         self.dm["_ioprocessors"] = {}
         
-#        def dataModelErrorCallback(key, value):
-#            e = DataModelError("The field %s in the datamodel cannot be modified." % key)
-#            self.raiseError("error.execution.datamodelerror", e)
-            
-#        self.dm.errorCallback = dataModelErrorCallback
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -248,7 +244,6 @@ class Compiler(object):
             else:
                 if self.strict_parse: 
                     raise ExecutableError(node, "PySCXML doesn't recognize the executabel content '%s'" % node.tag)
-        
     
     def parseIf(self, node):
         def gen_prefixExec(itr):
@@ -361,6 +356,7 @@ class Compiler(object):
             sender = partial(defaultSend, event, data)
         elif type in scxmlSendType:
             if target == "#_parent":
+                
                 sender = partial(defaultSend, event, 
                               data, 
                               self.interpreter.invokeId, 
@@ -461,10 +457,9 @@ class Compiler(object):
             raise e
             return
              
+        #TOOD: check for communication errors here. consider using the sender as a async worker.
         if delay:
-#            t = Timer(delay, sender)
             self.timer_mapping[sendid] = eventlet.spawn_after(delay, sender)
-            
         else:
             sender()
         
