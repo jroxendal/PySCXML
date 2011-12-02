@@ -199,9 +199,9 @@ class MultiSession(object):
     
     def start(self):
         ''' launches the initialized sessions by calling start_threaded() on each sm'''
-        with self._lock:
-            for sm in self:
-                sm.start_threaded()
+#        with self._lock:
+#        for sm in self:
+        sm.start_threaded()
             
     
     def make_session(self, sessionid, xml):
@@ -231,18 +231,18 @@ class MultiSession(object):
                 self.sm_mapping[session].send(event, data)
     
     def cancel(self):
-        with self._lock:
-            for sm in self:
-                sm.cancel()
+#        with self._lock:
+        for sm in self:
+            sm.cancel()
     
     def on_sm_exit(self, sender):
-        with self._lock:
-            if sender.sessionid in self:
-                self.logger.debug("The session '%s' finished" % sender.sessionid)
-                del self[sender.sessionid]
-            else:
-                self.logger.error("The session '%s' reported exit but it " 
-                "can't be found in the mapping." % sender.sessionid)
+#        with self._lock:
+        if sender.sessionid in self:
+            self.logger.debug("The session '%s' finished" % sender.sessionid)
+            del self[sender.sessionid]
+        else:
+            self.logger.error("The session '%s' reported exit but it " 
+            "can't be found in the mapping." % sender.sessionid)
     
     def __enter__(self):
         self.start()
