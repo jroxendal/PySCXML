@@ -216,7 +216,7 @@ class WebsocketWSGI(PySCXMLServer):
         if not session in self.clients: 
             self.clients[session] = [ws]
 #            threading.Thread(target=self.websocket_response, args=(sm, session)).start()
-            eventlet.spawn(self.websocket_response)
+            eventlet.spawn(self.websocket_response, sm, session)
         else:
             self.clients[session].append(ws)
         sm.send("websocket.connect")
