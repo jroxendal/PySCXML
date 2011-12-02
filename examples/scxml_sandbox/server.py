@@ -4,6 +4,7 @@ from scxml.datamodel import DataModel
 import logging
 import os, json, sys
 from safe_eval import safe_eval
+import eventlet
 from eventlet import wsgi, websocket
 
 class SafePythonDataModel(DataModel):
