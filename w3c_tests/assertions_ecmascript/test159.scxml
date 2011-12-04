@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that any error raised by an element of executable content causes all subsequent elements to be skipped.
-The send tag will raise an error so var1 should not be incremented.  If it is fail, otherwise succeed --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+The send tag will raise an error so var1 should not be incremented.  If it is fail, otherwise succeed --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="0"/>
   </datamodel>

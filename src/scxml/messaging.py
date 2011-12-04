@@ -5,7 +5,7 @@ Created on Nov 4, 2010
 '''
 
 from louie import dispatcher
-import threading
+import os
 from eventlet.green import urllib2
 
 from urllib import urlencode
@@ -13,8 +13,6 @@ from functools import partial
 import eventlet
 
 def exec_async(io_function):
-#    t = threading.Thread(target=io_function)
-#    t.start()
     eventlet.spawn_n(io_function)
 
 class UrlGetter(urllib2.HTTPDefaultErrorHandler):
@@ -27,7 +25,10 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
         exec_async(partial(self.get_sync, url, data, type=type))
     
     def get_sync(self, url, data, type=None):
-        data = urlencode(data) if data else None
+        try:
+            data = urlencode(data)
+        except: # data is probably a string to be send directly. 
+            pass
         if type and type.upper() not in ("POST", "GET"):
             from restlib import RestfulRequest #@UnresolvedImport
             req = RestfulRequest(url, data=data, method=type.upper())
@@ -70,7 +71,6 @@ if __name__ == '__main__':
     dispatcher.connect(onHttpResult, UrlGetter.HTTP_RESULT, getter)
     dispatcher.connect(onHttpError, UrlGetter.HTTP_ERROR, getter)
     dispatcher.connect(onUrlError, UrlGetter.URL_ERROR, getter)
-    import os
     print os.getcwd()
 #    getter.get_async("http://localhost/cgi-bin/cgi_test.py", {'mykey' : 'myvalue'})
     getter.get_async("file:messaging.py", {})

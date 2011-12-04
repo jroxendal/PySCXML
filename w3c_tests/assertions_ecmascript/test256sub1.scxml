@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, terminate immediately returning Var1=2 Var2=2 in donedata   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="final" datamodel="python">
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, terminate immediately returning Var1=2 Var2=2 in donedata   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="final" datamodel="ecmascript">
 <datamodel>
   <data id="Var1"/>
   <data id="Var2"/>

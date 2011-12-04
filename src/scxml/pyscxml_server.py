@@ -24,46 +24,8 @@ from scxml.pyscxml import MultiSession
 from xml.parsers.expat import ExpatError
 import cgi
 import logging
-import threading, time
-from functools import partial
 import eventlet
-
-def get_server(isWebSocket):
-    try:
-        import gevent.pywsgi
-        from ws4py.server.geventserver import UpgradableWSGIHandler
-        from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
-        class WebSocketServer(gevent.pywsgi.WSGIServer):
-            handler_class = UpgradableWSGIHandler
-            
-            def __init__(self, listener, application, fallback_app=None, **kwargs):
-                gevent.pywsgi.WSGIServer.__init__(self, listener, application, **kwargs)
-                protocols = kwargs.pop('websocket_protocols', [])
-                extensions = kwargs.pop('websocket_extensions', [])
-                self.application = WebSocketUpgradeMiddleware(self.application, 
-                                    protocols=protocols,
-                                    extensions=extensions,
-                                    fallback_app=fallback_app)
-                
-        return WebSocketServer
-    except ImportError:
-        try:
-            from eventlet import wsgi, websocket
-            import eventlet
-            class Server(object):
-                def __init__(self, adressTuple, ws_handler, handler):
-                    self.adressTuple = adressTuple
-                    self.handler = handler
-                    
-                def serve_forever(self):
-                    wsgi.server(eventlet.listen((self.host, self.port)), self.request_handler)
-            return Server
-        except ImportError, e:
-            if isWebSocket:
-                raise e
-            else:
-                from wsgiref.simple_server import make_server 
-                return lambda tup, ws_handler, handler: make_server(*tup, handler=handler)
+from StringIO import StringIO
 
 TYPE_DEFAULT = "default"
 TYPE_RESPONSE = "response"
@@ -151,14 +113,16 @@ class PySCXMLServer(object):
             self.logger.info(str(e))
             start_response(status, [('Content-type', 'text/plain')])
             return [""]
-        fs = cgi.FieldStorage(fp=environ['wsgi.input'],
+        input = environ["wsgi.input"].read(environ["Content_Length"])
+        
+        fs = cgi.FieldStorage(fp=StringIO(input),
                                environ=environ,
                                keep_blank_values=True)
         
-        try:
+        if fs.keys():
             data = dict([(key, fs.getvalue(key)) for key in fs.keys()])
-        except TypeError:
-            data = {"request" : fs.value }
+        else:
+            data = input
         
         if "QUERY_STRING" in environ and environ["QUERY_STRING"]:
             data.update(x.split("=") for x in environ["QUERY_STRING"].split("&"))
@@ -176,8 +140,6 @@ class PySCXMLServer(object):
                 raise
                 
             if self.is_type(TYPE_DEFAULT):
-#                timer = threading.Timer(0.1, sm.interpreter.externalQueue.put, args=(event,))
-#                timer.start()
                 eventlet.spawn_after(0.1, sm.interpreter.externalQueue.put, event)
                 start_response(status, headers.items())
             elif self.is_type(TYPE_RESPONSE):
@@ -248,8 +210,12 @@ class ioprocessor(object):
 
 @ioprocessor('basichttp')
 def type_basichttp(session, data, sm, environ):
-    if "_content" in data:
-        event = Processor.fromxml(data["_content"], "unknown")
+    if "_scxmlevent" in data:
+        event = Processor.fromxml(data["_scxmlevent"], "unknown")
+    elif "eventname" in data:
+        evtname = data.pop("_eventname")
+        event = Event(evtname, data)
+        event.origintype = "basichttp"
     else:
         pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
         event = Event(["http", environ['REQUEST_METHOD'].lower()] + pth, data=data)
@@ -259,10 +225,7 @@ def type_basichttp(session, data, sm, environ):
 
 @ioprocessor('scxml')
 def type_scxml(session, data, sm, environ):
-    if "_content" in data:
-        event = Processor.fromxml(data["_content"])
-    else:
-        event = Processor.fromxml(data["request"])
+    event = Processor.fromxml(data)
     return event
 
 

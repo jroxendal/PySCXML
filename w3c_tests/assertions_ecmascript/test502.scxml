@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that the finalize executes for each event received from the child process and only on events
 received from the child process.  test502sub1 returns two events, childToParent and done.invoke.  The first
 invoke in s1 has a finalize, the second doesn't.  The finalize handler in the first invoke should be executed
-twice --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="python" name="machineName">
+twice --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="ecmascript" name="machineName">
 <datamodel>
   <data id="Var1" expr="0"/>
   </datamodel>

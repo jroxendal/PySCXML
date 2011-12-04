@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that an internal transition whose targets are not proper descendants of its source state
-behaves like an external transition --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="python" name="machineName">
+behaves like an external transition --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="ecmascript" name="machineName">
 <datamodel>
   <data id="Var1" expr="0"/>  <!-- how often we have exited p -->
   <data id="Var2" expr="0"/>  <!-- how often we have exited ps1 -->

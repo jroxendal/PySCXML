@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that done.invoke.id event has the right id.  test235sub1.scxml terminates immediately
-and should generate done.invoke.foo   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+and should generate done.invoke.foo   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
      
 <state id="s0">

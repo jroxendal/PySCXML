@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- parent will pass in 1 as value for var1.  If we get it return success, otherwise failure, then terminate.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+<?xml version="1.0" encoding="UTF-8"?><!-- parent will pass in 1 as value for var1.  If we get it return success, otherwise failure, then terminate.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
  <datamodel>
    <data id="Var1" expr="0"/>
    </datamodel>

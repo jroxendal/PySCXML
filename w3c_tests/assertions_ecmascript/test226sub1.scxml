@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, if var1 has a value notify parent. Then terminate.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, if var1 has a value notify parent. Then terminate.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
 <datamodel>
   <data id="Var1"/>

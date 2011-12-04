@@ -18,7 +18,9 @@ class InternalError(PySCXMLError):
     pass
 
 class AtomicError(PySCXMLError):
-    pass
+    def __init__(self, *args, **kwargs):
+        PySCXMLError.__init__(self)
+        self.exception = self
 
 class ExecutableError(CompositeError):
     def __init__(self, exc, elem):
@@ -32,15 +34,17 @@ class ExecutableError(CompositeError):
             % (article, name, split_ns(self.elem)[1], self.elem.lineno, self.exception)
 
 class IllegalLocationError(AtomicError):
+    pass
+
+class SendExecutionError(AtomicError):
     def __init__(self, *args, **kwargs):
         AtomicError.__init__(self,*args, **kwargs)
-        self.exception = self
-
-class IllegalTargetError(AtomicError):
+        self.type = "execution"
+            
+class SendCommunicationError(AtomicError):
     def __init__(self, *args, **kwargs):
         AtomicError.__init__(self,*args, **kwargs)
-        self.exception = self
-
+        self.type = "communication"
 
 class ExprEvalError(AtomicError):
     def __init__(self, exc, traceback):
@@ -91,9 +95,9 @@ class ExecutableContainerError(ExecutableError):
         ExecutableError.__init__(self, exc, elem)
         
     def __str__(self):
+        child_name = "an element"
         if hasattr(self.exception, "elem"):
             child_name = split_ns(self.exception.elem)[1]
-        child_name = ""
         return "Stopped executing children of %s on line %s after %s raised an error:\n    %s" % \
             (split_ns(self.elem)[1], self.elem.lineno, child_name, self.exception)
         

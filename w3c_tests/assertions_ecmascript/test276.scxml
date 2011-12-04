@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that values passed in from parent process override default values specified in the child, test276sub1.scxml.
-The child returns event1 if var1 has value 1, event0 if it has default value 0.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+The child returns event1 if var1 has value 1, event0 if it has default value 0.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
    <state id="s0">
      <invoke type="scxml" src="file:test276sub1.scxml">

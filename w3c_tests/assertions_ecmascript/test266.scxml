@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- we test exmode=lax.  Tests 267-9 test exmode strict.  The  processor should ignore the attribute
-foo on <scxml> and execute without an error.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" foo="bar" exmode="lax" initial="s0" datamodel="python">
+foo on <scxml> and execute without an error.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" foo="bar" exmode="lax" initial="s0" datamodel="ecmascript">
 
      
 <state id="s0">

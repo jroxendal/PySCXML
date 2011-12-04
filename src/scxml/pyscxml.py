@@ -25,7 +25,8 @@ from louie import dispatcher
 import logging
 import os
 import eventlet
-
+import errno
+import re
 
 def default_logfunction(label, msg):
     label = label or ""
@@ -38,7 +39,7 @@ class StateMachine(object):
     This class provides the entry point for the pyscxml library. 
     '''
     
-    def __init__(self, xml, log_function=default_logfunction, sessionid=None, default_datamodel="python"):
+    def __init__(self, source, log_function=default_logfunction, sessionid=None, default_datamodel="python"):
         '''
         @param xml: the scxml document to parse, expressed as a string.
         @param log_function: the function to execute on a <log /> element. 
@@ -48,11 +49,13 @@ class StateMachine(object):
         @param default_datamodel: if omitted, any document started by this instance will have 
         its datamodel expressions evaluated as Python expressions. Set to 'ecmascript' to assume 
         EMCAScript expressions.
+        @raise IOError 
+        @raise xml.parsers.expat.ExpatError 
         '''
 
-#        self._lock = RLock()
         self.is_finished = False
-        # makes sure the scxml done event reaches this class. 
+        self.filedir = None
+        self.filename = None
         self.compiler = compiler.Compiler()
         self.compiler.default_datamodel = default_datamodel
         self.compiler.log_function = log_function
@@ -60,14 +63,42 @@ class StateMachine(object):
         self.sessionid = sessionid or "pyscxml_session_" + str(id(self))
         self.interpreter = Interpreter()
         dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
+        self.logger = logging.getLogger("pyscxml.%s" % self.sessionid)
         self.interpreter.logger = logging.getLogger("pyscxml.%s.interpreter" % self.sessionid)
         self.compiler.logger = logging.getLogger("pyscxml.%s.compiler" % self.sessionid)
-        self.doc = self.compiler.parseXML(xml, self.interpreter)
+        self.doc = self.compiler.parseXML(self.open_document(source), self.interpreter)
         self.doc.datamodel["_x"] = {"self" : self}
         self.doc.datamodel["_sessionid"] = self.sessionid 
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
         
+    
+    def get_path(self, local_path):
+        prefix = self.filedir + ":" if self.filedir else ""
+        search_path = (prefix + os.getcwd() + ":" + os.environ.get("PYSCXMLPATH", "").strip(":")).split(":")
+        paths = [os.path.join(folder, local_path) for folder in search_path]
+        for path in paths:
+            if os.path.isfile(path):
+                return (path, search_path)
+        return (None, search_path)
+    
+    def open_document(self, uri):
+        if hasattr(uri, "read"):
+            return uri.read()
+        elif isinstance(uri, basestring) and re.search("<(.+:)?scxml", uri): #"<scxml" in uri:
+            self.filename = "<string>"
+            self.filedir = None
+            return uri
+        else:
+            path, search_path = self.get_path(uri)
+            if path:
+                self.filedir, self.filename = os.path.split(os.path.abspath(path))
+                return open(path).read()
+            else:
+                msg = "No such file on the PYSCXMLPATH"
+                self.logger.error(msg + ": '%s'" % uri)
+                self.logger.error("PYTHONPATH: '%s'" % search_path)
+                raise IOError(errno.ENOENT, msg, uri)
     
     def _start(self):
         self.compiler.instantiate_datamodel()
@@ -88,12 +119,8 @@ class StateMachine(object):
     
     def start_threaded(self):
         self._start()
-        if self.compiler.datamodel == "ecmascript":
-            from PyV8 import JSLocker #@UnresolvedImport
-#            with JSLocker():
-            eventlet.spawn(self.interpreter.mainEventLoop)
-        else:
-            eventlet.spawn(self.interpreter.mainEventLoop)
+        eventlet.spawn(self.interpreter.mainEventLoop)
+        eventlet.greenthread.sleep()
         
     def isFinished(self):
         '''Returns True if the statemachine has reached it 
@@ -118,6 +145,7 @@ class StateMachine(object):
         @param data: the data passed to the _event.data variable (any data type)
         '''
         self._send(name, data)
+        eventlet.greenthread.sleep()
             
     def _send(self, name, data={}, invokeid = None, toQueue = None):
 #        with self._lock:
@@ -183,7 +211,7 @@ class MultiSession(object):
             
             
     def __iter__(self):
-        return self.sm_mapping.itervalues()
+        return iter(list(self.sm_mapping.itervalues()))
     
     def __delitem__(self, val):
         del self.sm_mapping[val]
@@ -202,6 +230,7 @@ class MultiSession(object):
 #        with self._lock:
         for sm in self:
             sm.start_threaded()
+        eventlet.greenthread.sleep()
             
     
     def make_session(self, sessionid, xml):
@@ -287,32 +316,45 @@ def register_datamodel(id, klass):
 __all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor", "expr_evaluator", "expr_exec"]
 
 if __name__ == "__main__":
+    os.environ["PYSCXMLPATH"] = "../../w3c_tests/:../../unittest_xml:../../resources"
     
-#    import eventlet
-#    eventlet.monkey_patch()
-#    xml = open("../../examples/websockets/websocket_server.xml").read()
-    xml = open("../../unittest_xml/colors.xml").read()
-#    xml = open("../../resources/issue64.xml").read()
-#    xml = open("../../resources/foreach.xml").read()
-#    xml = open("../../unittest_xml/parallel3.xml").read()
-    xml = open("../../w3c_tests/testPreemption.scxml").read()
-#    xml = open("../../w3c_tests/assertions/failed/test187sub1.xml").read()
-#    xml = open("../../resources/preempted2.xml").read()
-#    xml = open("../../unittest_xml/invoke.xml").read()
-#    xml = open("../../unittest_xml/invoke_soap.xml").read()
-#    xml = open("../../unittest_xml/factorial.xml").read()
-#    xml = open("../../resources/exceptions.xml").read()
-    os.chdir("../../w3c_tests/assertions_passed/")
-    xml = open("../../w3c_tests/assertions_passed/test191.scxml").read()
-#    xml = open("../../resources/parallel5.xml").read()
-#    xml = open("../../unittest_xml/issue_626.xml").read()
-
     logging.basicConfig(level=logging.NOTSET)
     
     
-    sm = StateMachine(xml)
+#    sm = StateMachine("assertions_passed/test144.scxml")
+    sm = StateMachine("assertions_ecmascript/test154.scxml")
     sm.start()
+
+    listener = '''
+        <scxml>
+            <state>
+                <transition event="e1" target="f">
+                    <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
+                </transition>
+            </state>
+            <final id="f" />
+        </scxml>
+    '''
+    sender = '''
+    <scxml>
+        <state>
+            <onentry>
+                <log label="sending event" />
+                <send event="e1" target="#_scxml_session1"  />
+            </onentry>
+            <transition event="e2" target="f" />
+        </state>
+        <final id="f" />
+    </scxml>
+    '''
     
+#    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
+##        eventlet.greenthread.sleep(1)
+#    ms.start()
+#    print all(map(lambda x: x.isFinished(), ms))
+        
+    
+
     
 #    with StateMachine(xml) as sm:
 #        pass

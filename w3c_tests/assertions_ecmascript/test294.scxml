@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- simple test that a param inside donedata ends up in the data field of the done event --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="python" initial="s0">
+<?xml version="1.0" encoding="UTF-8"?><!-- simple test that a param inside donedata ends up in the data field of the done event --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" initial="s0">
  <datamodel>
        <data id="Var1" expr="0"/>
     </datamodel>   

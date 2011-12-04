@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- let the parent session know we're running by sending childToParent, then wait for parentToChild.
-If we get it, send eventReceived.  If we don't we eventually time out --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+If we get it, send eventReceived.  If we don't we eventually time out --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
   
 <state id="s0">

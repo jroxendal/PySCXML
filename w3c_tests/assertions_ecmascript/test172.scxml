@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- we test that eventexpr uses the current value of var1, not its initial value  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+<?xml version="1.0" encoding="UTF-8"?><!-- we test that eventexpr uses the current value of var1, not its initial value  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="'event1'"/>
   </datamodel>

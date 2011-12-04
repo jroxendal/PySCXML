@@ -2,7 +2,7 @@
     copy. Create a two dimensional array (list of lists) and test that if we 
     modify its cells/values inside <foreach>, the changes persist. -->
 <scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance"
-    datamodel="python">
+    datamodel="ecmascript">
     <datamodel>
         <data id="Var1" expr="[[0,0],[0,0]]" />
     </datamodel>

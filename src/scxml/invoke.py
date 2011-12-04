@@ -27,7 +27,6 @@ from messaging import exec_async
 from functools import partial
 from scxml.messaging import UrlGetter
 import logging
-#from threading import Thread
 import eventlet
 #from scxml.pyscxml import default_logfunction
 
@@ -98,6 +97,7 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.initData = data
         self.cancelled = False
         self.default_datamodel = "python"
+        self.paths = []
     
     def start(self, parentQueue):
         self.parentQueue = parentQueue
@@ -113,30 +113,15 @@ class InvokeSCXML(BaseFetchingInvoke):
                                sessionid=self.parentSessionid + "." + self.invokeid, 
                                default_datamodel=self.default_datamodel,
                                log_function=lambda label, val: dispatcher.send(signal="invoke_log", sender=self, label=label, val=val))
-            
         
         self.sm.compiler.initData = self.initData
-#        self.sm.datamodel.update(self.initData)
-#        self.sm.start_threaded(self.parentQueue, self.invokeid)
-#        logger = "pyscxml.%s.interpreter" % self.sessionid
-#        self.sm.interpreter.logger = logging.getLogger(name)
         
         self.sm._start_invoke(self.parentQueue, self.invokeid)
-#        t = Thread(target=self.sm.interpreter.mainEventLoop)
-        if self.sm.compiler.datamodel == "ecmascript":
-#            from PyV8 import JSLocker #@UnresolvedImport
-#            with JSLocker():
-#            t.start()
-            eventlet.spawn(self.sm.interpreter.mainEventLoop)
-            
-            
-        else:
-            eventlet.spawn(self.sm.interpreter.mainEventLoop)
-#        dispatcher.send("init.invoke." + self.invokeid, self)
+        eventlet.spawn(self.sm.interpreter.mainEventLoop)
 
     
     def send(self, eventobj):
-        if not self.sm.isFinished():
+        if self.sm and not self.sm.isFinished():
             self.sm.interpreter.externalQueue.put(eventobj)
     
     def onHttpResult(self, signal, result, **named):

@@ -22,7 +22,7 @@ not being executed. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf
       <onentry>
 <!-- illegal item -->
         <foreach item="'lambda'" index="Var3" array="[1, 2, 3]">
-          <assign location="Var1" expr="Var1 + 1"/>
+          <assign location="Var1" expr="Var1 + 1"/> 
           </foreach>
         <raise event="foo"/>
         </onentry>

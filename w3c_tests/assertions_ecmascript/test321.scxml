@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that _sessionid is bound on startup --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python" name="machineName">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that _sessionid is bound on startup --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript" name="machineName">
 <datamodel>
   <data id="Var1" expr="_sessionid"/>
   </datamodel>

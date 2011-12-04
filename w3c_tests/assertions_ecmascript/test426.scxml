@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that the processor automatically generates an id when one is missing.  Both the top-level states
 in the test are missing ids.  So ids should be generated and used in their respective done events.  We check
-that the event names are different --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s01" datamodel="python" name="machineName">
+that the event names are different --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s01" datamodel="ecmascript" name="machineName">
 <datamodel>
   <data id="Var1"/>
   <data id="Var2"/>

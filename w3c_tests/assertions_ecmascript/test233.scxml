@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that finalize markup runs before the event is processed.  test233sub1.scxml will
 return 2 in _event.data.aParam, so that new value should be in force when we select
-the transtitions.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+the transtitions.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="1"/>
   </datamodel>

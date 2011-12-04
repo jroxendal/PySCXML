@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that cancelling works. test237sub1.scxml sleeps for two seconds, then terminates.  We
 sleep for 1 sec in s0, then move to s1.  This should cause the invocation to get cancelled.
 If we receive done.invoke, the invocation wasn't cancelled, and we fail. If we receive no events by
-the time timeout2 fires, success   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+the time timeout2 fires, success   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
      
 <state id="s0">

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- make sure sendid is blank in a non-error event --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python" name="machineName">  
+<?xml version="1.0" encoding="UTF-8"?><!-- make sure sendid is blank in a non-error event --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript" name="machineName">  
    
  <state id="s0">
    <onentry>

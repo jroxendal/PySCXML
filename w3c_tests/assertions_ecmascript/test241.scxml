@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test240sub1 will return success ifits Var1 is set to 1, failure otherwise. For this test
 we try passing in Var1 by param and by namelist and check that we either get two successes
-or two failures  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+or two failures  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="1"/>
   </datamodel>

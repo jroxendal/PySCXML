@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that foreach goes over the array in the right order.  since the array contains 1 2 3, we compare the current 
 value with the previous value, which is stored in var1. The current value should always be larger.  If
-it ever isn't, set Var4 to 0, indicating failure --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+it ever isn't, set Var4 to 0, indicating failure --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="0"/>
   <data id="Var2"/> <!-- the item, which will contain the current value -->

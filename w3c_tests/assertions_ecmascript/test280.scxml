@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="conf.xsl"?><!-- test late binding.  var2 won't get bound until s1 is entered, so it shouldn't  have a value in s0 and
 accessing it should cause an error. It should get bound before the onentry code in s1 so it should  be
-possible access it there and assign its value to var1 --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python" binding="late">
+possible access it there and assign its value to var1 --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript" binding="late">
  
  <datamodel>
    <data id="Var1"/>

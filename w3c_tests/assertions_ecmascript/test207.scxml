@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- we test that that we can't  cancel an event in another process.  We start up test207sub1.scxml.  It notifies
 us when it has generated a delayed event with sendid foo.  We try to cancel foo.  test207sub1.scxml sends us event
  event success if the event is not cancelled, event fail otherwise.  This doesn't test that there is absolutely no way to cancel an event
-raised by another document, but the spec doesn't define any way to refer to an event in another process  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+raised by another document, but the spec doesn't define any way to refer to an event in another process  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
    
 <state id="s0" initial="s01">

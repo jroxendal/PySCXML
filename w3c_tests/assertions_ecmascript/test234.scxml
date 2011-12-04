@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that only finalize markup in the invokingstate runs.  test234sub1.scxml will
 return 2 in _event.data.aParam, while test234sub2.scxml doesn't return any events.  So
-var1 should have value 2 but var2 should still be set to 1  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="p0" datamodel="python">
+var1 should have value 2 but var2 should still be set to 1  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="p0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="1"/>
   <data id="Var2" expr="1"/>

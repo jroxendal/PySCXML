@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that the processor automatically 
     generates send and invoke ids each time the element is executed. -->
 <scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance"
-    initial="s1" datamodel="python" name="machineName">
+    initial="s1" datamodel="ecmascript" name="machineName">
     <datamodel>
         <data id="Var1" expr="0" /> <!-- how many times we've entered s1 -->
         <data id="Var2" />  <!-- idlocation for send in s1 -->

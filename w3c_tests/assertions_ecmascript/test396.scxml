@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that the value in _event.name matches the event name used to match against transitions  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="python">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that the value in _event.name matches the event name used to match against transitions  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="1"/>
  </datamodel>

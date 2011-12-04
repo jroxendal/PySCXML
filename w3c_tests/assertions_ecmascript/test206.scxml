@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- a duplicate of test205, but this time we're testing that the specified data is included.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+<?xml version="1.0" encoding="UTF-8"?><!-- a duplicate of test205, but this time we're testing that the specified data is included.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 <datamodel>
    <data id="Var1"/>
    </datamodel>

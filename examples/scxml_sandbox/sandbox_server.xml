@@ -12,7 +12,7 @@
     </datamodel>
     
         <state id="sandbox">
-            <transition event="http.post">
+            <transition event="http.post" cond="_event.data.get('doc')">
 <!--                 <if cond="session"> -->
 <!--                     <send targetexpr="'#_scxml_' + session" event="quit" /> -->
 <!--                 </if> -->
@@ -102,6 +102,11 @@
                     
                 </spyderbrain:start_session>
 <!--                 <send target="#_response" namelist="session headers" /> -->
+        </transition>
+        
+        <transition event="http">
+            <log label="got http request" expr="_event.data" />
+            <log expr="_event" />
         </transition>
         
         <transition event="init.session">

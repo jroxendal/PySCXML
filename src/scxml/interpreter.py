@@ -73,6 +73,7 @@ class Interpreter(object):
         
         self.executeTransitionContent([transition])
         self.enterStates([transition])
+        
     
     
     def mainEventLoop(self):

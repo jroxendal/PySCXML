@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- we test 'optimal enablement' meaning that of all transitions that are enabled, we chose the ones
-in child states over parent states, and use document order to break ties.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+in child states over parent states, and use document order to break ties.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
        
 <state id="s0" initial="s01">

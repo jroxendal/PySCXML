@@ -8,6 +8,7 @@ import sys
 import traceback
 from errors import ExprEvalError, DataModelError
 import eventlet
+import re
 
 
 try:
@@ -42,8 +43,8 @@ class DataModel(dict):
         dict.__init__(self, *args, **kwargs)
     
     def __setitem__(self, key, val):
-        if (key in assignOnce and key in self) or key in hidden:
-            raise DataModelError("You can't assign to the field '%s'." % key)
+        if (key in assignOnce and key in self) or key in hidden or not self.isLegalName(key):
+            raise DataModelError("You can't assign to the name '%s'." % key)
         else:
             dict.__setitem__(self, key, val)
     
@@ -60,14 +61,15 @@ class DataModel(dict):
             return True
         except:
             return False
-        
-    def foreach(self, itemstr, indexstr, array):
-        for i, item in enumerate(self.evalExpr(array)):
-            self[itemstr] = item
-            if indexstr:
-                self[indexstr] = i
-            yield 
     
+    def isLegalName(self, name):
+        try:
+            self.evalExpr(name + " = None")
+            self.evalExpr("del " + name)
+            return True
+        except:
+            return False
+        
     @exceptionFormatter
     def evalExpr(self, expr):
         return eval(expr, self)
@@ -82,15 +84,10 @@ class ECMAScriptDataModel(object):
         class GlobalEcmaContext(object):
             pass
         self.g = GlobalEcmaContext()
-#        self._lock = JSLocker()
-        
-#        self._lock.enter()
-        
-    
     
     def __setitem__(self, key, val):
-        if (key in assignOnce and key in self) or key in hidden:
-            raise DataModelError("You can't assign to the field '%s'." % key)
+        if (key in assignOnce and key in self) or key in hidden or not self.isLegalName(key):
+            raise DataModelError("You can't assign to the name '%s'." % key)
         else:
             if key == "__event":
                 #TODO: let's try using the Event object as is, and block
@@ -121,8 +118,10 @@ class ECMAScriptDataModel(object):
     def hasLocation(self, location):
         return self.evalExpr("typeof(%s) != 'undefined'" % location)
     
+    def isLegalName(self, name):
+        return bool(re.match("[a-zA-Z_$][0-9a-zA-Z_$]*", name))
+    
     def evalExpr(self, expr):
-#        with JSLocker():
         with JSContext(self.g) as c:
             try:
                 ret = c.eval(expr)
@@ -132,15 +131,6 @@ class ECMAScriptDataModel(object):
             return ret
     def execExpr(self, expr):
         self.evalExpr(expr)
-    
-    def foreach(self, itemstr, indexstr, array):
-#        with JSLocker():
-        with JSContext(self.g) as c:
-            for i, item in enumerate(c.eval(array)):
-                self[itemstr] = item
-                if indexstr:
-                    self[indexstr] = i
-                yield 
     
 if __name__ == '__main__':
     import PyV8 #@UnresolvedImport

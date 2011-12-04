@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- this is basically just a test that invoke works correctly and that you can pass data
 to the invoked process.  If test226sub1.scxml is started and finds aParam==1, it exits, signalling
-success.  otherwise it will hang and the timeout in this doc signifies failure.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+success.  otherwise it will hang and the timeout in this doc signifies failure.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
 
      
 <state id="s0">
