@@ -113,7 +113,7 @@ class PySCXMLServer(object):
             self.logger.info(str(e))
             start_response(status, [('Content-type', 'text/plain')])
             return [""]
-        input = environ["wsgi.input"].read(environ["Content_Length"])
+        input = environ["wsgi.input"].read(environ["CONTENT_LENGTH"])
         
         fs = cgi.FieldStorage(fp=StringIO(input),
                                environ=environ,

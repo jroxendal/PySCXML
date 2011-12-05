@@ -63,12 +63,8 @@ class DataModel(dict):
             return False
     
     def isLegalName(self, name):
-        try:
-            self.evalExpr(name + " = None")
-            self.evalExpr("del " + name)
-            return True
-        except:
-            return False
+        #TODO: what about reserved names?
+        return bool(re.match("[a-zA-Z_][0-9a-zA-Z_]*", name))
         
     @exceptionFormatter
     def evalExpr(self, expr):
@@ -134,8 +130,8 @@ class ECMAScriptDataModel(object):
     
 if __name__ == '__main__':
     import PyV8 #@UnresolvedImport
-    d = ECMAScriptDataModel()
-#    d = DataModel()
+#    d = ECMAScriptDataModel()
+    d = DataModel()
     
     
     d["__event"] = Event("yeah")
