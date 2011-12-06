@@ -64,6 +64,12 @@ $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonAr
 	$("#sendDoc").click(sendDoc);
 	sendDoc();
 	
+	$(window).resize(function() {
+		$(".CodeMirror-scroll")
+		.height($(window).height() - $(".CodeMirror-scroll").offset().top - 40)
+	}).resize();
+	
+	
 	
 });
 

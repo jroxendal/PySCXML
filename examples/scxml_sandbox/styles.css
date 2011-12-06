@@ -1,3 +1,5 @@
+@import url(http://fonts.googleapis.com/css?family=Lato:100&text=scxmlSCXML);
+@import url(http://fonts.googleapis.com/css?family=Gruppo&text=consoleCONSOLE);
 html {
 	height : 100%;
 }
@@ -19,6 +21,25 @@ body {
 	font-family : helvetica,sans-serif;
 	overflow : hidden;
 }
+
+#logo {
+	font-family: 'Lato', sans-serif;
+	font-size : 8em;
+	line-height: 0;
+	margin-left : 0.55em;
+	margin-top: 0.4em;
+	
+}
+#sublogo {
+	font-family: 'Gruppo', sans-serif;
+	font-size : 4em;
+	line-height: 0;
+	margin-left: 3.54em;
+	margin-top: -0.22em;
+	color : grey;
+	margin-bottom : 0;
+}
+
 label {
 	display : block;
 }
@@ -51,10 +72,21 @@ p {
 	top : -273px;
 }
 #header {
-	margin-bottom : 20px;
+	margin-bottom : -1.0em;
+	width : 100%;
+	height : 4em;
 }
-#header img {
-/* 	height : 100px; */
+#header > div {
+	float : left;
+	margin-bottom : -0.9em;	
+}
+#header a:hover {
+	border : none;
+}
+#header a {
+	float : right;
+	margin-top : 1em;
+	margin-right : 2em;
 }
 #main {
 	background-color: white;
@@ -128,11 +160,14 @@ form input[type=text] {
 
 
 #left_col {
-	-webkit-box-flex: 2;
-	-moz-box-flex: 2;
-	box-flex: 2;
+	-webkit-box-flex: 4;
+	-moz-box-flex: 4;
+	box-flex: 4;
 }
 #right_col {
+	-webkit-box-flex: 1;
+	-moz-box-flex: 1;
+	box-flex: 1;
 	vertical-align: top;
 	width : 200px;
 	margin-left : 8px;
