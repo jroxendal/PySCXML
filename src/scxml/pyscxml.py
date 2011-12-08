@@ -114,6 +114,9 @@ class StateMachine(object):
 #        with self._lock:
         if not self.interpreter.g_continue:
             raise RuntimeError("The StateMachine instance may only be started once.")
+        else:
+            doc = os.path.join(self.filedir, self.filename) if self.filedir else ""
+            self.logger.info("Starting %s" % doc)
         self._start()
         self.interpreter.mainEventLoop()
     
@@ -322,8 +325,8 @@ if __name__ == "__main__":
     
     
 #    sm = StateMachine("assertions_passed/test144.scxml")
-    sm = StateMachine("assertions_ecmascript/test154.scxml")
-    sm.start()
+#    sm = StateMachine("assertions_ecmascript/test154.scxml")
+#    sm.start()
 
     listener = '''
         <scxml>
@@ -363,28 +366,9 @@ if __name__ == "__main__":
 #    xml = open("../../resources/preempted.xml").read()
 #    xml = open("../../unittest_xml/finalize.xml").read()
     
-    xml = '''
-    <scxml datamodel="ecmascript">
-    <state id="s1">
-        <onentry>
-            <log label="entering" expr="'first state'" />
-        <script>
-          throw lol
-      </script>
-        </onentry>
-      <transition event="error" target="s2">
-      </transition>
-        <transition event="next" target="s2" />
-    </state>
-    <state id="s2">
-        <transition event="quit" target="f" />
-    </state>
-    <final id="f" />
-</scxml>
-    '''
     
-#    sm = StateMachine(xml)
-#    sm.start()
+    sm = StateMachine("invoke.xml")
+    sm.start()
     
 #    sm.start_threaded()
 #    sm.send("e")

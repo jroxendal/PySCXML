@@ -36,7 +36,7 @@ class RegressionTest(unittest.TestCase):
     This test class is run from the context of the build.xml found in the project root.
     '''
     
-    def loltestInterpreter(self):
+    def testInterpreter(self):
         os.environ["PYSCXMLPATH"] = "../../unittest_xml:./unittest_xml"
         runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
@@ -108,7 +108,7 @@ class RegressionTest(unittest.TestCase):
         
 
 
-    def loltestW3cPython(self):
+    def testW3cPython(self):
 #        logging.basicConfig(level=logging.NOTSET)
         os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_passed"
         
@@ -132,9 +132,9 @@ class RegressionTest(unittest.TestCase):
         filelist = [f for f in glob.glob(os.environ["PYSCXMLPATH"] + "/*xml") if "sub" not in f]
         print "Running W3C ecmascript tests..."
         
-#        failed = parallelize(filelist)
-        failed = []
-        sequentialize(filelist)
+        failed = parallelize(filelist)
+#        failed = []
+#        sequentialize(filelist)
         
         print "completed %s w3c ecmascript tests" % len(filelist)
         if failed:

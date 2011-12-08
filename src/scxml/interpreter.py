@@ -324,11 +324,12 @@ class Interpreter(object):
                         if isParallelState(anc):
                             for child in getChildStates(anc):
                                 if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
-                                    self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)   
+                                    self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)
+        # TODO: switch these (invoke should happen in the same order). see equivalent in exitstates.
+#        for s in statesToEnter:
+#            self.statesToInvoke.add(s)
         for s in statesToEnter:
-            self.statesToInvoke.add(s)
-        statesToEnter.sort(key=enterOrder)
-        for s in statesToEnter:
+            statesToEnter.sort(key=enterOrder)
             self.configuration.add(s)
             if self.doc.binding == "late" and s.isFirstEntry:
                 s.initDatamodel()
@@ -502,10 +503,12 @@ def isCompoundState(s):
 
 
 def enterOrder(s):
-    return (getStateDepth(s), s.n)
+#    return (getStateDepth(s), s.n)
+    return s.n  
 
 def exitOrder(s):
-    return (0 - getStateDepth(s), 0 - s.n)
+    return 0 - s.n
+#    return (0 - getStateDepth(s), 0 - s.n)
 
 def documentOrder(s):
     key = [s.n]

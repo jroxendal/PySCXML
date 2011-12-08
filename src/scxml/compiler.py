@@ -811,7 +811,7 @@ def preprocess(tree):
             node.set('id',id)
             
             
-
+#TODO: this should be moved to the python datamodel class.
 def normalizeExpr(expr):
     # TODO: what happens if we have python strings in our script blocks with &gt; ?
     code = unescape(expr).strip("\n")
@@ -826,15 +826,15 @@ def normalizeExpr(expr):
     
 
 def iter_elems(tree):
-    queue = [(None, tree)]
+    stack = [(None, tree)]
     n = 0
-    while(len(queue) > 0):
-        parent, child = queue.pop(0)
+    while(len(stack) > 0):
+        parent, child = stack.pop()
         yield (n, parent, child)
         n += 1 
-        for elem in child:
+        for elem in reversed(child):
             if elem.tag in tagsForTraversal:
-                queue.append((child, elem))
+                stack.append((child, elem))
                 
 class FileWrapper(object):
     def __init__(self, source):
