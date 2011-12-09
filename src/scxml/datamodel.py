@@ -118,7 +118,7 @@ class ECMAScriptDataModel(object):
         return bool(re.match("[a-zA-Z_$][0-9a-zA-Z_$]*", name))
     
     def evalExpr(self, expr):
-        with JSContext(self.g) as c:
+        with JSContext(self.g) as c:    
             try:
                 ret = c.eval(expr)
             except Exception, e:

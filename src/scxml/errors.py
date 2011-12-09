@@ -19,7 +19,7 @@ class InternalError(PySCXMLError):
 
 class AtomicError(PySCXMLError):
     def __init__(self, *args, **kwargs):
-        PySCXMLError.__init__(self)
+        PySCXMLError.__init__(self, *args, **kwargs)
         self.exception = self
 
 class ExecutableError(CompositeError):
@@ -81,8 +81,11 @@ class ParseError(PySCXMLError):
 class ScriptFetchError(PySCXMLError):
     pass
 
-class DataModelError(PySCXMLError):
+class DataModelError(AtomicError):
     pass
+#    def __init__(self, *args):
+#        AtomicError.__init__(self);
+#        self.args = args
 
 class SendError(ExecutableError):
     def __init__(self, exc, elem, error_type, sendid=None):

@@ -326,10 +326,11 @@ class Interpreter(object):
                                 if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
                                     self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)
         # TODO: switch these (invoke should happen in the same order). see equivalent in exitstates.
+        statesToEnter.sort(key=enterOrder)
 #        for s in statesToEnter:
 #            self.statesToInvoke.add(s)
         for s in statesToEnter:
-            statesToEnter.sort(key=enterOrder)
+            self.statesToInvoke.add(s)
             self.configuration.add(s)
             if self.doc.binding == "late" and s.isFirstEntry:
                 s.initDatamodel()

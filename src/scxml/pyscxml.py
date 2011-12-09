@@ -367,7 +367,7 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/finalize.xml").read()
     
     
-    sm = StateMachine("invoke.xml")
+    sm = StateMachine("assertions_passed/test152.scxml")
     sm.start()
     
 #    sm.start_threaded()

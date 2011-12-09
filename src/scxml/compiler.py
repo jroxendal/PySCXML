@@ -181,9 +181,8 @@ class Compiler(object):
                     except ExprEvalError, e:
                         raise AttributeEvalError(e, node, "array")
                     except TypeError, e:
-                        err = AtomicError(e)
-                        err.exception = e
-                        raise err
+                        err = DataModelError(e)
+                        raise AttributeEvalError(err, node, "array")
                     
                     for index, item in itr:
                         try:
