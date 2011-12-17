@@ -153,7 +153,7 @@ class StateMachine(object):
         top-level <final /> state in your document instead.  
         '''
         self.interpreter.running = False
-        self.interpreter.externalQueue.put(Event("cancel.invoke.%s" % self.datamodel["_invokeid"]))
+        self.interpreter.externalQueue.put(Event("cancel.invoke.%s" % self.datamodel.get("_sessionid")))
     
     def send(self, name, data={}):
         '''
