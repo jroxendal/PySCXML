@@ -35,15 +35,15 @@ handler_mapping = {}
 
 class PySCXMLServer(object):
     
-    def __init__(self, host, port, default_scxml_doc=None, server_type=TYPE_DEFAULT, 
+    def __init__(self, host, port, default_scxml_source=None, server_type=TYPE_DEFAULT, 
                  init_sessions={}, session_path="/", default_datamodel="python"):
         '''
         @param host: the hostname on which to serve.
         @param port: the port on which to serve.
-        @param default_scxml_doc: an scxml document expressed as a string.
+        @param default_scxml_source: an scxml document source (see StateMachine for the format).
         If one is provided, each call to a sessionid will initialize a new 
         StateMachine instance at that session, running the default document.
-        If default_scxml_doc is None, a call to an address that hasn't been 
+        If default_scxml_source is None, a call to an address that hasn't been 
         pre-initialized will fail with HTTP error 403 FORBIDDEN.
         @param server_type: define the server as TYPE_DEFAULT or TYPE_RESPONSE.
         TYPE_DEFAULT corresponds to the type of server that the W3C standard prefers,
@@ -53,14 +53,14 @@ class PySCXMLServer(object):
         would like the server to be initialized with and the values to scxml document 
         strings you want those sessions to run. These will be constructed in the server 
         constructor and started as serve_forever() is called. Any key with the value of None 
-        will instead execute the default_scxml_doc. If default_scxml_doc is None and a value 
+        will instead execute the default_scxml_source. If default_scxml_source is None and a value 
         in init_sessions is None, AssertionError will be raised.    
         
         Example:
         # when queried with a POST at http://localhost:8081/any_legal_url_string/basichttp,
         # this server will initialize a new StateMachine instance at that location, as well as
         # send it the http.post event.  
-        server = PySCXMLServer("localhost", 8081, default_scxml_doc=myStateMachine)
+        server = PySCXMLServer("localhost", 8081, default_scxml_source=myStateMachine)
         server.serve_forever()
         
         # when queried with a POST at http://localhost:8081/any_legal_url_string/basichttp,
@@ -77,7 +77,7 @@ class PySCXMLServer(object):
         self.logger = logging.getLogger("pyscxml.pyscxml_server")
         self.host = host
         self.port = port
-        self.sm_mapping = MultiSession(default_scxml_doc, init_sessions, default_datamodel)
+        self.sm_mapping = MultiSession(default_scxml_source, init_sessions, default_datamodel)
         for sm in self.sm_mapping:
             self.set_processors(sm)
             

@@ -25,7 +25,6 @@ This file is part of pyscxml.
 
 
 from node import *
-#from Queue import Queue
 
 from datastructures import OrderedSet
 from eventprocessor import Event
@@ -41,9 +40,8 @@ class Interpreter(object):
     statemachine.
     '''
     def __init__(self):
-        self.g_continue = True
+        self.running = True
         self.configuration = OrderedSet()
-        self.previousConfiguration = OrderedSet()
         
         self.internalQueue = Queue()
         self.externalQueue = Queue()
@@ -52,8 +50,6 @@ class Interpreter(object):
         self.historyValue = {}
         self.dm = None
         self.invokeId = None
-        self.n = 0
-#        self.timerDict = {}
         self.logger = None
     
     
@@ -77,34 +73,28 @@ class Interpreter(object):
     
     
     def mainEventLoop(self):
-        enabledTransitions = None
-        initialStepComplete = False
-        while self.g_continue:
-            
-            if enabledTransitions or not initialStepComplete:
-                if initialStepComplete:
-                    self.microstep(list(enabledTransitions))
+        while self.running:
+            enabledTransitions = None
+            stable = False
                 
-                # now take any newly enabled null transitions and any transitions triggered by internal events
-                macroStepComplete = False
-                while not macroStepComplete and self.g_continue:
-                    initialStepComplete = True
-                    enabledTransitions = self.selectEventlessTransitions()
-                    if enabledTransitions.isEmpty():
-                        if self.internalQueue.empty(): 
-                            macroStepComplete = True
-                        else:
-                            internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
-                            
-                            self.logger.info("internal event found: %s", internalEvent.name)
-                            
-                            self.dm["__event"] = internalEvent
-                            enabledTransitions = self.selectTransitions(internalEvent)
-    
-                    if enabledTransitions:
-                        self.microstep(list(enabledTransitions))
-                    eventlet.greenthread.sleep(seconds=0)
-                    
+            # now take any newly enabled null transitions and any transitions triggered by internal events
+            while self.running and not stable:
+                enabledTransitions = self.selectEventlessTransitions()
+                if not enabledTransitions:
+                    if self.internalQueue.empty(): 
+                        stable = True
+                    else:
+                        internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
+                        
+                        self.logger.info("internal event found: %s", internalEvent.name)
+                        
+                        self.dm["__event"] = internalEvent
+                        enabledTransitions = self.selectTransitions(internalEvent)
+
+                if enabledTransitions:
+                    self.microstep(enabledTransitions)
+                eventlet.greenthread.sleep(seconds=0)
+                
                     
             
             for state in self.statesToInvoke:
@@ -113,21 +103,11 @@ class Interpreter(object):
             self.statesToInvoke.clear()
             
             if not self.internalQueue.empty():
-                internalEvent = self.internalQueue.get() # this call returns immediately if no event is available
-                            
-                self.logger.info("internal event found: %s", internalEvent.name)
-                
-                self.dm["__event"] = internalEvent
-                enabledTransitions = self.selectTransitions(internalEvent)
                 continue
             
-            if not self.g_continue:
-                break
-            
-            self.previousConfiguration = self.configuration
             externalEvent = self.externalQueue.get() # this call blocks until an event is available
             
-            if externalEvent is None:
+            if externalEvent.name == "cancel.invoke.%s" % self.dm["_sessionid"]:
                 continue
             
             self.logger.info("external event found: %s", externalEvent.name)
@@ -142,9 +122,11 @@ class Interpreter(object):
                         inv.send(externalEvent)
             
             enabledTransitions = self.selectTransitions(externalEvent)
+            if enabledTransitions:
+                self.microstep(enabledTransitions)
             
               
-        # if we get here, we have reached a top-level final state or some external entity has set g_continue to False        
+        # if we get here, we have reached a top-level final state or some external entity has set running to False        
         self.exitInterpreter()  
          
     
@@ -247,16 +229,6 @@ class Interpreter(object):
         return OrderedSet(filteredTransitions)
     
     
-#    def isPreempted(self, s, transitionList):
-#        preempted = False
-#        for t in transitionList:
-#            if t.target:
-#                LCA = self.findLCA([t.source] + self.getTargetStates(t.target))
-#                if isDescendant(s,LCA):
-#                    preempted = True
-#                    break
-#        return preempted
-    
     def microstep(self, enabledTransitions):
         self.exitStates(enabledTransitions)
         self.executeTransitionContent(enabledTransitions)
@@ -325,10 +297,8 @@ class Interpreter(object):
                             for child in getChildStates(anc):
                                 if not any(map(lambda s: isDescendant(s,child), statesToEnter)):
                                     self.addStatesToEnter(child, statesToEnter,statesForDefaultEntry)
-        # TODO: switch these (invoke should happen in the same order). see equivalent in exitstates.
+
         statesToEnter.sort(key=enterOrder)
-#        for s in statesToEnter:
-#            self.statesToInvoke.add(s)
         for s in statesToEnter:
             self.statesToInvoke.add(s)
             self.configuration.add(s)
@@ -346,10 +316,10 @@ class Interpreter(object):
                 self.internalQueue.put(Event(["done", "state", parent.id], s.donedata()))
                 if isParallelState(grandparent):
                     if all(map(self.isInFinalState, getChildStates(grandparent))):
-                        self.internalQueue.put(Event(["done", "state", grandparent.id], s.donedata()))
+                        self.internalQueue.put(Event(["done", "state", grandparent.id]))
         for s in self.configuration:
             if isFinalState(s) and isScxmlState(s.parent):
-                self.g_continue = False;
+                self.running = False;
     
     
     def addStatesToEnter(self, state,statesToEnter,statesForDefaultEntry):
@@ -456,7 +426,6 @@ def isDescendant(state1,state2):
             return True
     return False
 
-
 def getChildStates(state):
     return state.state + state.final + state.history
 
@@ -504,12 +473,10 @@ def isCompoundState(s):
 
 
 def enterOrder(s):
-#    return (getStateDepth(s), s.n)
     return s.n  
 
 def exitOrder(s):
     return 0 - s.n
-#    return (0 - getStateDepth(s), 0 - s.n)
 
 def documentOrder(s):
     key = [s.n]
@@ -520,13 +487,4 @@ def documentOrder(s):
     key.reverse()
     return key
     
-def getStateDepth(s):
-    depth = 0
-    p = s.parent
-    while p:
-        depth += 1
-        p = p.parent
-    return depth
-        
-
     

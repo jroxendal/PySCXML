@@ -27,6 +27,7 @@ import os
 import eventlet
 import errno
 import re
+from eventprocessor import Event
 
 def default_logfunction(label, msg):
     label = label or ""
@@ -41,7 +42,20 @@ class StateMachine(object):
     
     def __init__(self, source, log_function=default_logfunction, sessionid=None, default_datamodel="python"):
         '''
-        @param xml: the scxml document to parse, expressed as a string.
+        @param source: the scxml document to parse. source may be either:
+        
+            uri : similar to what you'd write to the open() function. The 
+            difference is, StateMachine looks in the PYSCXMLPATH environment variable 
+            for documents if none can be found at ".". As such, it's similar to the PYTHONPATH
+            environment variable. Set the PYSCXMLPATH variable to exert more fine-grained control
+            over the src attribute of <invoke>. self.filename and self.filedir are set as a result.
+            
+            xml string: if source is an xml string, it's executed as is. 
+            self.filedir and self.filename aren't filled. 
+            
+            file-like object: if source has the .read() method, 
+            the result of that method will be executed.
+            
         @param log_function: the function to execute on a <log /> element. 
         signature is f(label, msg), where label is a string and msg a string.
         @param sessionid: is stored in the _session variable. Will be automatically
@@ -66,14 +80,14 @@ class StateMachine(object):
         self.logger = logging.getLogger("pyscxml.%s" % self.sessionid)
         self.interpreter.logger = logging.getLogger("pyscxml.%s.interpreter" % self.sessionid)
         self.compiler.logger = logging.getLogger("pyscxml.%s.compiler" % self.sessionid)
-        self.doc = self.compiler.parseXML(self.open_document(source), self.interpreter)
+        self.doc = self.compiler.parseXML(self._open_document(source), self.interpreter)
         self.doc.datamodel["_x"] = {"self" : self}
         self.doc.datamodel["_sessionid"] = self.sessionid 
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
         
     
-    def get_path(self, local_path):
+    def _get_path(self, local_path):
         prefix = self.filedir + ":" if self.filedir else ""
         search_path = (prefix + os.getcwd() + ":" + os.environ.get("PYSCXMLPATH", "").strip(":")).split(":")
         paths = [os.path.join(folder, local_path) for folder in search_path]
@@ -82,7 +96,7 @@ class StateMachine(object):
                 return (path, search_path)
         return (None, search_path)
     
-    def open_document(self, uri):
+    def _open_document(self, uri):
         if hasattr(uri, "read"):
             return uri.read()
         elif isinstance(uri, basestring) and re.search("<(.+:)?scxml", uri): #"<scxml" in uri:
@@ -90,7 +104,7 @@ class StateMachine(object):
             self.filedir = None
             return uri
         else:
-            path, search_path = self.get_path(uri)
+            path, search_path = self._get_path(uri)
             if path:
                 self.filedir, self.filename = os.path.split(os.path.abspath(path))
                 return open(path).read()
@@ -112,7 +126,7 @@ class StateMachine(object):
     def start(self):
         '''Takes the statemachine to its initial state'''
 #        with self._lock:
-        if not self.interpreter.g_continue:
+        if not self.interpreter.running:
             raise RuntimeError("The StateMachine instance may only be started once.")
         else:
             doc = os.path.join(self.filedir, self.filename) if self.filedir else ""
@@ -138,8 +152,8 @@ class StateMachine(object):
         accepts events. For clarity, consider using the 
         top-level <final /> state in your document instead.  
         '''
-        self.interpreter.g_continue = False
-        self.interpreter.externalQueue.put(None)
+        self.interpreter.running = False
+        self.interpreter.externalQueue.put(Event("cancel.invoke.%s" % self.datamodel["_invokeid"]))
     
     def send(self, name, data={}):
         '''
@@ -162,12 +176,6 @@ class StateMachine(object):
 #        with self._lock:
         return self.interpreter.In(statename)
             
-#    def _sessionid_getter(self):
-#        return self.datamodel["_sessionid"]
-#    def _sessionid_setter(self, id):
-#        self.compiler.setSessionId(id)
-#    
-#    sessionid = property(_sessionid_getter, _sessionid_setter)
     
     def on_exit(self, sender, final):
 #        with self._lock:
@@ -190,12 +198,12 @@ class StateMachine(object):
 
 class MultiSession(object):
     
-    def __init__(self, default_scxml_doc=None, init_sessions={}, default_datamodel="python"):
+    def __init__(self, default_scxml_source=None, init_sessions={}, default_datamodel="python"):
         '''
         MultiSession is a local runtime for multiple StateMachine sessions. Use 
         this class for supporting the send target="_scxml_sessionid" syntax described
         in the W3C standard. 
-        @param default_scxml_doc: an scxml document expressed as a string.
+        @param default_scxml_source: an scxml document source (see StateMachine for the format).
         If one is provided, each call to a sessionid will initialize a new 
         StateMachine instance at that session, running the default document.
         @param init_sessions: the optional keyword arguments run 
@@ -204,7 +212,7 @@ class MultiSession(object):
         default xml for that session. 
         '''
 #        self._lock = RLock()
-        self.default_scxml_doc = default_scxml_doc
+        self.default_scxml_source = default_scxml_source
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
         self.default_datamodel = default_datamodel
@@ -236,17 +244,17 @@ class MultiSession(object):
         eventlet.greenthread.sleep()
             
     
-    def make_session(self, sessionid, xml):
+    def make_session(self, sessionid, source):
         '''initalizes and starts a new StateMachine 
         session at the provided sessionid.
-        @param xml: A string. if None or empty, the statemachine at this 
+        @param source: A string. if None or empty, the statemachine at this 
         sesssionid will run the document specified as default_scxml_doc 
-        in the constructor. Otherwise, the xml will be run. 
+        in the constructor. Otherwise, the source will be run. 
         @return: the resulting scxml.pyscxml.StateMachine instance. It has 
         not been started, only initialized.
          '''
-        assert xml or self.default_scxml_doc
-        sm = StateMachine(xml or self.default_scxml_doc, sessionid=sessionid, default_datamodel=self.default_datamodel)
+        assert source or self.default_scxml_source
+        sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel)
         self.sm_mapping[sessionid] = sm
         sm.datamodel["_x"]["sessions"] = self
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
@@ -312,6 +320,8 @@ def register_datamodel(id, klass):
     evalExpr(expr) # returns value
     execExpr(expr) # returns None
     hasLocation(location) # returns bool (check for deep location value)
+    isLegalName(name) # returns bool 
+    @param klass: A function that returns an instance that satisfies the above api.
     '''
     compiler.datamodel_mapping[id] = klass
 
@@ -367,7 +377,9 @@ if __name__ == "__main__":
 #    xml = open("../../unittest_xml/finalize.xml").read()
     
     
-    sm = StateMachine("assertions_passed/test152.scxml")
+#    sm = StateMachine("assertions_ecmascript/test242.scxml")
+#    sm = StateMachine("algo_test.xml")
+    sm = StateMachine("colors.xml")
     sm.start()
     
 #    sm.start_threaded()

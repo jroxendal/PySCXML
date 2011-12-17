@@ -131,7 +131,7 @@ class InvokeSCXML(BaseFetchingInvoke):
     def cancel(self):
         self.cancelled = True
         if not self.sm: return;
-        self.sm.interpreter.g_continue = False
+        self.sm.interpreter.running = False
         class DummyQueue(object):
             def put(self, item):
                 pass

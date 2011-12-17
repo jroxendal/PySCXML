@@ -139,6 +139,11 @@ class RegressionTest(unittest.TestCase):
         print "completed %s w3c ecmascript tests" % len(filelist)
         if failed:
             self.fail("Failed tests:\n" + "\n".join(failed))
+    
+    def runTest(self):
+        self.testInterpreter()
+        self.testW3cEcma()
+        self.testW3cPython()
         
 
 class W3CTester(StateMachine):
