@@ -14,10 +14,6 @@ This file is part of pyscxml.
     You should have received a copy of the GNU Lesser General Public License
     along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
     
-    This is an implementation of the interpreter algorithm described in the W3C standard document, 
-    which can be found at:
-    
-    http://www.w3.org/TR/2009/WD-scxml-20091029/ 
     
     @author Johan Roxendal
     @contact: johan@roxendal.com

@@ -1,6 +1,11 @@
 var HOST = location.host;
 var PORT = 8081;
 var editor;
+if(typeof MozWebSocket != "undefined") WebSocket = MozWebSocket;
+
+var isValidBrowser = Boolean(!(typeof WebSocket == "undefined") &&
+	($.browser.mozilla) || ($.browser.webkit));
+
 
 var socket = null;
 var logBox = null;
@@ -18,10 +23,17 @@ deferred_domReady.done(function() {
 
 var jsonDeferred = $.getJSON("example_list.json");
 
+
 $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonArray) {
 	var doc = getArray[0];
 	var filelist = jsonArray[0];
 	$.log("onready", doc, filelist);
+	
+	if(!isValidBrowser) {
+		$("#bkg").height($(window).height());
+		browserWarn();
+		return;
+	} 
 	
 	
 	$.each(filelist, function(foldername, files) {
@@ -96,7 +108,13 @@ function sendDoc() {
 			connect($.format("ws://%s:%s/%s/websocket", [HOST, PORT, evt.data.session]));
 		}
 		
+	}).fail(function() {
+		$.log("ajax post failed", arguments);
+	}).always(function() {
+		
+		$.log("ajax post done", arguments);
 	});
+	$.log("sending");
 }
 
 function send() {
@@ -107,7 +125,6 @@ function send() {
 }
 
 function connect(address) {
-	if(typeof WebSocket == "undefined") WebSocket = MozWebSocket;
 	socket = new WebSocket(address);
 
 	socket.onopen = function() {
@@ -137,3 +154,37 @@ function closeSocket() {
 	socket.close();
 }
 
+function browserWarn() {
+	$.reject({
+		reject : {
+			all : true,
+		},
+		imagePath : "img/browsers/",
+		display: ['firefox','chrome',"safari"],
+		browserInfo: { // Settings for which browsers to display   
+	        firefox: {   
+	            text: 'Firefox', // Text below the icon   
+	            url: 'http://www.mozilla.com/firefox/' // URL For icon/text link   
+	        },   
+	        chrome: {   
+	            text: 'Chrome',   
+	            url: 'http://www.google.com/chrome/'   
+	        },
+	        safari: {   
+	            text: 'Safari',   
+	            url: 'http://www.apple.com/safari/download/'   
+	        },   
+	        
+		},
+		header: "Sorry...", // Header of pop-up window   
+	    paragraph1: 'Your browser might not support WebSockets, or it\'s otherwise incompatible with this site. Please come back with any of these excellent alternatives:',   
+	    paragraph2: '', // Paragraph 2
+	    closeMessage: '', // Message displayed below closing link   
+	    closeLink: 'Close' // Text for closing link   
+//		header: 'Did you know that your Internet Browser is out of date?', // Header of pop-up window   
+//	    paragraph1: 'Your browser is out of date, and may not be compatible with our website. A list of the most popular web browsers can be found below.', // Paragraph 1   
+//	    paragraph2: 'Just click on the icons to get to the download page', // Paragraph 2
+//	    closeMessage: 'By closing this window you acknowledge that your experience on this website may be degraded', // Message displayed below closing link   
+//	    closeLink: 'Close This Window', // Text for closing link   
+	});
+};

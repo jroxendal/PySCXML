@@ -10,34 +10,12 @@ TIMEOUT = 12
 class W3CTester(StateMachine):
     def __init__(self, xml, log_function=lambda fn, y:None, sessionid=None):
         self.didPass = False
-        import re
-        xml = re.sub("datamodel=.python.", 'datamodel="ecmascript"', xml)
         StateMachine.__init__(self, xml, log_function, None)
     def on_exit(self, sender, final):
         self.didPass = final == "pass"
         StateMachine.on_exit(self, sender, final)
     
 
-#def runtest(doc_uri):
-#    xml = open(ASSERTION_DIR + doc_uri).read()
-#    try:
-#        sm = W3CTester(xml)
-#        sm.name = doc_uri
-#        didTimeout = False
-#        def timeout():
-#            #print "timout", doc_uri
-#            sm.send("timeout")
-#            sm.cancel()
-#            didTimeout = True
-#        threading.Timer(TIMEOUT, timeout).start()
-#        sm.start()
-#        
-#        
-#        didPass = didTimeout or sm.didPass
-#    except ScriptFetchError, e:
-#        print "caught ", str(e)
-#        didPass = True
-#    return didPass
 
 def move(src, dest):
     srcs = [src.replace(".", "%s." % fn) for fn in ["", "sub1", "sub2"]]
@@ -46,22 +24,6 @@ def move(src, dest):
             shutil.move(url, dest + url)
         except:
             pass
-                
-#def parallelize(filelist):
-#    with futures.ThreadPoolExecutor(max_workers=5) as executor:
-#        future_to_url = dict((executor.submit(runtest, url), url)
-#                             for url in filelist)
-#    
-#        for future in futures.as_completed(future_to_url):
-#            url = future_to_url[future]
-#            e = future.exception()
-#            if e is not None or not future.result():
-#                print "failed:", url, "exception: " + str(e) if e else ""
-#                move(url, "failed/")
-#                
-#            else:
-#                print "passed:", url
-#                move(url, "passed/")
 
 
 if __name__ == '__main__':
@@ -79,19 +41,19 @@ if __name__ == '__main__':
         pass
     
     stoplist = [
-        "test201.scxml",
-        "test267.scxml",
-        "test268.scxml",
-        "test269.scxml",
-        "test320.scxml",
-        "test325.scxml",
-        "test326.scxml",
-        "test336.scxml",
-        "test349.scxml",
-        "test350.scxml",
+        "test201.scxml", #basichttp eventprocessor for sending within machine.
+        "test267.scxml", #exmode strict
+        "test268.scxml", #exmode strict
+        "test269.scxml", #exmode strict
+        "test320.scxml", #send content parsing
+        "test325.scxml", #_ioprocessors bound at startup
+        "test326.scxml", #_ioprocessors bound till end
+        "test336.scxml", #_event.origin
+        "test349.scxml", #_event.origin
+        "test350.scxml", #target yourself using #_scxml_sessionid
         "test360.scxml", #exmode strict
-        "test500.scxml",
-        "test501.scxml",
+        "test500.scxml", #location field of ioprocessor in event
+        "test501.scxml", #location field of ioprocessor in event
     ]
     supposed_to_fail = [
         "test230.scxml",
