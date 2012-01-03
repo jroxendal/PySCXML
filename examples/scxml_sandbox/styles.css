@@ -46,11 +46,11 @@ label {
 	display : block;
 }
 
-#main a {
+#about a {
 	color : #1C4257 !important;
 	text-decoration: none;
 }
-#main a:hover {
+#about a:hover {
 	color : #B9E0F5;
 	border-bottom : 1px dotted #B9E0F5;
 }

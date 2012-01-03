@@ -3,7 +3,8 @@
     xsi:schemaLocation="http://www.w3.org/2005/07/scxml http://www.w3.org/2011/04/SCXML/scxml.xsd"
     xmlns:spyderbrain="http://code.google.com/p/pyscxml"
     version="1.0"
-    datamodel="python">
+    datamodel="python"
+    spyderbrain:response="true">
     
     <datamodel>
         <data id="session" />
@@ -55,12 +56,12 @@
                                             def handle(self, record):
                                                 log(record.levelname.lower(), record.getMessage()) 
                                             
-                                        log_handler = EventHandler()
+                                        log_handler = EventHandler(logging.INFO)
                                         logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
                                         
                                         def log_func(signal, sender, label, val):
                                             label = label + ":" if label else ""
-                                            if sender is _x["self"].datamodel["i"]:
+                                            if sender is _x["sessions"].get(_sessionid + ".i"):
                                                 log("elem", label + " " + (str(val) if val else "" )) 
                                         
                                         dispatcher.connect(log_func, "invoke_log")
@@ -79,9 +80,9 @@
                                     </send>
                                 </transition>
                                 <transition event="websocket.disconnect done.invoke quit" target="f">
-                                    <script>
-                                        logging.getLogger("pyscxml.i").removeHandler(log_handler)
-                                    </script>
+<!--                                     <script> -->
+<!--                                         logging.getLogger("pyscxml.i").removeHandler(log_handler) -->
+<!--                                     </script> -->
                                 </transition>
                                 
                                 <transition event="error">

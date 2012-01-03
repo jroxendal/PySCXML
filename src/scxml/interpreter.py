@@ -57,7 +57,7 @@ class Interpreter(object):
         '''Initializes the interpreter given an SCXMLDocument instance'''
         
         self.doc = document
-        self.dm = self.doc.datamodel
+#        self.dm = self.doc.datamodel
         self.dm["In"] = self.In
         self.dm["_parent"] = parentQueue
 
@@ -397,7 +397,7 @@ class Interpreter(object):
         if isinstance(name, basestring): name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
         evt = Event(name, data, invokeid, sendid=sendid)
-        evt.origin = self.dm["_sessionid"]
+        evt.origin = "#_scxml_" + self.dm["_sessionid"]
         evt.origintype = ScxmlOriginType()
         #TODO: and for ecmascript?
         evt.language = "python"

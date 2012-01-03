@@ -38,7 +38,8 @@ import time
 from datamodel import *
 from errors import *
 from eventlet import Queue
-    
+import scxml.pyscxml
+
         
 
 def prepend_ns(tag):
@@ -84,8 +85,7 @@ class Compiler(object):
         self.dm["_response"] = Queue() 
         self.dm["_websocket"] = Queue()
         self.dm["__event"] = None
-        
-        self.dm["_ioprocessors"] = {}
+#        self.dm["_x"]["sessions"] = {}
         
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
@@ -104,6 +104,7 @@ class Compiler(object):
             self.do_execute_content(parent)
         except SendError, e:
             self.logger.error("Parsing of send node failed on line %s." % e.elem.lineno)
+            self.logger.error(str(e))
             self.raiseError("error." + e.error_type, e, sendid=e.sendid)
         except (CompositeError, AtomicError), e: #AttributeEvalError, ExprEvalError, ExecutableError
             getFirst = lambda x: x.exception if isinstance(x, AtomicError) else getFirst(x.exception)
@@ -147,7 +148,6 @@ class Compiler(object):
                 elif node_name == "cancel":
                     sendid = self.parseAttr(node, "sendid")
                     if sendid in self.timer_mapping:
-#                        self.timer_mapping[sendid].cancel()
                         eventlet.greenthread.cancel(self.timer_mapping[sendid])
                         del self.timer_mapping[sendid]
                 elif node_name == "assign":
@@ -325,7 +325,9 @@ class Compiler(object):
         
         type = self.parseAttr(sendNode, "type", "scxml")
         event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None
-        eventstr = ".".join(event) if event else "" 
+        eventstr = ".".join(event) if event else ""
+        if not eventstr:
+            raise SendExecutionError("Illegal send value: '%s'" % eventstr) 
         target = self.parseAttr(sendNode, "target")
         if target == "#_response": type = "x-pyscxml-response"
         sender = None
@@ -340,12 +342,16 @@ class Compiler(object):
         
         scxmlSendType = ("http://www.w3.org/TR/scxml/#SCXMLEventProcessor", "scxml")
         httpSendType = ("http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor", "basichttp")
-        if type in scxmlSendType and not target:
+        if (type in scxmlSendType or type in httpSendType) and not target:
             #TODO: a shortcut, we're sending without eventprocessors no matter 
             # the send type if the target is self. This might break conformance.
             # see test 201.
             
             sender = partial(defaultSend, event, data)
+        elif isinstance(target, scxml.pyscxml.StateMachine):
+            #TODO: what happens if this target isFinished when this executes?
+            sendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None
+            sender = partial(target.interpreter.send, event, data, sendid=sendid) 
         elif type in scxmlSendType:
             if target == "#_parent":
                 
@@ -361,7 +367,6 @@ class Compiler(object):
                 try:
                     toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
                 except KeyError:
-                    #TODO: this should probably be raised as an external error
                     raise SendCommunicationError("The session '%s' is inaccessible." % sessionid)
                 sender = partial(defaultSend, event, data, toQueue=toQueue)
                 
@@ -371,26 +376,20 @@ class Compiler(object):
                 sender = partial(self.dm["_websocket"].put, eventXML)
             elif target.startswith("#_") and not target == "#_response": # invokeid
                 try:
-                    inv = self.dm[target[2:]]
+                    sessionid = self.dm["_sessionid"] + "." + target[2:]
+                    sm = self.dm["_x"]["sessions"][sessionid]
                 except KeyError:
                     e = SendCommunicationError("Line %s: No valid invoke target at '%s'." % (sendNode.lineno, sessionid))
-                evt = Event(event, data, self.interpreter.invokeId)
-                evt.origin = self.dm["_sessionid"]
-                evt.origintype = "scxml"
-                evt.sendid = sendid
-                sender = partial(inv.send, evt)
+                sender = partial(sm.interpreter.send, event, data, sendid=sendid)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
-                try:
-                    origin = self.dm["_ioprocessors"]["scxml"]
-                except KeyError:
-                    origin = ""
-                if not eventstr:
-                    raise SendExecutionError("Illegal send value: '%s'" % eventstr)
+                
+                if self.dm["_ioprocessors"]["scxml"]["location"].startswith("http://"):
+                    origin = self.dm["_ioprocessors"]["scxml"]["location"]
                 
                 eventXML = Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
                 getter = self.getUrlGetter(target)
-                sender = partial(getter.get_sync, target, eventXML)
+                sender = partial(getter.get_async, target, eventXML, content_type="text/xml")
                 
             else:
                 raise SendExecutionError("The send target '%s' is malformed or unsupported" 
@@ -420,7 +419,7 @@ class Compiler(object):
 #                data = json.dumps(data)  
             
 #            if type in scxmlSendType:
-            data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"], sendNode.get("id", ""), language="json")    
+            data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"]["location"], sendNode.get("id", ""), language="json")    
             headers["Content-Type"] = "text/xml" 
             sender = partial(self.dm["_response"].put, (data, headers))
         
@@ -453,16 +452,17 @@ class Compiler(object):
 
     def onHttpError(self, signal, error_code, source, exception, **named ):
         self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
-        self.raiseError("error.communication", exception)
+        self.interpreter.send("error.communication", data=exception)
 
     def onURLError(self, signal, sender, exception):
         self.logger.error("The address %s is currently unavailable" % sender.url)
-        self.raiseError("error.communication", exception)
+        self.interpreter.send("error.communication", data=exception)
         
     def onHttpResult(self, signal, **named):
-        self.logger.info("onHttpResult " + str(named))
+        self.logger.debug("onHttpResult " + str(named))
     
     def raiseError(self, err, exception=None, sendid=None):
+#        self.interpreter.send(err.split("."), data=exception)
         self.interpreter.raiseFunction(err.split("."), exception, sendid=sendid, type="platform")
     
     def parseXML(self, xmlStr, interpreterRef):
@@ -478,6 +478,7 @@ class Compiler(object):
         self.strict_parse = tree.get("exmode", "lax") == "strict"
         self.doc.binding = tree.get("binding", "early")
         preprocess(tree)
+        self.is_response = tree.get("{%s}%s" % (pyscxml_ns, "response")) in ("true", "True")
         self.setupDatamodel(tree.get("datamodel", self.default_datamodel))
         self.instantiate_datamodel = partial(self.setDatamodel, tree)
         
@@ -595,15 +596,8 @@ class Compiler(object):
 
     def execExpr(self, expr):
         if not expr or not expr.strip(): return 
-#        try:
         expr = normalizeExpr(expr)
         self.dm.execExpr(expr)
-#        except Exception, e:
-            #TODO: should be reformatted before used, try:  traceback.extract_tb(sys.exc_info()[2])
-#            raise ExprEvalError(tb.format_exc(sys.exc_info()[2]))
-#            self.logger.error("Exception while executing expression in a script block: '%s'" % expr)
-#            self.logger.error("%s: %s" % (type(e).__name__, str(e)) )
-#            self.raiseError("error.execution." + type(e).__name__.lower(), e)
                 
     
     def getExprValue(self, expr, throwErrors=False):
@@ -615,8 +609,8 @@ class Compiler(object):
         try:
             return self.dm.evalExpr(expr)
         except Exception, e:
+            #TODO: throwerrors should never be false
             if throwErrors:
-                #TODO: should be reformatted before used, try:  traceback.extract_tb(sys.exc_info()[2])
                 raise 
             else:
                 self.logger.exception("Exception while evaluating expression: '%s'" % expr)
@@ -634,13 +628,19 @@ class Compiler(object):
                 return
             wrapper.set_invoke(inv)
             
-            self.dm[inv.invokeid] = inv
             dispatcher.connect(self.onInvokeSignal, "init.invoke." + inv.invokeid, inv)
             dispatcher.connect(self.onInvokeSignal, "result.invoke." + inv.invokeid, inv)
             dispatcher.connect(self.onInvokeSignal, "error.communication.invoke." + inv.invokeid, inv)
             try:
+                if isinstance(inv, InvokeSCXML):
+                    def onCreated(sender, sm):
+                        sessionid = sm.sessionid
+                        self.dm["_x"]["sessions"].make_session(sessionid, sm)
+#                        self.dm["_x"]["sessions"][sessionid] = inv
+                    dispatcher.connect(onCreated, "created", inv, weak=False)
                 inv.start(self.interpreter.externalQueue)
             except Exception, e:
+#                del self.dm["_x"]["sessions"][sessionid]
                 self.logger.exception("Line %s: Exception while parsing invoke xml." % (node.lineno))
                 self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
             
@@ -668,7 +668,7 @@ class Compiler(object):
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         if src and src.startswith("file:"):
-            newsrc, search_path = self.dm["_x"]["self"].get_path(src.replace("file:", ""))
+            newsrc, search_path = self.dm["_x"]["self"]._get_path(src.replace("file:", ""))
             if not newsrc:
                 #TODO: add search_path info to this exception.
                 raise Exception("file not found: %s" % src)
@@ -680,6 +680,7 @@ class Compiler(object):
             contentNode = node.find(prepend_ns("content"))
             if contentNode != None:
                 inv.content = self.parseContent(contentNode)
+            
         elif type == "x-pyscxml-soap":
             inv = InvokeSOAP()
         elif type == "x-pyscxml-httpserver":
@@ -744,7 +745,10 @@ class Compiler(object):
             key = node.get("id")
             value = None
             if node.get("expr"):
-                value = self.getExprValue("(%s)" % node.get("expr"))
+                try:
+                    value = self.getExprValue("(%s)" % node.get("expr"), True)
+                except Exception, e:
+                    self.raiseError("error.execution", AttributeEvalError(e, node, "expr"))
             elif node.get("src"):
                 try:
                     value = urlopen(node.get("src")).read()

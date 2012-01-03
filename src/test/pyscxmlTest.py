@@ -21,7 +21,6 @@ import time
 import unittest
 from scxml.pyscxml import StateMachine, MultiSession
 import os, sys
-from scxml.pyscxml_server import PySCXMLServer, TYPE_RESPONSE
 import logging
 from scxml.errors import ScriptFetchError
 import glob
@@ -43,7 +42,7 @@ class RegressionTest(unittest.TestCase):
                                "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
                                "internal_transition.xml", "binding.xml", "finalize.xml",
                                "internal_parallel.xml"]
-        
+#        logging.basicConfig(level=logging.NOTSET)
         for name in runToCompletionList:
             print "Running " + name 
             sm = StateMachine(name)
@@ -83,7 +82,7 @@ class RegressionTest(unittest.TestCase):
             <scxml>
                 <state>
                     <transition event="e1" target="f">
-                        <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
+                        <send event="e2" targetexpr="_event.origin"  />
                     </transition>
                 </state>
                 <final id="f" />

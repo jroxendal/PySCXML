@@ -77,11 +77,11 @@ class BaseFetchingInvoke(BaseInvoke):
         
     def onFetchError(self, signal, exception, **named ):
         self.logger.error(str(exception))
-        dispatcher.send("error.communication.invoke." + self.invokeid, self, data={"exception" : exception})
+        dispatcher.send("error.communication.invoke." + self.invokeid, self, data=exception)
 
     def onHttpResult(self, signal, result, **named):
         self.logger.debug("onHttpResult " + str(named))
-        dispatcher.send("result.invoke.%s" % (self.invokeid), self, data={"response" : result})
+        dispatcher.send("result.invoke.%s" % (self.invokeid), self, data=result)
     
 
 class InvokeSCXML(BaseFetchingInvoke):
@@ -93,7 +93,6 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.initData = data
         self.cancelled = False
         self.default_datamodel = "python"
-        self.paths = []
     
     def start(self, parentQueue):
         self.parentQueue = parentQueue
@@ -109,9 +108,9 @@ class InvokeSCXML(BaseFetchingInvoke):
                                sessionid=self.parentSessionid + "." + self.invokeid, 
                                default_datamodel=self.default_datamodel,
                                log_function=lambda label, val: dispatcher.send(signal="invoke_log", sender=self, label=label, val=val))
-        
+        self.interpreter = self.sm.interpreter
         self.sm.compiler.initData = self.initData
-        
+        dispatcher.send("created", sender=self, sm=self.sm)
         self.sm._start_invoke(self.parentQueue, self.invokeid)
         eventlet.spawn(self.sm.interpreter.mainEventLoop)
 

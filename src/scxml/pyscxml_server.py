@@ -26,17 +26,15 @@ import cgi
 import logging
 import eventlet
 from StringIO import StringIO
-
-TYPE_DEFAULT = "default"
-TYPE_RESPONSE = "response"
+import os
 
 handler_mapping = {}
 
 
-class PySCXMLServer(object):
+class PySCXMLServer(MultiSession):
     
-    def __init__(self, host, port, default_scxml_source=None, server_type=TYPE_DEFAULT, 
-                 init_sessions={}, session_path="/", default_datamodel="python"):
+    def __init__(self, host, port, default_scxml_source=None, init_sessions={}, 
+                 session_path="/", default_datamodel="python"):
         '''
         @param host: the hostname on which to serve.
         @param port: the port on which to serve.
@@ -56,6 +54,7 @@ class PySCXMLServer(object):
         will instead execute the default_scxml_source. If default_scxml_source is None and a value 
         in init_sessions is None, AssertionError will be raised.    
         
+        WARNING: this documentation is deprecated, since server_forever no longer exists. i'll fix this soon.
         Example:
         # when queried with a POST at http://localhost:8081/any_legal_url_string/basichttp,
         # this server will initialize a new StateMachine instance at that location, as well as
@@ -73,34 +72,26 @@ class PySCXMLServer(object):
         
         '''
         self.session_path = session_path.strip("/") + "/"
-        self.server_type = server_type
         self.logger = logging.getLogger("pyscxml.pyscxml_server")
         self.host = host
         self.port = port
-        self.sm_mapping = MultiSession(default_scxml_source, init_sessions, default_datamodel)
-        for sm in self.sm_mapping:
-            self.set_processors(sm)
+        MultiSession.__init__(self, default_scxml_source, init_sessions, default_datamodel)
             
         #the connected websocket clients
         
-        self.sm_mapping.start()
+        self.start()
         
-    
-    def is_type(self, type):
-        return self.server_type == type 
     
     
     def init_session(self, sessionid):
-        sm = self.sm_mapping.make_session(sessionid, None)
-        self.set_processors(sm)
+        sm = self.make_session(sessionid, None)
         sm.start_threaded()
         return sm
     
     def set_processors(self, sm):
-        sm.datamodel["_ioprocessors"].update( (type, "http://%s:%s/%s%s/%s" % (self.host, self.port, self.session_path, sm.datamodel["_sessionid"], type) )  
-                                              for type in handler_mapping)
-        
-    
+        d = dict( (io_type, {"location" : "http://%s:%s" % (self.host, self.port) + "/".join([self.session_path, sm.datamodel["_sessionid"], io_type])} ) 
+                  for io_type in handler_mapping)
+        sm.datamodel["_ioprocessors"].update(d)  
     
     def request_handler(self, environ, start_response):
         status = '200 OK'
@@ -118,10 +109,9 @@ class PySCXMLServer(object):
         fs = cgi.FieldStorage(fp=StringIO(input),
                                environ=environ,
                                keep_blank_values=True)
-        
-        if fs.keys():
+        try:
             data = dict([(key, fs.getvalue(key)) for key in fs.keys()])
-        else:
+        except TypeError:
             data = input
         
         if "QUERY_STRING" in environ and environ["QUERY_STRING"]:
@@ -131,20 +121,21 @@ class PySCXMLServer(object):
         headers = {'Content-type' : 'text/plain'}
 
         try:
-            sm = self.sm_mapping.get(session) or self.init_session(session)
+            sm = self.get(session) or self.init_session(session)
             try:
                 #picks out the input handler and executes it.
                 event = handler_mapping[type](session, data, sm, environ)
+                
             except:
                 self.logger.error("Error when looking up handler for type %s." % type)
                 raise
                 
-            if self.is_type(TYPE_DEFAULT):
-                eventlet.spawn_after(0.1, sm.interpreter.externalQueue.put, event)
-                start_response(status, headers.items())
-            elif self.is_type(TYPE_RESPONSE):
+            if sm.is_response:
                 sm.interpreter.externalQueue.put(event)
                 output, headers = sm.datamodel["_response"].get() #blocks
+                start_response(status, headers.items())
+            else:
+                eventlet.spawn_after(0.1, sm.interpreter.externalQueue.put, event)
                 start_response(status, headers.items())
             
         except AssertionError:
@@ -166,8 +157,8 @@ class WebsocketWSGI(PySCXMLServer):
         
     def set_processors(self, sm):
         PySCXMLServer.set_processors(self, sm)
-        sm.datamodel["_ioprocessors"]["websocket"] = "ws://%s:%s/%s%s/websocket" % \
-                    (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])
+        sm.datamodel["_ioprocessors"]["websocket"] = {"location" : "ws://%s:%s/%s%s/websocket" % \
+                    (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])}
     
     def websocket_handler(self, ws, environ):
 #        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
@@ -226,6 +217,7 @@ def type_basichttp(session, data, sm, environ):
 @ioprocessor('scxml')
 def type_scxml(session, data, sm, environ):
     event = Processor.fromxml(data)
+    event.type = "http"
     return event
 
 

@@ -1,4 +1,4 @@
-from scxml.pyscxml_server import WebsocketWSGI, TYPE_DEFAULT, TYPE_RESPONSE, ioprocessor
+from scxml.pyscxml_server import WebsocketWSGI
 from scxml.pyscxml import register_datamodel
 from scxml.datamodel import DataModel
 import logging
@@ -31,8 +31,6 @@ register_datamodel("safe_python", SafePythonDataModel)
 logging.basicConfig(level=logging.NOTSET)
 
 
-
-
 #import gevent.pywsgi
 #from ws4py.server.geventserver import UpgradableWSGIHandler
 #from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
@@ -61,8 +59,7 @@ def main(address):
     json.dump(files, open("example_list.json", "w"))
     
     pyscxml = WebsocketWSGI(address[0], address[1], 
-                            init_sessions={"server" : open("sandbox_server.xml").read()},
-                            server_type=TYPE_RESPONSE,
+                            init_sessions={"server" : "sandbox_server.xml", "echo" : "echo.scxml"},
                             default_datamodel="ecmascript"
                             )
 

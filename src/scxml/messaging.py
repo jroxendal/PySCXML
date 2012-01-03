@@ -21,19 +21,20 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
     URL_ERROR = "URL_ERROR"
     
     
-    def get_async(self, url, data, type=None):
-        exec_async(partial(self.get_sync, url, data, type=type))
+    def get_async(self, url, data, type=None, content_type="application/x-www-form-urlencoded"):
+        exec_async(partial(self.get_sync, url, data, type=type, content_type=content_type))
     
-    def get_sync(self, url, data, type=None):
+    def get_sync(self, url, data, type=None, content_type="application/x-www-form-urlencoded"):
         try:
             data = urlencode(data)
         except: # data is probably a string to be send directly. 
             pass
+        headers = {"Content-Type" : content_type}
         if type and type.upper() not in ("POST", "GET"):
             from restlib import RestfulRequest #@UnresolvedImport
             req = RestfulRequest(url, data=data, method=type.upper())
         else:
-            req = urllib2.Request(url, data)
+            req = urllib2.Request(url, data, headers=headers)
         
         opener = urllib2.build_opener(self)
         try:

@@ -1,18 +1,18 @@
 ''' 
 This file is part of pyscxml.
 
-    pyscxml is free software: you can redistribute it and/or modify
+    PySCXML is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    pyscxml is distributed in the hope that it will be useful,
+    PySCXML is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pyscxml.  If not, see <http://www.gnu.org/licenses/>.
+    along with PySCXML.  If not, see <http://www.gnu.org/licenses/>.
     
     @author: Johan Roxendal
     @contact: johan@roxendal.com
@@ -21,7 +21,6 @@ This file is part of pyscxml.
 import compiler
 from interpreter import Interpreter
 from louie import dispatcher
-#from threading import Thread, RLock
 import logging
 import os
 import eventlet
@@ -37,7 +36,7 @@ def default_logfunction(label, msg):
 
 class StateMachine(object):
     '''
-    This class provides the entry point for the pyscxml library. 
+    This class provides the entry point for the PySCXML library. 
     '''
     
     def __init__(self, source, log_function=default_logfunction, sessionid=None, default_datamodel="python"):
@@ -74,6 +73,7 @@ class StateMachine(object):
         self.compiler.default_datamodel = default_datamodel
         self.compiler.log_function = log_function
         
+        
         self.sessionid = sessionid or "pyscxml_session_" + str(id(self))
         self.interpreter = Interpreter()
         dispatcher.connect(self.on_exit, "signal_exit", self.interpreter)
@@ -81,11 +81,19 @@ class StateMachine(object):
         self.interpreter.logger = logging.getLogger("pyscxml.%s.interpreter" % self.sessionid)
         self.compiler.logger = logging.getLogger("pyscxml.%s.compiler" % self.sessionid)
         self.doc = self.compiler.parseXML(self._open_document(source), self.interpreter)
-        self.doc.datamodel["_x"] = {"self" : self}
+        self.interpreter.dm = self.doc.datamodel
+        self.doc.datamodel["_x"] = {"self" : self, "sessions" : MultiSession()}
         self.doc.datamodel["_sessionid"] = self.sessionid 
         self.datamodel = self.doc.datamodel
         self.name = self.doc.name
+        self.is_response = self.compiler.is_response
         
+        
+        self.setIOProcessors(self.datamodel)
+    
+    def setIOProcessors(self, dm):
+        dm["_ioprocessors"] = {"scxml" : {"location" : dm["_x"]["self"]},
+                                    "basichttp" : {"location" : dm["_x"]["self"]} }    
     
     def _get_path(self, local_path):
         prefix = self.filedir + ":" if self.filedir else ""
@@ -125,7 +133,6 @@ class StateMachine(object):
     
     def start(self):
         '''Takes the statemachine to its initial state'''
-#        with self._lock:
         if not self.interpreter.running:
             raise RuntimeError("The StateMachine instance may only be started once.")
         else:
@@ -165,7 +172,6 @@ class StateMachine(object):
         eventlet.greenthread.sleep()
             
     def _send(self, name, data={}, invokeid = None, toQueue = None):
-#        with self._lock:
         self.interpreter.send(name, data, invokeid, toQueue)
         
     def In(self, statename):
@@ -173,12 +179,10 @@ class StateMachine(object):
         Checks if the state 'statename' is in the current configuration,
         (i.e if the StateMachine instance is currently 'in' that state).
         '''
-#        with self._lock:
         return self.interpreter.In(statename)
             
     
     def on_exit(self, sender, final):
-#        with self._lock:
         if sender is self.interpreter:
             self.is_finished = True
             for timer in self.compiler.timer_mapping.values():
@@ -186,6 +190,7 @@ class StateMachine(object):
                 del timer
             dispatcher.disconnect(self, "signal_exit", self.interpreter)
             dispatcher.send("signal_exit", self, final=final)
+    
     
     def __enter__(self):
         self.start_threaded()
@@ -211,7 +216,6 @@ class MultiSession(object):
         a set of sessions. Set value to None as a shorthand for deferring to the 
         default xml for that session. 
         '''
-#        self._lock = RLock()
         self.default_scxml_source = default_scxml_source
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
@@ -238,15 +242,14 @@ class MultiSession(object):
     
     def start(self):
         ''' launches the initialized sessions by calling start_threaded() on each sm'''
-#        with self._lock:
         for sm in self:
             sm.start_threaded()
         eventlet.greenthread.sleep()
             
     
     def make_session(self, sessionid, source):
-        '''initalizes and starts a new StateMachine 
-        session at the provided sessionid.
+        '''initalizes and starts a new StateMachine session at the provided sessionid. 
+        
         @param source: A string. if None or empty, the statemachine at this 
         sesssionid will run the document specified as default_scxml_doc 
         in the constructor. Otherwise, the source will be run. 
@@ -254,16 +257,24 @@ class MultiSession(object):
         not been started, only initialized.
          '''
         assert source or self.default_scxml_source
-        sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel)
+        if isinstance(source, StateMachine):
+            sm = source
+        else:
+            sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel)
         self.sm_mapping[sessionid] = sm
         sm.datamodel["_x"]["sessions"] = self
+        self.set_processors(sm)
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
         return sm
+    
+    def set_processors(self, sm):
+        sm.datamodel["_ioprocessors"].update({"scxml" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]},
+                                              "basichttp" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]} })
+        
     
     def send(self, event, data={}, to_session=None):
         '''send an event to the specified session. if to_session is None or "", 
         the event is sent to all active sessions.'''
-#        with self._lock:
         if to_session:
             self[to_session].send(event, data)
         else:
@@ -271,12 +282,10 @@ class MultiSession(object):
                 self.sm_mapping[session].send(event, data)
     
     def cancel(self):
-#        with self._lock:
         for sm in self:
             sm.cancel()
     
     def on_sm_exit(self, sender):
-#        with self._lock:
         if sender.sessionid in self:
             self.logger.debug("The session '%s' finished" % sender.sessionid)
             del self[sender.sessionid]
@@ -290,6 +299,7 @@ class MultiSession(object):
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.cancel()
+        eventlet.greenthread.sleep()
 
 class custom_executable(object):
     '''A decorator for defining custom executable content'''
@@ -301,15 +311,15 @@ class custom_executable(object):
         return f
     
     
-class preprocessor(object):
-    '''A decorator for defining replacing xml elements of a 
-    particular namespace with other markup. '''
-    def __init__(self, namespace):
-        self.namespace = namespace
-    
-    def __call__(self, f):
-        compiler.preprocess_mapping[self.namespace] = f
-        return f
+#class preprocessor(object):
+#    '''A decorator for defining replacing xml elements of a 
+#    particular namespace with other markup. '''
+#    def __init__(self, namespace):
+#        self.namespace = namespace
+#    
+#    def __call__(self, f):
+#        compiler.preprocess_mapping[self.namespace] = f
+#        return f
     
 def register_datamodel(id, klass):
     ''' registers a datamodel class to an id for use with the 
@@ -334,15 +344,17 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.NOTSET)
     
     
-#    sm = StateMachine("assertions_passed/test144.scxml")
-#    sm = StateMachine("assertions_ecmascript/test154.scxml")
-#    sm.start()
+#    sm = StateMachine("assertions_passed/test192.scxml")
+    sm = StateMachine("invoke.xml")
+#    sm = StateMachine("assertions_ecmascript/test487.scxml")
+    sm.start()
 
     listener = '''
         <scxml>
             <state>
                 <transition event="e1" target="f">
-                    <send event="e2" targetexpr="'#_scxml_' + _event.origin"  />
+                    <log expr="_event.origin" />
+                    <send event="e2" targetexpr="_event.origin"  />
                 </transition>
             </state>
             <final id="f" />
@@ -362,27 +374,10 @@ if __name__ == "__main__":
     '''
     
 #    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
-##        eventlet.greenthread.sleep(1)
 #    ms.start()
+#    with ms:
+#        pass
+##        eventlet.greenthread.sleep(1)
 #    print all(map(lambda x: x.isFinished(), ms))
         
-    
-
-    
-#    with StateMachine(xml) as sm:
-#        pass
-#    xml = open("../../unittest_xml/ispreempted.xml").read()
-#    xml = open("../../unittest_xml/ispreempted_complex.xml").read()
-#    xml = open("../../resources/preempted.xml").read()
-#    xml = open("../../unittest_xml/finalize.xml").read()
-    
-    
-#    sm = StateMachine("assertions_ecmascript/test242.scxml")
-#    sm = StateMachine("algo_test.xml")
-    sm = StateMachine("colors.xml")
-    sm.start()
-    
-#    sm.start_threaded()
-#    sm.send("e")
-    
     
