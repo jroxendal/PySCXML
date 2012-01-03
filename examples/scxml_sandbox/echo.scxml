@@ -1,0 +1,10 @@
+<scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <state id="listening">
+        <transition event="error"></transition>
+        
+        <transition event="*">
+<!--             <send target="#_response" event="ok" /> -->
+            <send eventexpr="_event.name" targetexpr="_event.origin" />
+        </transition>
+    </state>
+</scxml>
