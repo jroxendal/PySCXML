@@ -383,7 +383,7 @@ class Compiler(object):
                 sender = partial(sm.interpreter.send, event, data, sendid=sendid)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
-                
+                origin = "unreachable"
                 if self.dm["_ioprocessors"]["scxml"]["location"].startswith("http://"):
                     origin = self.dm["_ioprocessors"]["scxml"]["location"]
                 

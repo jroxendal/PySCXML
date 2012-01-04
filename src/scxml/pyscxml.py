@@ -82,18 +82,20 @@ class StateMachine(object):
         self.compiler.logger = logging.getLogger("pyscxml.%s.compiler" % self.sessionid)
         self.doc = self.compiler.parseXML(self._open_document(source), self.interpreter)
         self.interpreter.dm = self.doc.datamodel
-        self.doc.datamodel["_x"] = {"self" : self, "sessions" : MultiSession()}
-        self.doc.datamodel["_sessionid"] = self.sessionid 
         self.datamodel = self.doc.datamodel
+        self.doc.datamodel["_x"] = {"self" : self}
+        self.doc.datamodel["_sessionid"] = self.sessionid 
         self.name = self.doc.name
         self.is_response = self.compiler.is_response
         
+        MultiSession().make_session(self.sessionid, self)
         
-        self.setIOProcessors(self.datamodel)
+        
+#        self.setIOProcessors(self.datamodel)
     
-    def setIOProcessors(self, dm):
-        dm["_ioprocessors"] = {"scxml" : {"location" : dm["_x"]["self"]},
-                                    "basichttp" : {"location" : dm["_x"]["self"]} }    
+#    def setIOProcessors(self, dm):
+#        dm["_ioprocessors"] = {"scxml" : {"location" : dm["_x"]["self"]},
+#                                    "basichttp" : {"location" : dm["_x"]["self"]} }    
     
     def _get_path(self, local_path):
         prefix = self.filedir + ":" if self.filedir else ""
@@ -268,8 +270,8 @@ class MultiSession(object):
         return sm
     
     def set_processors(self, sm):
-        sm.datamodel["_ioprocessors"].update({"scxml" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]},
-                                              "basichttp" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]} })
+        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]},
+                                              "basichttp" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]} }
         
     
     def send(self, event, data={}, to_session=None):
@@ -345,7 +347,7 @@ if __name__ == "__main__":
     
     
 #    sm = StateMachine("assertions_passed/test192.scxml")
-    sm = StateMachine("invoke.xml")
+    sm = StateMachine("sender2.xml")
 #    sm = StateMachine("assertions_ecmascript/test487.scxml")
     sm.start()
 
