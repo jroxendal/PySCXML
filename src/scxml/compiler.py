@@ -101,7 +101,9 @@ class Compiler(object):
             return output if not is_list else output.split(" ")
     
     def init_scripts(self, tree):
-        scripts = tree.findall(".//%s[@src]" % prepend_ns("script"))
+        scripts = tree.getiterator(prepend_ns("script"))
+        scripts = filter(lambda x: x.get("src"), scripts)
+        
         self.script_src = self.parallelize_download(scripts)
         
         failedList = filter(lambda x: isinstance(x[1], Exception), self.script_src.items())
@@ -802,11 +804,7 @@ class Compiler(object):
                     return (node, URLError("File not found: %s" % node.get("src")))
                 src = "file:" + src
             try:
-                print "start download", src
-                ret = (node, urlopen(src).read())
-                print "done!", src
-                
-                return ret
+                return (node, urlopen(src).read())
                 
             except Exception, e:
                 return (node, e)
