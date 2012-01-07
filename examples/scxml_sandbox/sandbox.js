@@ -1,4 +1,4 @@
-var HOST = location.host;
+var HOST = location.hostname;
 var PORT = 8081;
 var editor;
 if(typeof MozWebSocket != "undefined") WebSocket = MozWebSocket;
@@ -95,7 +95,9 @@ function addToLog(log) {
 
 function sendDoc() {
 	addToLog("Sending document...");
-	$.post($.format("http://%s:%s/server/basichttp", [HOST, PORT]), {
+	var serverUrl = $.format("http://%s:%s/server/basichttp", [HOST, PORT]);
+	$.log("posting to " + serverUrl);
+	$.post(serverUrl, {
 		"doc" : editor.getValue()
 	}, function(data) {
 		var evt = SCXMLEventProcessor.fromXML(data);
@@ -105,16 +107,15 @@ function sendDoc() {
 			$.log("error", evt);
 			addToLog("Error when posting document: " + evt.name.split(".")[2])
 		} else {
-			connect($.format("ws://%s:%s/%s/websocket", [HOST, PORT, evt.data.session]));
+			var url = $.format("ws://%s:%s/%s/websocket", [HOST, PORT, evt.data.session]);
+			connect(url);
 		}
 		
 	}).fail(function() {
 		$.log("ajax post failed", arguments);
 	}).always(function() {
-		
 		$.log("ajax post done", arguments);
 	});
-	$.log("sending");
 }
 
 function send() {

@@ -45,7 +45,7 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
                 e = urllib2.HTTPError(url, f.code, "A code %s HTTP error has ocurred when trying to send to target %s" % (f.code, url), req.headers, f)
                 dispatcher.send(UrlGetter.HTTP_ERROR, self, exception=e)
         except urllib2.URLError, e:
-            dispatcher.send(UrlGetter.URL_ERROR, self, exception=e)
+            dispatcher.send(UrlGetter.URL_ERROR, self, exception=e, url=url)
         
     
 #    def http_error_default(self, req, fp, code, msg, headers):
@@ -54,6 +54,15 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
 #        result.status = code                                  
 #        return result        
 
+
+def get_path(local_path, additional_paths=""):
+        prefix = additional_paths + ":" if additional_paths else ""
+        search_path = (prefix + os.getcwd() + ":" + os.environ.get("PYSCXMLPATH", "").strip(":")).split(":")
+        paths = [os.path.join(folder, local_path) for folder in search_path]
+        for path in paths:
+            if os.path.isfile(path):
+                return (path, search_path)
+        return (None, search_path)
     
 if __name__ == '__main__':
     

@@ -1,0 +1,11 @@
+<scxml>
+    <state>
+        <onentry>
+            <send event="hello" target="http://pyscxml.spyderbrain.com/echo/scxml" />
+        </onentry>
+        <transition event="hello" target="f">
+            <log label="'hello' caught"/>
+        </transition>
+    </state>
+    <final id="f" />
+</scxml>

@@ -1,5 +1,5 @@
 ''' 
-This file is part of pyscxml.
+This file is part of PySCXML.
 
     PySCXML is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -12,7 +12,7 @@ This file is part of pyscxml.
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with PySCXML.  If not, see <http://www.gnu.org/licenses/>.
+    along with PySCXML. If not, see <http://www.gnu.org/licenses/>.
     
     @author: Johan Roxendal
     @contact: johan@roxendal.com
@@ -27,6 +27,7 @@ import eventlet
 import errno
 import re
 from eventprocessor import Event
+from messaging import get_path
 
 def default_logfunction(label, msg):
     label = label or ""
@@ -97,14 +98,6 @@ class StateMachine(object):
 #        dm["_ioprocessors"] = {"scxml" : {"location" : dm["_x"]["self"]},
 #                                    "basichttp" : {"location" : dm["_x"]["self"]} }    
     
-    def _get_path(self, local_path):
-        prefix = self.filedir + ":" if self.filedir else ""
-        search_path = (prefix + os.getcwd() + ":" + os.environ.get("PYSCXMLPATH", "").strip(":")).split(":")
-        paths = [os.path.join(folder, local_path) for folder in search_path]
-        for path in paths:
-            if os.path.isfile(path):
-                return (path, search_path)
-        return (None, search_path)
     
     def _open_document(self, uri):
         if hasattr(uri, "read"):
@@ -114,7 +107,7 @@ class StateMachine(object):
             self.filedir = None
             return uri
         else:
-            path, search_path = self._get_path(uri)
+            path, search_path = get_path(uri, self.filedir or "")
             if path:
                 self.filedir, self.filename = os.path.split(os.path.abspath(path))
                 return open(path).read()
@@ -207,9 +200,8 @@ class MultiSession(object):
     
     def __init__(self, default_scxml_source=None, init_sessions={}, default_datamodel="python"):
         '''
-        MultiSession is a local runtime for multiple StateMachine sessions. Use 
-        this class for supporting the send target="_scxml_sessionid" syntax described
-        in the W3C standard. 
+        MultiSession is a local runtime environment for multiple StateMachine sessions. It's 
+        the base class for the PySCXMLServer. You probably won't need to instantiate it directly. 
         @param default_scxml_source: an scxml document source (see StateMachine for the format).
         If one is provided, each call to a sessionid will initialize a new 
         StateMachine instance at that session, running the default document.
@@ -347,7 +339,7 @@ if __name__ == "__main__":
     
     
 #    sm = StateMachine("assertions_passed/test192.scxml")
-    sm = StateMachine("sender2.xml")
+    sm = StateMachine("multi_script.xml")
 #    sm = StateMachine("assertions_ecmascript/test487.scxml")
     sm.start()
 

@@ -221,6 +221,7 @@ def type_scxml(session, data, sm, environ):
     return event
 
 
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.NOTSET)

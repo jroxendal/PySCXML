@@ -53,13 +53,12 @@ logging.basicConfig(level=logging.NOTSET)
 
 
 def main(address):
-    from itertools import ifilter, chain
-    
+    os.environ["PYSCXMLPATH"] = "example_docs"
     files = dict([(x, z) for (x, y, z) in os.walk("example_docs") if ".svn" not in x])
     json.dump(files, open("example_list.json", "w"))
     
     pyscxml = WebsocketWSGI(address[0], address[1], 
-                            init_sessions={"server" : "sandbox_server.xml", "echo" : "echo.scxml"},
+                            init_sessions={"server" : "sandbox_server.xml", "echo" : "example_docs/echo.scxml"},
                             default_datamodel="ecmascript"
                             )
 
@@ -73,7 +72,7 @@ def main(address):
             start_response("200 OK", headers.items())
             output = ["Things seem to be running smoothly. There are currently %s document(s) running." % len(list(pyscxml.sm_mapping)),
                       "Session\t\tConfiguration\t\tisFinished"]
-            for sessionid, sm in pyscxml.sm_mapping.sm_mapping.items():
+            for sessionid, sm in pyscxml.sm_mapping.items():
                 output.append("%s\t\t%s\t\t%s" % (sessionid, "{" + ", ".join([s.id for s in sm.interpreter.configuration if s.id != "__main__"]) + "}", sm.isFinished()))
             return ["\n".join(output)]
         

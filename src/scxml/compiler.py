@@ -24,9 +24,10 @@ from node import *
 import re, sys
 from functools import partial
 from xml.sax.saxutils import unescape
-from messaging import UrlGetter
+from messaging import UrlGetter, get_path
 from louie import dispatcher
-from urllib2 import urlopen, URLError
+from urllib2 import URLError
+from eventlet.green.urllib2 import urlopen
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import *
 from xml.parsers.expat import ExpatError
@@ -69,6 +70,7 @@ class Compiler(object):
 #        self.setSessionId()
         # used by data passed to invoked processes
         self.initData = {}
+        self.script_src = {}
         
         self.log_function = None
         self.strict_parse = False
@@ -97,9 +99,25 @@ class Compiler(object):
             except ExprEvalError, e:
                 raise AttributeEvalError(e, elem, attr + "expr")
             return output if not is_list else output.split(" ")
+    
+    def init_scripts(self, tree):
+        scripts = tree.findall(".//%s[@src]" % prepend_ns("script"))
+        self.script_src = self.parallelize_download(scripts)
+        
+        failedList = filter(lambda x: isinstance(x[1], Exception), self.script_src.items())
+        if not failedList: return
+        # decorate the output.
+        linenums = map(lambda x: str(x[0].lineno), failedList)
+        if len(linenums) > 2:   
+            linenums[:-2] = map(lambda x: x + ",", linenums[:-2])
+        plur = ""
+        if len(failedList) > 1:
+            plur = "s"
+            linenums[-1:] = ["and", linenums[-1]] 
+        raise ScriptFetchError("Fetching remote script file%s failed on line%s %s." % (plur, plur, " ".join(linenums)))
         
     
-    def try_excecute_content(self, parent):
+    def try_execute_content(self, parent):
         try:
             self.do_execute_content(parent)
         except SendError, e:
@@ -165,11 +183,8 @@ class Compiler(object):
                         raise ExecutableError(e, node)
                 elif node_name == "script":
                     try:
-                        if node.get("src"):
-                            #TODO: all scripts should be fetched at compile time, at least with early eval.
-                            self.execExpr(urlopen(node.get("src")).read())
-                        else:
-                            self.execExpr(node.text)
+                        src = node.text or self.script_src.get(node) or ""
+                        self.execExpr(src)
                     except ExprEvalError, e:
                         raise ExecutableError(e, node)
                         
@@ -454,8 +469,9 @@ class Compiler(object):
         self.logger.error("A code %s HTTP error has ocurred when trying to send to target %s" % (error_code, source))
         self.interpreter.send("error.communication", data=exception)
 
-    def onURLError(self, signal, sender, exception):
-        self.logger.error("The address %s is currently unavailable" % sender.url)
+    def onURLError(self, signal, sender, exception, url):
+        print "sender", url
+        self.logger.error("The address %s is currently unavailable" % url)
         self.interpreter.send("error.communication", data=exception)
         
     def onHttpResult(self, signal, **named):
@@ -481,6 +497,7 @@ class Compiler(object):
         self.is_response = tree.get("{%s}%s" % (pyscxml_ns, "response")) in ("true", "True")
         self.setupDatamodel(tree.get("datamodel", self.default_datamodel))
         self.instantiate_datamodel = partial(self.setDatamodel, tree)
+        self.init_scripts(tree)
         
         for n, parent, node in iter_elems(tree):
             if parent != None and parent.get("id"):
@@ -495,23 +512,17 @@ class Compiler(object):
                     self.dm["_name"] = node.get("name")
 #                TODO: shouldn't I be allowed to link to more than one script?
 #                    also, _all_ the scripts with src in the doc should be fetched at load time. 
-                scriptChild = node.find(prepend_ns("script"))
-                if scriptChild != None:
-                    src = ""
-                    if scriptChild.get("src"):
-                        try:
-                            src = urlopen(scriptChild.get("src")).read()
-                        except URLError, e:
-                            msg = ("A URL error in a top level script element at line %s "
-                            "prevented the document from executing. Error: %s") % (scriptChild.lineno, e)
-                            
-                            raise ScriptFetchError(msg)
-                            
-                    else:
-                        src = node.find(prepend_ns("script")).text
+                for scriptChild in node.findall(prepend_ns("script")):
+                    src = self.script_src.get(scriptChild, "") or scriptChild.text or ""
+#                        except URLError, e:
+#                            msg = ("A URL error in a top level script element at line %s "
+#                            "prevented the document from executing. Error: %s") % (scriptChild.lineno, e)
+#                            
+#                            raise ScriptFetchError(msg)
                     try:
                         self.execExpr(src)
                     except ExprEvalError, e:
+                        #TODO: we should probably crash here.
                         self.logger.exception("An exception was raised in a top-level script element.")
                         
                 self.doc.rootState = s    
@@ -570,7 +581,7 @@ class Compiler(object):
                     t.cond = partial(self.getExprValue, node.get("cond"))
                 t.type = node.get("type", "external") 
                 
-                t.exe = partial(self.try_excecute_content, node)
+                t.exe = partial(self.try_execute_content, node)
                 parentState.addTransition(t)
     
             elif node_tag == "invoke":
@@ -578,16 +589,21 @@ class Compiler(object):
             elif node_tag == "onentry":
                 s = Onentry()
                 
-                s.exe = partial(self.try_excecute_content, node)
+                s.exe = partial(self.try_execute_content, node)
                 parentState.addOnentry(s)
             
             elif node_tag == "onexit":
                 s = Onexit()
-                s.exe = partial(self.try_excecute_content, node)
+                s.exe = partial(self.try_execute_content, node)
                 parentState.addOnexit(s)
                 
             elif node_tag == "datamodel":
-                parentState.initDatamodel = partial(self.setDataList, node.findall(prepend_ns("data")))
+                def initDatamodel(datalist):
+                    try:
+                        self.setDataList(datalist)
+                    except Exception, e:
+                        self.logger.exception("Evaluation of a data element failed.")
+                parentState.initDatamodel = partial(initDatamodel, node.findall(prepend_ns("data")))
                 
             else:
                 self.logger.error("Parsing of element '%s' failed at line %s" % (node_tag, node.lineno or "unknown"))
@@ -668,10 +684,10 @@ class Compiler(object):
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         if src and src.startswith("file:"):
-            newsrc, search_path = self.dm["_x"]["self"]._get_path(src.replace("file:", ""))
+            newsrc, search_path = get_path(src.replace("file:", ""))
             if not newsrc:
                 #TODO: add search_path info to this exception.
-                raise Exception("file not found: %s" % src)
+                raise Exception("file not found when searching the PYTHONPATH: %s" % src)
             src = "file:" + newsrc
         data = self.parseData(node, getContent=False)
         scxmlType = ["http://www.w3.org/TR/scxml", "scxml"]
@@ -704,7 +720,7 @@ class Compiler(object):
                         self.dm[location] = self.dm["_event"].data[name]
             inv.finalize = f
         elif finalizeNode != None:
-            inv.finalize = partial(self.try_excecute_content, finalizeNode)
+            inv.finalize = partial(self.try_execute_content, finalizeNode)
             
         return inv
 
@@ -715,7 +731,7 @@ class Compiler(object):
             transitionNode = node.find(prepend_ns("initial"))[0]
             assert transitionNode.get("target")
             initial = Initial(transitionNode.get("target").split(" "))
-            initial.exe = partial(self.try_excecute_content, transitionNode)
+            initial.exe = partial(self.try_execute_content, transitionNode)
             return initial
         else: # has neither initial tag or attribute, so we'll make the first valid state a target instead.
             childNodes = filter(lambda x: x.tag in map(prepend_ns, ["state", "parallel", "final"]), list(node)) 
@@ -727,20 +743,28 @@ class Compiler(object):
         for data in tree.getiterator(prepend_ns("data")):
             self.dm[data.get("id")] = None
         
-        try:
-            if self.doc.binding == "early":
+        # set top-level datamodel element
+        if tree.find(prepend_ns("datamodel")) is not None:
+            try:
+                self.setDataList(tree.find(prepend_ns("datamodel")))
+            except Exception, e:
+                raise ParseError("Parsing of data tag caused document startup to fail. \n%s" % e)
+            
+            
+        if self.doc.binding == "early":
+            try:
                 self.setDataList(tree.getiterator(prepend_ns("data")))
-            else:
-                if tree.find(prepend_ns("datamodel")) is not None:
-                    self.setDataList(tree.find(prepend_ns("datamodel")))
-        except:
-            e = ParseError("Parsing of data tag on line caused document startup to fail.")
-            raise
+            except Exception, e:
+                self.logger.exception("Evaluation of a data element failed.")
+        
         for key, value in self.initData.items():
             if key in self.dm: self.dm[key] = value
             
     
     def setDataList(self, datalist):
+        
+        dl_mapping = self.parallelize_download(filter(lambda x: x.get("src"), datalist))
+        
         for node in datalist:
             key = node.get("id")
             value = None
@@ -750,13 +774,11 @@ class Compiler(object):
                 except Exception, e:
                     self.raiseError("error.execution", AttributeEvalError(e, node, "expr"))
             elif node.get("src"):
-                try:
-                    value = urlopen(node.get("src")).read()
-                except ValueError:
-                    value = open(node.get("src")).read()
-                except Exception, e:
-                    self.logger.exception("Data src not found : '%s'\n" % node.get("src"))
-                    raise e
+                value = dl_mapping[node]
+                if isinstance(value, Exception):
+                    self.logger.error("Data src not found : '%s'. \n\t%s" % (node.get("src"), value))
+                    value = None
+#                    raise AttributeEvalError(value, node, "src")
             elif len(list(node)) == 1:
                 value = ElementTree.tostring(list(node)[0])
             elif node.text and node.text.strip(" "):
@@ -764,14 +786,36 @@ class Compiler(object):
                     value = self.dm.evalExpr(node.text)
                 except:
                     raise ParseError("Parsing of inline data failed for data tag on line %s." % node.lineno)
-#            else:
-#                msg = "Line %s: parsin of data element failed."
-#                self.logger.error(msg)
-#                raise ParseError("Line %s: parsing of data element failed.")
+                
+            
             #TODO: should we be overwriting values here? see test 226.
 #            if not self.dm.get(key): self.dm[key] = value
 #            self.dm.setdefault(key, value)
             self.dm[key] = value
+            
+    def parallelize_download(self, nodelist):
+        def download(node):
+            src = node.get("src")
+            if src.startswith("file:"):
+                src, search_path = get_path(node.get("src").replace("file:", ""))
+                if not src:
+                    return (node, URLError("File not found: %s" % node.get("src")))
+                src = "file:" + src
+            try:
+                print "start download", src
+                ret = (node, urlopen(src).read())
+                print "done!", src
+                
+                return ret
+                
+            except Exception, e:
+                return (node, e)
+        
+        pool = eventlet.greenpool.GreenPool()
+        output = {}
+        for node, result in pool.imap(download, nodelist):
+            output[node] = result
+        return output
             
     def addDefaultNamespace(self, xmlStr):
         if not ElementTree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":

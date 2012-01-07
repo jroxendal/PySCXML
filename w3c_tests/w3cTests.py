@@ -1,7 +1,7 @@
 from scxml.pyscxml import StateMachine
 import os, shutil
 from scxml.compiler import ScriptFetchError
-from scxml.test.pyscxmlTest import parallelize
+from test import pyscxmlTest
 
 
 ASSERTION_DIR = "./"
@@ -28,7 +28,7 @@ def move(src, dest):
 
 if __name__ == '__main__':
     import futures, os, glob, sys, eventlet
-    os.chdir("assertions_ecma/")
+    os.chdir("stoplist/")
     
     for fn in glob.glob("*.xml"):
         shutil.move(fn, fn.split(".")[0] + ".scxml")
@@ -41,19 +41,19 @@ if __name__ == '__main__':
         pass
     
     stoplist = [
-        "test201.scxml", #basichttp eventprocessor for sending within machine.
+        #"test201.scxml", #basichttp eventprocessor for sending within machine.
         "test267.scxml", #exmode strict
         "test268.scxml", #exmode strict
         "test269.scxml", #exmode strict
         "test320.scxml", #send content parsing
-        "test325.scxml", #_ioprocessors bound at startup
-        "test326.scxml", #_ioprocessors bound till end
-        "test336.scxml", #_event.origin
-        "test349.scxml", #_event.origin
-        "test350.scxml", #target yourself using #_scxml_sessionid
+        #"test325.scxml", #_ioprocessors bound at startup
+        #"test326.scxml", #_ioprocessors bound till end
+        #"test336.scxml", #_event.origin
+        #"test349.scxml", #_event.origin
+        #"test350.scxml", #target yourself using #_scxml_sessionid
         "test360.scxml", #exmode strict
-        "test500.scxml", #location field of ioprocessor in event
-        "test501.scxml", #location field of ioprocessor in event
+        #"test500.scxml", #location field of ioprocessor in event
+        #"test501.scxml", #location field of ioprocessor in event
     ]
     supposed_to_fail = [
         "test230.scxml",
@@ -72,9 +72,9 @@ if __name__ == '__main__':
         move(url, "passed/")
         
     def onFail(url):
-        print "failed:", url, "exception: " + str(e) if e else ""
+        print "failed:", url
         move(url, "failed/")
         
-    parallelize(filelist, onSuccess, onFail)
+    pyscxmlTest.parallelize(filelist, onSuccess, onFail)
     print "Done"
     

@@ -1,13 +1,13 @@
 
 from setuptools import setup
 
-version = "0.8.1"
-filename = "0.8.1-20111209-full"
+version = "0.8.2"
+filename = "0.8.2-20111217-full"
 
 setup(name="pyscxml",
       version=filename,
       description="A pure Python SCXML parser/interpreter",
-      long_description="Use PySCXML to parse and execute an SCXML document. PySCXML aims for full compliance with the W3C standard. Features include but are not limited to multisession support, HTTP serving with easily configured REST service configuration and complete HTTP IO processor.",
+      long_description="Use PySCXML to parse and execute an SCXML document. PySCXML aims for full compliance with the W3C standard. Features include but are not limited to multisession support, HTTP serving with easily configured REST service configuration and complete HTTP IO processor. Supports the ECMAScript datamodel through PyV8.",
       author="Johan Roxendal",
       author_email="johan@roxendal.com",
       url="http://code.google.com/p/pyscxml/",
