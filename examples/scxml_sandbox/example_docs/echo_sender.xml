@@ -1,7 +1,7 @@
 <scxml>
     <state>
         <onentry>
-            <send event="hello" target="http://pyscxml.spyderbrain.com/echo/scxml" />
+            <send event="hello" target="http://pyscxml.spyderbrain.com:8081/echo/scxml" />
         </onentry>
         <transition event="hello" target="f">
             <log label="'hello' caught"/>

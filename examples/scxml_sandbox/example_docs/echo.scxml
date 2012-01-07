@@ -1,9 +1,11 @@
 <scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <!-- This document is currently being served on
+    http://pyscxml.spyderbrain.com:8081/echo/scxml 
+    
+    -->
     <state id="listening">
         <transition event="error"></transition>
-        
         <transition event="*">
-<!--             <send target="#_response" event="ok" /> -->
             <send eventexpr="_event.name" targetexpr="_event.origin" />
         </transition>
     </state>
