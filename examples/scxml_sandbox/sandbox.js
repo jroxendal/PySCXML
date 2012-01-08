@@ -113,8 +113,7 @@ function sendDoc() {
 		
 	}).fail(function() {
 		$.log("ajax post failed", arguments);
-	}).always(function() {
-		$.log("ajax post done", arguments);
+		addToLog("The server seems to be offline. Sorry for the inconvenience, please come back later.");
 	});
 }
 

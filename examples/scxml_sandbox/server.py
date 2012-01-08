@@ -70,7 +70,6 @@ if __name__ == '__main__':
     
     
     import sys
-    address = ("localhost", 8081)
     
     if len(sys.argv[1:]):
         os.chdir("/var/www/pyscxml/examples/scxml_sandbox/")
@@ -79,4 +78,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.NOTSET, filename=log_file)
     else:
         logging.basicConfig(level=logging.NOTSET)
+        address = ("localhost", 8081)
     main(address)
