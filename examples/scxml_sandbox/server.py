@@ -70,8 +70,8 @@ if __name__ == '__main__':
     
     
     import sys
-    
-    if len(sys.argv[1:]):
+    isDev = len(sys.argv[1:]) > 0
+    if not isDev :
         os.chdir("/var/www/pyscxml/examples/scxml_sandbox/")
         host, port, log_file = sys.argv[1:]
         address = tuple([host, int(port)])
@@ -79,4 +79,8 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.NOTSET)
         address = ("localhost", 8081)
-    main(address)
+    
+    try:
+        main(address)
+    except:
+        logging.exception("Error caught in main:")
