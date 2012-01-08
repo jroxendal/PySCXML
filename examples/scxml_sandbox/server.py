@@ -70,11 +70,11 @@ if __name__ == '__main__':
     
     
     import sys
-    isDev = len(sys.argv[1:]) > 0
+    isDev = len(sys.argv[1:]) == 0
     if not isDev :
         host, port, log_file = sys.argv[1:]
-        address = tuple([host, int(port)])
         logging.basicConfig(level=logging.NOTSET, filename=log_file, filemode="w")
+        address = tuple([host, int(port)])
     else:
         logging.basicConfig(level=logging.NOTSET)
         address = ("localhost", 8081)
