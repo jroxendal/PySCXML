@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from scxml.pyscxml_server import WebsocketWSGI
 from scxml.pyscxml import register_datamodel
 from scxml.datamodel import DataModel
@@ -28,29 +29,6 @@ class SafePythonDataModel(DataModel):
 
 register_datamodel("safe_python", SafePythonDataModel)
 
-logging.basicConfig(level=logging.NOTSET)
-
-
-#import gevent.pywsgi
-#from ws4py.server.geventserver import UpgradableWSGIHandler
-#from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
-#class WebSocketServer(gevent.pywsgi.WSGIServer):
-#    handler_class = UpgradableWSGIHandler
-#    
-#    def __init__(self, listener, application, fallback_app=None, **kwargs):
-#        gevent.pywsgi.WSGIServer.__init__(self, listener, application, **kwargs)
-#        protocols = kwargs.pop('websocket_protocols', [])
-#        extensions = kwargs.pop('websocket_extensions', [])
-#        self.application = WebSocketUpgradeMiddleware(self.application, 
-#                            protocols=protocols,
-#                            extensions=extensions,
-#                            fallback_app=fallback_app)
-#        
-#
-#server = WebSocketServer((HOST, PORT), pyscxml.websocket_handler, pyscxml.request_handler)
-#
-#server.serve_forever()
-
 
 def main(address):
     os.environ["PYSCXMLPATH"] = "example_docs"
@@ -78,24 +56,8 @@ def main(address):
         
         type = pathlist[1]
         
-        class DummyMessage(object):
-            def __init__(self, msg):
-                self.data = msg
-        
-        def dummyhandler(ws):
-            
-            def receive(msg_obj):
-                w = ws.wait()
-                if w is None:
-                    return None
-                return DummyMessage(w)
-            
-            ws.receive = receive 
-            
-            pyscxml.websocket_handler(ws, environ)
-        
         if type == "websocket":
-            handler = websocket.WebSocketWSGI(dummyhandler)
+            handler = websocket.WebSocketWSGI(pyscxml.websocket_handler)
             return handler(environ, start_response)
         else:
             return pyscxml.request_handler(environ, start_response)
@@ -109,8 +71,12 @@ if __name__ == '__main__':
     
     import sys
     address = ("localhost", 8081)
+    
     if len(sys.argv[1:]):
         os.chdir("/var/www/pyscxml/examples/scxml_sandbox/")
-        host, port = sys.argv[1:]
+        host, port, log_file = sys.argv[1:]
         address = tuple([host, int(port)])
+        logging.basicConfig(level=logging.NOTSET, filename=log_file)
+    else:
+        logging.basicConfig(level=logging.NOTSET)
     main(address)

@@ -24,7 +24,6 @@ from functools import partial
 from scxml.messaging import UrlGetter
 import logging
 import eventlet
-#from scxml.pyscxml import default_logfunction
 
 
 class InvokeWrapper(object):

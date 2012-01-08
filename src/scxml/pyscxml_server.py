@@ -160,25 +160,22 @@ class WebsocketWSGI(PySCXMLServer):
         sm.datamodel["_ioprocessors"]["websocket"] = {"location" : "ws://%s:%s/%s%s/websocket" % \
                     (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])}
     
-    def websocket_handler(self, ws, environ):
-#        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
-        pathlist = filter(lambda x: bool(x), environ["PATH_INFO"].split("/"))
+    def websocket_handler(self, ws):
+        pathlist = filter(lambda x: bool(x), ws.path.split("/"))
         
         session = pathlist[0]
         sm = self.sm_mapping.get(session) or self.init_session(session)
         if not session in self.clients: 
             self.clients[session] = [ws]
-#            threading.Thread(target=self.websocket_response, args=(sm, session)).start()
             eventlet.spawn(self.websocket_response, sm, session)
         else:
             self.clients[session].append(ws)
         sm.send("websocket.connect")
         while True:
-#            message = ws.wait()
-            message = ws.receive(msg_obj=True)
+            message = ws.wait()
             if message is None:
                 break
-            evt = Processor.fromxml(str(message.data), origintype="javascript")
+            evt = Processor.fromxml(str(message), origintype="javascript")
             sm.interpreter.externalQueue.put(evt)
         sm.send("websocket.disconnect")
         self.clients[session].remove(ws)

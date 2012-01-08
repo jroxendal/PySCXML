@@ -23,7 +23,6 @@ This file is part of pyscxml.
 from node import *
 import re, sys
 from functools import partial
-from xml.sax.saxutils import unescape
 from messaging import UrlGetter, get_path
 from louie import dispatcher
 from urllib2 import URLError
@@ -34,6 +33,7 @@ from xml.parsers.expat import ExpatError
 from threading import Timer
 from StringIO import StringIO
 from xml.etree import ElementTree
+import textwrap
     
 import time
 from datamodel import *
@@ -203,13 +203,11 @@ class Compiler(object):
                     
                     for index, item in itr:
                         try:
-#                            self.dm.evalExpr(node.get("item") + " = (%s)" % item )
                             self.dm[node.get("item")] = item
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
                         try:
                             if node.get("index"):
-#                                self.dm.evalExpr(node.get("index") + " = (%s)" % index )
                                 self.dm[node.get("index")] = index
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "index")
@@ -512,10 +510,8 @@ class Compiler(object):
                 self.doc.name = node.get("name", "")
                 if "name" in node.attrib:
                     self.dm["_name"] = node.get("name")
-#                TODO: shouldn't I be allowed to link to more than one script?
-#                    also, _all_ the scripts with src in the doc should be fetched at load time. 
                 for scriptChild in node.findall(prepend_ns("script")):
-                    src = self.script_src.get(scriptChild, "") or scriptChild.text or ""
+                    src = scriptChild.text or self.script_src.get(scriptChild, "") or ""
 #                        except URLError, e:
 #                            msg = ("A URL error in a top level script element at line %s "
 #                            "prevented the document from executing. Error: %s") % (scriptChild.lineno, e)
@@ -622,8 +618,6 @@ class Compiler(object):
         """These expression are always one-line, so their value is evaluated and returned."""
         if not expr: 
             return None
-        expr = unescape(expr)
-        
         try:
             return self.dm.evalExpr(expr)
         except Exception, e:
@@ -858,16 +852,7 @@ def preprocess(tree):
             
 #TODO: this should be moved to the python datamodel class.
 def normalizeExpr(expr):
-    # TODO: what happens if we have python strings in our script blocks with &gt; ?
-    code = unescape(expr).strip("\n")
-    
-    firstLine = code.split("\n")[0]
-    # how many whitespace chars in first line?
-    indent_len = len(firstLine) - len(firstLine.lstrip())
-    # indent left by indent_len chars
-    code = "\n".join(map(lambda x:x[indent_len:], code.split("\n")))
-    
-    return code
+    return textwrap.dedent(expr)
     
 
 def iter_elems(tree):
