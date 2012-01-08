@@ -56,7 +56,7 @@ def main(address):
         
         type = pathlist[1]
         
-        if type == "websocket":
+        if type == "websocket": 
             handler = websocket.WebSocketWSGI(pyscxml.websocket_handler)
             return handler(environ, start_response)
         else:
