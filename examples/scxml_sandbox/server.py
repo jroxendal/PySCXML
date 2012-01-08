@@ -72,7 +72,6 @@ if __name__ == '__main__':
     import sys
     isDev = len(sys.argv[1:]) > 0
     if not isDev :
-        os.chdir("/var/www/pyscxml/examples/scxml_sandbox/")
         host, port, log_file = sys.argv[1:]
         address = tuple([host, int(port)])
         logging.basicConfig(level=logging.NOTSET, filename=log_file, filemode="w")
