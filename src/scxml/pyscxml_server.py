@@ -223,22 +223,21 @@ def type_scxml(session, data, sm, environ):
     event.type = "http"
     return event
 
-@ioprocessor("raw_scxml")
-def type_raw(session, data, sm, environ):
-    event = type_scxml(session, data, sm, environ)
-    if not event.data:
-        event.data = {}
-    
-    event.data.update({"_input" : environ["wsgi.input"].read(), "_method" : environ["REQUEST_METHOD"]})
-    
-    return event
-@ioprocessor("raw_basichttp")
+#@ioprocessor("raw_scxml")
+#def type_raw(session, data, sm, environ):
+#    event = type_scxml(session, data, sm, environ)
+#    if not event.data:
+#        event.data = {}
+#    
+#    event.data.update({"_input" : environ["wsgi.input"].read(), "_method" : environ["REQUEST_METHOD"]})
+#    
+#    return event
+@ioprocessor("raw")
 def type_raw_basic(session, data, sm, environ):
     event = type_basichttp(session, data, sm, environ)
-    if not event.data:
-        event.data = {}
     
-    event.data.update({"_input" : environ["wsgi.input"].read(), "_method" : environ["REQUEST_METHOD"]})
+    event._input = environ["wsgi.input"].read()
+    event._method = environ["REQUEST_METHOD"]
     
     return event
 
