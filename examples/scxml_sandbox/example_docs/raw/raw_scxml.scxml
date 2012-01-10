@@ -1,0 +1,14 @@
+<scxml>
+    <state id="s1">
+        <onentry>
+            <send type="scxml" targetexpr="_ioprocessors['raw_scxml']['location']"
+                  event="an_event">
+                <param name="p1" expr="1" />
+                <param name="p2" expr="2" />
+            </send>
+        </onentry>
+        <transition event="*">
+            <log label="caught raw message xml" expr="_event.data['_input']" />
+        </transition>
+    </state>
+</scxml>

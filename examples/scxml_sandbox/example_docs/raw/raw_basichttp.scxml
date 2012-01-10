@@ -1,0 +1,16 @@
+<scxml>
+    <state id="s1">
+        <onentry>
+            <send type="basichttp" targetexpr="_ioprocessors['raw_basichttp']['location']"
+                  event="an_event">
+                <param name="p1" expr="1" />
+                <param name="p2" expr="2" />
+            </send>
+        </onentry>
+        <transition event="*">
+            <log label="caught raw basichttp" />
+            <log label="input stream" expr="_event.data['_input']" />
+            <log label="request method" expr="_event.data['_method']" />
+        </transition>
+    </state>
+</scxml>
