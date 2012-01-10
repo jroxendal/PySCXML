@@ -27,6 +27,7 @@ import logging
 import eventlet
 from StringIO import StringIO
 import os
+from pprint import pprint
 
 handler_mapping = {}
 
@@ -104,8 +105,13 @@ class PySCXMLServer(MultiSession):
             self.logger.info(str(e))
             start_response(status, [('Content-type', 'text/plain')])
             return [""]
-        input = environ["wsgi.input"].read(environ["CONTENT_LENGTH"])
+
         
+        try:
+            input = environ["wsgi.input"].read(environ["CONTENT_LENGTH"])
+            environ["wsgi.input"] = StringIO(input)
+        except KeyError:
+            input = None
         fs = cgi.FieldStorage(fp=StringIO(input),
                                environ=environ,
                                keep_blank_values=True)
@@ -217,11 +223,26 @@ def type_scxml(session, data, sm, environ):
     event.type = "http"
     return event
 
-
+@ioprocessor("raw_scxml")
+def type_raw(session, data, sm, environ):
+    event = type_scxml(session, data, sm, environ)
+    if not event.data:
+        event.data = {}
+    
+    event.data.update({"_input" : environ["wsgi.input"].read(), "_method" : environ["REQUEST_METHOD"]})
+    
+    return event
+@ioprocessor("raw_basichttp")
+def type_raw_basic(session, data, sm, environ):
+    event = type_basichttp(session, data, sm, environ)
+    if not event.data:
+        event.data = {}
+    
+    event.data.update({"_input" : environ["wsgi.input"].read(), "_method" : environ["REQUEST_METHOD"]})
+    
+    return event
 
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.NOTSET)
-    
-    
     
