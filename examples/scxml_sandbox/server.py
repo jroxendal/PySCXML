@@ -38,8 +38,8 @@ def main(address):
     pyscxml = WebsocketWSGI(address[0], address[1], 
                             init_sessions={"server" : "sandbox_server.xml", 
                                            "echo" : "example_docs/echo.scxml",
-                                           "508" : "perpetual/test508Server.xml", 
-                                           "509" : "perpetual/test509Server.xml" 
+                                           "508" : "example_docs/test508Server.xml", 
+                                           "509" : "example_docs/test509Server.xml" 
                                            },
                             default_datamodel="ecmascript"
                             )
