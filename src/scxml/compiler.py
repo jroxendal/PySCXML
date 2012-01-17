@@ -19,7 +19,6 @@ This file is part of pyscxml.
     
 '''
 
-
 from node import *
 import re, sys
 from functools import partial
@@ -410,8 +409,9 @@ class Compiler(object):
                 raise SendExecutionError("The send target '%s' is malformed or unsupported" 
                 " by the platform for the send type '%s'." % (target, type))
             
-        elif type in httpSendType:
+        elif type in httpSendType: # basichttp
             #TODO: fetch errors? external?
+            data.update({"_eventname" : ".".join(event)})
             getter = self.getUrlGetter(target)
             sender = partial(getter.get_async, target, data)
             

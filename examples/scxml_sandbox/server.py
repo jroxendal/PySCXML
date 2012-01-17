@@ -36,7 +36,11 @@ def main(address):
     json.dump(files, open("example_list.json", "w"))
     
     pyscxml = WebsocketWSGI(address[0], address[1], 
-                            init_sessions={"server" : "sandbox_server.xml", "echo" : "example_docs/echo.scxml"},
+                            init_sessions={"server" : "sandbox_server.xml", 
+                                           "echo" : "example_docs/echo.scxml",
+                                           "508" : "perpetual/test508Server.xml", 
+                                           "509" : "perpetual/test509Server.xml" 
+                                           },
                             default_datamodel="ecmascript"
                             )
 

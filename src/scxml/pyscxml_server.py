@@ -26,7 +26,7 @@ import cgi
 import logging
 import eventlet
 from StringIO import StringIO
-import os
+import os, urllib
 from pprint import pprint
 
 handler_mapping = {}
@@ -206,7 +206,7 @@ class ioprocessor(object):
 def type_basichttp(session, data, sm, environ):
     if "_scxmlevent" in data:
         event = Processor.fromxml(data["_scxmlevent"], "unknown")
-    elif "eventname" in data:
+    elif "_eventname" in data:
         evtname = data.pop("_eventname")
         event = Event(evtname, data)
         event.origintype = "basichttp"
@@ -235,9 +235,8 @@ def type_scxml(session, data, sm, environ):
 @ioprocessor("raw")
 def type_raw_basic(session, data, sm, environ):
     event = type_basichttp(session, data, sm, environ)
-    
-    event._input = environ["wsgi.input"].read()
-    event._method = environ["REQUEST_METHOD"]
+    event.raw = repr(environ) + "\n\n" + urllib.unquote(environ["wsgi.input"].read()) 
+    print event.raw 
     
     return event
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- server side of test509. If sending 
+    side used POST to send the event, use the address parameter to send a message 
+    back to the originator -->
+<scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance"
+    initial="s0" datamodel="python" version="1.0">
+    <datamodel>
+        <data id="Var1" />
+    </datamodel>
+    <script>
+        import re
+    </script>
+    <state id="s0">
+        <!-- if other end sends us a POST message, get other side's address 
+            and send an event back -->
+        <transition event="*" cond="'POST' in _event.raw">
+            
+            <assign location="Var1"
+                expr="re.search('address=(\S+)$', _event.raw).groups()[0]" />
+            <send event="success"
+                type="http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor"
+                targetexpr="Var1" />
+        </transition>
+
+    </state>
+</scxml>
