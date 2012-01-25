@@ -81,8 +81,23 @@ $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonAr
 		.height($(window).height() - $(".CodeMirror-scroll").offset().top - 40)
 	}).resize();
 	
+//	$(window).bind("hashchange", function(e) {
+//		if(typeof $.bbq.getState("admin") !== "undefined" && !$(".ui-dialog:visible").length) {
+//			$.log("hashchange", typeof $.bbq.getState("admin") !== "undefined");
+//			
+//			$("#admin").dialog({
+//				beforeClose : function() {
+//					$.bbq.removeState("admin");
+//				},
+//				height : $(window).height() - 200,
+//				width : $(window).width() - 100
+//			});
+//		}
+//	}).trigger("hashchange");
 	
-	
+//	window.location.hash = "admin";
+		
+		
 });
 
 
@@ -95,10 +110,12 @@ function addToLog(log) {
 
 function sendDoc() {
 	addToLog("Sending document...");
+	var isAdmin = typeof $.bbq.getState("admin") !== "undefined";
 	var serverUrl = $.format("http://%s:%s/server/basichttp", [HOST, PORT]);
 	$.log("posting to " + serverUrl);
 	$.post(serverUrl, {
-		"doc" : editor.getValue()
+		"doc" : editor.getValue(),
+		"timeout" : isAdmin ? "300s" : "20s"
 	}, function(data) {
 		var evt = SCXMLEventProcessor.fromXML(data);
 		$.log("post result", data, evt);
@@ -109,6 +126,10 @@ function sendDoc() {
 		} else {
 			var url = $.format("ws://%s:%s/%s/websocket", [HOST, PORT, evt.data.session]);
 			connect(url);
+			
+			if(isAdmin) {
+				addToLog("Generated sessionid: " + evt.data.session + ".i");
+			}
 		}
 		
 	}).fail(function() {

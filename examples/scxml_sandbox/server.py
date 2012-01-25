@@ -58,6 +58,18 @@ def main(address):
                 output.append("%s\t\t%s\t\t%s" % (sessionid, "{" + ", ".join([s.id for s in sm.interpreter.configuration if s.id != "__main__"]) + "}", sm.isFinished()))
             return ["\n".join(output)]
         
+#        if session == "persist":
+#            headers = {"Content-Type" : "text/plain"}
+#            start_response("200 OK", headers.items())
+#            
+#            fs = cgi.FieldStorage(fp=environ["wsgi.input"],
+#                               environ=environ,
+#                               keep_blank_values=True)
+#            
+#            json.load(open("persistent/list.json"))
+#            
+#            return [""]
+        
         type = pathlist[1]
         
         if type == "websocket":  

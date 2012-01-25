@@ -19,7 +19,7 @@
 <!--                 </if> -->
             <assign location="session" expr="'session_' + str(counter)" />
             <assign location="counter" expr="counter + 1" />
-            <spyderbrain:start_session sessionidexpr="session" timeout="20s">
+            <spyderbrain:start_session sessionidexpr="session" timeoutexpr="_event.data.get('timeout', '20s')">
                 <param name="doc" expr="_event.data['doc']" />
                 <content>
                         <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" datamodel="python">

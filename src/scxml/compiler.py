@@ -231,7 +231,8 @@ class Compiler(object):
                         sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
                         sm.compiler.initData = data
                         sm.start_threaded()
-                        timeout = self.parseCSSTime(node.get("timeout", "0s"))
+                        timeout = self.parseCSSTime(self.parseAttr(node, "timeout", "0s"))
+#                        timeout = self.parseCSSTime(node.get("timeout", "0s"))
                         if timeout:
                             def cancel():
                                 if not sm.isFinished():
