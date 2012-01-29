@@ -204,34 +204,27 @@ class ioprocessor(object):
 
 @ioprocessor('basichttp')
 def type_basichttp(session, data, sm, environ):
-    if "_scxmlevent" in data:
-        event = Processor.fromxml(data["_scxmlevent"], "unknown")
-    elif "_eventname" in data:
-        evtname = data.pop("_eventname")
+    if "_scxmleventstruct" in data:
+        event = Processor.fromxml(data["_scxmleventstruct"], "unknown")
+    elif "_scxmleventname" in data:
+        evtname = data.pop("_scxmleventname")
         event = Event(evtname, data)
         event.origintype = "basichttp"
+        event.origin = "unreachable"
     else:
         pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
-        event = Event(["http", environ['REQUEST_METHOD'].lower()] + pth, data=data)
+        event = Event(["HTTP", environ['REQUEST_METHOD'].lower()] + pth, data=data)
         event.origintype = "basichttp"
+        event.origin = "unreachable"
         
     return event
 
 @ioprocessor('scxml')
 def type_scxml(session, data, sm, environ):
     event = Processor.fromxml(data)
-    event.type = "http"
+    event.type = "HTTP"
     return event
 
-#@ioprocessor("raw_scxml")
-#def type_raw(session, data, sm, environ):
-#    event = type_scxml(session, data, sm, environ)
-#    if not event.data:
-#        event.data = {}
-#    
-#    event.data.update({"_input" : environ["wsgi.input"].read(), "_method" : environ["REQUEST_METHOD"]})
-#    
-#    return event
 @ioprocessor("raw")
 def type_raw_basic(session, data, sm, environ):
     event = type_basichttp(session, data, sm, environ)

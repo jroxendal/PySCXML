@@ -339,10 +339,21 @@ if __name__ == "__main__":
     
     
 #    sm = StateMachine("assertions_passed/test192.scxml")
-    sm = StateMachine("multi_script.xml")
+#    sm = StateMachine("multi_script.xml")
 #    sm = StateMachine("assertions_ecmascript/test487.scxml")
-    sm.start()
 
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <state>
+            <onentry>
+                <send type="basichttp" target="http://localhost:8081/echo/basichttp" event="hello" httpResponse="true" />
+            </onentry>
+        </state>
+    </scxml>
+    '''
+    sm = StateMachine(xml)
+    sm.start()
+    
     listener = '''
         <scxml>
             <state>
@@ -366,6 +377,8 @@ if __name__ == "__main__":
         <final id="f" />
     </scxml>
     '''
+    
+    
     
 #    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
 #    ms.start()

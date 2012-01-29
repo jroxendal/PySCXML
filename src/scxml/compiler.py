@@ -403,7 +403,7 @@ class Compiler(object):
                     origin = self.dm["_ioprocessors"]["scxml"]["location"]
                 
                 eventXML = Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
-                getter = self.getUrlGetter(target)
+                getter = self.getUrlGetter()
                 sender = partial(getter.get_async, target, eventXML, content_type="text/xml")
                 
             else:
@@ -411,9 +411,32 @@ class Compiler(object):
                 " by the platform for the send type '%s'." % (target, type))
             
         elif type in httpSendType: # basichttp
-            #TODO: fetch errors? external?
-            data.update({"_eventname" : ".".join(event)})
-            getter = self.getUrlGetter(target)
+            getter = UrlGetter()
+#            getter = self.getUrlGetter()
+            
+            if sendNode.get("httpResponse") in ("true", "True"):
+                
+                def success(signal, *args, **kwargs):
+                    code = kwargs["code"]
+                    self.interpreter.send("HTTP.%s.%s" % (str(code)[0], str(code)[1:]))
+                
+                def fail(signal, *args, **kwargs):
+                    code = kwargs["exception"].code
+                    self.interpreter.send("HTTP.%s.%s" % (str(code)[0], str(code)[1:]))
+                    
+#                def urlerror(signal, *args, **kwargs):
+#                    print "urlerror", args, kwargs
+#                    self.interpreter.send("HTTP")
+            
+                dispatcher.connect(success, UrlGetter.HTTP_RESULT, getter, False)
+                dispatcher.connect(fail, UrlGetter.HTTP_ERROR, getter, False)
+#                dispatcher.connect(fail, UrlGetter.URL_ERROR, getter, False)
+            origin = "unreachable"
+            if self.dm["_ioprocessors"]["scxml"]["location"].startswith("http://"):
+                origin = self.dm["_ioprocessors"]["scxml"]["location"]
+            data.update({"_scxmleventname" : ".".join(event),
+                         "_scxmleventstruct" : Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
+                         })
             sender = partial(getter.get_async, target, data)
             
         elif type == "x-pyscxml-soap":
@@ -457,7 +480,7 @@ class Compiler(object):
             sender()
         
     
-    def getUrlGetter(self, target):
+    def getUrlGetter(self):
         getter = UrlGetter()
         
         dispatcher.connect(self.onHttpResult, UrlGetter.HTTP_RESULT, getter)
@@ -471,7 +494,6 @@ class Compiler(object):
         self.interpreter.send("error.communication", data=exception)
 
     def onURLError(self, signal, sender, exception, url):
-        print "sender", url
         self.logger.error("The address %s is currently unavailable" % url)
         self.interpreter.send("error.communication", data=exception)
         

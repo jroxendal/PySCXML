@@ -40,7 +40,7 @@ class UrlGetter(urllib2.HTTPDefaultErrorHandler):
         try:
             f = opener.open(req, data=data)
             if f.code is None or str(f.code)[0] == "2":
-                dispatcher.send(UrlGetter.HTTP_RESULT, self, result=f.read(), source=url)
+                dispatcher.send(UrlGetter.HTTP_RESULT, self, result=f.read(), source=url, code=f.code)
             else:
                 e = urllib2.HTTPError(url, f.code, "A code %s HTTP error has ocurred when trying to send to target %s" % (f.code, url), req.headers, f)
                 dispatcher.send(UrlGetter.HTTP_ERROR, self, exception=e)
