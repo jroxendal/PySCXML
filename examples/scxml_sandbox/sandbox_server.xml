@@ -13,7 +13,7 @@
     </datamodel>
     
         <state id="sandbox">
-            <transition event="http.post" cond="_event.data.get('doc')">
+            <transition event="HTTP.post" cond="_event.data.get('doc')">
 <!--                 <if cond="session"> -->
 <!--                     <send targetexpr="'#_scxml_' + session" event="quit" /> -->
 <!--                 </if> -->
@@ -105,7 +105,7 @@
 <!--                 <send target="#_response" namelist="session headers" /> -->
         </transition>
         
-        <transition event="http">
+        <transition event="HTTP">
             <log label="got http request" expr="_event.data" />
             <log expr="_event" />
         </transition>
