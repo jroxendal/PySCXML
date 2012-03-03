@@ -90,7 +90,7 @@ class PySCXMLServer(MultiSession):
         return sm
     
     def set_processors(self, sm):
-        d = dict( (io_type, {"location" : "http://%s:%s" % (self.host, self.port) + "/".join([self.session_path, sm.datamodel["_sessionid"], io_type])} ) 
+        d = dict( (io_type, {"location" : "http://%s:%s" % (self.host, self.port) + "/".join([self.session_path, sm.datamodel.sessionid, io_type])} ) 
                   for io_type in handler_mapping)
         sm.datamodel["_ioprocessors"].update(d)  
     
@@ -164,7 +164,7 @@ class WebsocketWSGI(PySCXMLServer):
     def set_processors(self, sm):
         PySCXMLServer.set_processors(self, sm)
         sm.datamodel["_ioprocessors"]["websocket"] = {"location" : "ws://%s:%s/%s%s/websocket" % \
-                    (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])}
+                    (self.host, self.port, self.session_path, sm.datamodel.sessionid)}
     
     def websocket_handler(self, ws):
         pathlist = filter(lambda x: bool(x), ws.path.split("/"))
@@ -188,7 +188,7 @@ class WebsocketWSGI(PySCXMLServer):
 
     def websocket_response(self, sm, session):
         while self.clients[session]:
-            evt_xml = sm.datamodel["_websocket"].get() # blocks
+            evt_xml = sm.datamodel.websocket.get() # blocks
             for ws in self.clients[session]:
                 ws.send(evt_xml)
 

@@ -85,7 +85,7 @@ class StateMachine(object):
         self.interpreter.dm = self.doc.datamodel
         self.datamodel = self.doc.datamodel
         self.doc.datamodel["_x"] = {"self" : self}
-        self.doc.datamodel["_sessionid"] = self.sessionid 
+        self.doc.datamodel.sessionid = self.sessionid 
         self.name = self.doc.name
         self.is_response = self.compiler.is_response
         
@@ -256,14 +256,14 @@ class MultiSession(object):
         else:
             sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel)
         self.sm_mapping[sessionid] = sm
-        sm.datamodel["_x"]["sessions"] = self
+#        sm.datamodel["_x"]["sessions"] = self
         self.set_processors(sm)
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
         return sm
     
     def set_processors(self, sm):
-        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]},
-                                              "basichttp" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]} }
+        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.datamodel.sessionid},
+                                              "basichttp" : {"location" : "#_scxml_" + sm.datamodel.sessionid} }
         
     
     def send(self, event, data={}, to_session=None):
@@ -351,7 +351,7 @@ if __name__ == "__main__":
         </state>
     </scxml>
     '''
-    sm = StateMachine(xml)
+    sm = StateMachine("xpath_test.xml")
     sm.start()
     
     listener = '''

@@ -9,6 +9,10 @@ import traceback
 from errors import ExprEvalError, DataModelError
 import eventlet
 import re
+from lxml import etree
+from copy import deepcopy
+from scxml.datastructures import dictToXML
+from scxml.errors import ExecutableError, IllegalLocationError
 
 
 try:
@@ -37,7 +41,30 @@ def exceptionFormatter(f):
             raise ExprEvalError(e, traceback)
     return wrapper
 
-class DataModel(dict):
+class ImperativeDataModel(object):
+    '''A base class for the python and ecmascript datamodels'''
+    
+    def initDataField(self, id, value):
+        self[id] = value
+        
+    def assign(self, assignNode):
+        if not self.dm.hasLocation(assignNode.get("location")):
+            msg = "The location expression '%s' was not instantiated in the datamodel." % assignNode.get("location")
+            raise ExecutableError(IllegalLocationError(msg), assignNode)
+        
+        #TODO: this should function like the data element.
+        expression = assignNode.get("expr") or assignNode.text.strip()
+        
+        try:
+            #TODO: we might need to make a 'setlocation' method on the dm objects.
+            self.execExpr(assignNode.get("location") + " = " + expression)
+        except ExprEvalError, e:
+            raise ExecutableError(e, assignNode)
+        
+#    def initDataField(self, id, val):
+#        self.assign()
+
+class DataModel(dict, ImperativeDataModel):
     
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
@@ -75,7 +102,7 @@ class DataModel(dict):
         
     
 
-class ECMAScriptDataModel(object):
+class ECMAScriptDataModel(ImperativeDataModel):
     def __init__(self):
         class GlobalEcmaContext(object):
             pass
@@ -117,6 +144,7 @@ class ECMAScriptDataModel(object):
     def isLegalName(self, name):
         return bool(re.match("[a-zA-Z_$][0-9a-zA-Z_$]*", name))
     
+    
     def evalExpr(self, expr):
         with JSContext(self.g) as c:    
             try:
@@ -127,11 +155,134 @@ class ECMAScriptDataModel(object):
             return ret
     def execExpr(self, expr):
         self.evalExpr(expr)
+
+class XPathDatamodel(object):
+    def __init__(self):
+        #data context
+        self.c = {"_empty" : etree.Element("empty")}
+    
+        
+    def __getitem__(self, key):
+        if key.startswith("$"):
+            field = key.split("/")[0][1:]
+            expr = "/".join(["."] + key.split("/")[1:])
+        else: # for numbers and strings
+            field = "_empty"
+            expr = key
+        print field, expr
+        return self.c[field].xpath(expr or ".", **self.c)
+    
+    def __setitem__(self, key, val):
+        if type(val) == dict:
+            val = dictToXML(val)
+        self.c[key] = deepcopy(val)
+    
+    def initDataField(self, id, val):
+        root = etree.Element("root")
+        if isinstance(val, etree._Element):
+            root.append(deepcopy(val))
+            val = root
+        else:
+            val = root.xpath(str(val), **self.c)
+        self[id] = val
+    
+    def hasLocation(self, loc):
+        try:
+            assert self[loc]
+            return True
+        except:
+            return False
+    
+    def assign(self, assignNode):
+        loc = assignNode.get("location")
+        type = assignNode.get("type", "replacechildren")
+        expr = assignNode.get("expr")
+#        loc = assignNode.get("location")
+        if expr:
+            val = self[expr]
+        else:
+            val = assignNode[0]
+        
+        if type == "replacechildren" and loc.split("/")[-1].startswith("@"):
+            elemExpr = "/".join(loc.split("/")[:-1])
+            attrExpr = loc.split("/")[-1]
+            for elem in self[elemExpr]:
+                elem.set(attrExpr[1:], val)
+            return
+        
+        for elem in self[loc]:
+            if isinstance(val, etree._Element):
+                val = deepcopy(val)
+            if type == "replacechildren":
+                for child in elem:
+                    elem.remove(child)
+                if isinstance(val, etree._Element):
+                    elem.append(val)
+                else:
+                    elem.text = val 
+            elif type == "firstchild":
+                elem.insert(0, val)
+            elif type == "lastchild":
+                if elem:
+                    elem[-1].addnext(val)
+                else:
+                    elem.append(val)
+            elif type == "previoussibling":
+                elem.addprevious(val)
+            elif type == "nextsibling":
+                elem.addnext(val)
+            elif type == "replace":
+                elem.getparent().replace(elem, val)
+            elif type == "delete":
+                elem.getparent().remove(elem)
+            elif type == "addattribute":
+                elem.set(assignNode.get("attr"), str(val))
+        
+        
+    
+    def evalExpr(self, expr):
+        return self[expr]
+        
+    def execExpr(self, expr):
+        raise Exception("multiline expressions can't be executed on the xpath datamodel.")
     
 if __name__ == '__main__':
-    import PyV8 #@UnresolvedImport
+#    import PyV8 #@UnresolvedImport
+    
+    d = XPathDatamodel()
+    
+    d.initDataField("cart", etree.fromstring('''<myCart xmlns="">
+    <books>
+      <book>
+        <title>The Zen Mind</title>
+      </book>
+      <book>
+        <title>Freakonomics</title>
+      </book>
+    </books>
+    <cds>
+      <cd name="Something"/>
+    </cds>
+  </myCart>'''))
+    
+    print d["$cart/myCart/books/book[1]"]
+    
+#    assign = etree.fromstring('''<assign location="$cart/myCart/books/book[1]/title"  expr="'My favorite book'"/>''')
+    assign = etree.fromstring('''<assign type="addattribute" location="$cart//book" expr="'hej'" attr="name">
+  <bookinfo xmlns="">
+    <isdn>12334455</isdn>
+    <author>some author</author>
+  </bookinfo>
+</assign>''')
+    d.assign(assign)
+    d.assign(etree.fromstring('''<assign location="$cart//book/@num" expr="'lololo'" />'''))
+    
+    print etree.tostring(d.c["cart"])
+    
+    sys.exit()
+    
 #    d = ECMAScriptDataModel()
-    d = DataModel()
+#    d = DataModel()
     
     
     d["__event"] = Event("yeah")

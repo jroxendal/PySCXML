@@ -31,7 +31,9 @@ from invoke import *
 from xml.parsers.expat import ExpatError
 from threading import Timer
 from StringIO import StringIO
-from xml.etree import ElementTree
+#from xml.etree import ElementTree as etree
+from lxml import etree
+#import lxml
 import textwrap
     
 import time
@@ -39,6 +41,8 @@ from datamodel import *
 from errors import *
 from eventlet import Queue
 import scxml.pyscxml
+from scxml.datamodel import XPathDatamodel
+from copy import deepcopy
 
         
 
@@ -56,7 +60,8 @@ custom_exec_mapping = {}
 preprocess_mapping = {}
 datamodel_mapping = {
     "python" : DataModel,
-    "ecmascript" : ECMAScriptDataModel
+    "ecmascript" : ECMAScriptDataModel,
+    "xpath" : XPathDatamodel
 }
 
 
@@ -65,11 +70,11 @@ class Compiler(object):
     def __init__(self):
         self.doc = SCXMLDocument()
         
-        
 #        self.setSessionId()
         # used by data passed to invoked processes
         self.initData = {}
         self.script_src = {}
+#        self.lineno_mapping = {}
         
         self.log_function = None
         self.strict_parse = False
@@ -83,8 +88,8 @@ class Compiler(object):
         self.doc.datamodel = datamodel_mapping[datamodel]()
             
         self.dm = self.doc.datamodel
-        self.dm["_response"] = Queue() 
-        self.dm["_websocket"] = Queue()
+        self.dm.response = Queue() 
+        self.dm.websocket = Queue()
         self.dm["__event"] = None
 #        self.dm["_x"]["sessions"] = {}
         
@@ -170,18 +175,7 @@ class Compiler(object):
                         eventlet.greenthread.cancel(self.timer_mapping[sendid])
                         del self.timer_mapping[sendid]
                 elif node_name == "assign":
-                    if not self.dm.hasLocation(node.get("location")):
-                        msg = "The location expression '%s' was not instantiated in the datamodel." % node.get("location")
-                        raise ExecutableError(IllegalLocationError(msg), node)
-                    
-                    #TODO: this should function like the data element.
-                    expression = node.get("expr") or node.text.strip()
-                    
-                    try:
-                        #TODO: we might need to make a 'setlocation' method on the dm objects.
-                        self.execExpr(node.get("location") + " = " + expression)
-                    except ExprEvalError, e:
-                        raise ExecutableError(e, node)
+                    self.dm.assign(node)
                 elif node_name == "script":
                     try:
                         src = node.text or self.script_src.get(node) or ""
@@ -318,7 +312,7 @@ class Compiler(object):
             elif len(contentNode) == 0:
                 output = contentNode.text
             elif len(contentNode) > 0:
-                output = ElementTree.tostring(contentNode[0])
+                output = etree.tostring(contentNode[0])
             else:
                 self.logger.error("Line %s: error when parsing content node." % contentNode.lineno)
                 return 
@@ -388,10 +382,10 @@ class Compiler(object):
             elif target == "#_websocket":
                 self.logger.debug("sending to _websocket")
                 eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
-                sender = partial(self.dm["_websocket"].put, eventXML)
+                sender = partial(self.dm.websocket.put, eventXML)
             elif target.startswith("#_") and not target == "#_response": # invokeid
                 try:
-                    sessionid = self.dm["_sessionid"] + "." + target[2:]
+                    sessionid = self.dm.sessionid + "." + target[2:]
                     sm = self.dm["_x"]["sessions"][sessionid]
                 except KeyError:
                     e = SendCommunicationError("Line %s: No valid invoke target at '%s'." % (sendNode.lineno, sessionid))
@@ -460,7 +454,7 @@ class Compiler(object):
 #            if type in scxmlSendType:
             data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"]["location"], sendNode.get("id", ""), language="json")    
             headers["Content-Type"] = "text/xml" 
-            sender = partial(self.dm["_response"].put, (data, headers))
+            sender = partial(self.dm.response.put, (data, headers))
         
         # this is where to add parsing for more send types. 
         else:
@@ -508,7 +502,7 @@ class Compiler(object):
         self.interpreter = interpreterRef
         xmlStr = self.addDefaultNamespace(xmlStr)
         try:
-            tree = xml_from_string(xmlStr)
+            tree = self.xml_from_string(xmlStr)
         except ExpatError:
             xmlStr = "\n".join("%s %s" % (n, line) for n, line in enumerate(xmlStr.split("\n")))
             self.logger.error(xmlStr)
@@ -723,7 +717,7 @@ class Compiler(object):
         else:
             raise NotImplementedError("The invoke type '%s' is not supported by the platform." % type)
         inv.invokeid = invokeid
-        inv.parentSessionid = self.dm["_sessionid"]
+        inv.parentSessionid = self.dm.sessionid
         inv.src = src
         inv.type = type
         inv.default_datamodel = self.default_datamodel   
@@ -799,7 +793,12 @@ class Compiler(object):
                     value = None
 #                    raise AttributeEvalError(value, node, "src")
             elif len(list(node)) == 1:
-                value = ElementTree.tostring(list(node)[0])
+                value = etree.tostring(list(node)[0])
+                if isinstance(self.dm, XPathDatamodel):
+                    value = etree.fromstring(value)
+#                    value = deepcopy(node[0]) 
+                
+            #TODO: I should look for all whitespace chars when stripping.
             elif node.text and node.text.strip(" "):
                 try:
                     value = self.dm.evalExpr(node.text)
@@ -810,7 +809,8 @@ class Compiler(object):
             #TODO: should we be overwriting values here? see test 226.
 #            if not self.dm.get(key): self.dm[key] = value
 #            self.dm.setdefault(key, value)
-            self.dm[key] = value
+#            self.dm[key] = value
+            self.dm.initDataField(key, value)
             
     def parallelize_download(self, nodelist):
         def download(node):
@@ -833,11 +833,21 @@ class Compiler(object):
         return output
             
     def addDefaultNamespace(self, xmlStr):
-        if not ElementTree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":
+        if not etree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":
             self.logger.warn("Your document lacks the correct "
                 "default namespace declaration. It has been added for you, for parsing purposes.")
             return xmlStr.replace("<scxml", "<scxml xmlns='http://www.w3.org/2005/07/scxml'", 1)
         return xmlStr
+    
+    def xml_from_string(self, xmlstr):
+#        f = FileWrapper(StringIO(xmlstr))
+        root = None
+        for event, elem in etree.iterparse(StringIO(xmlstr), events=("start", ), remove_comments=True):
+            if root is None: root = elem
+#            setattr(elem, "lineno", f.lineno)
+#            elem.lineno = f.lineno
+#            self.lineno_mapping[elem] = f.lineno
+        return root
     
         
 
@@ -851,13 +861,13 @@ def preprocess(tree):
                 xmlstr = preprocess_mapping[node_ns](child)
                 i = list(parent).index(child)
                 
-#                newNode = ElementTree.fromstring(xmlstr)
-                newNode = ElementTree.fromstring("<wrapper>%s</wrapper>" % xmlstr)
+#                newNode = etree.fromstring(xmlstr)
+                newNode = etree.fromstring("<wrapper>%s</wrapper>" % xmlstr)
                 for node in newNode:
                     if "{" not in node.tag:
                         node.set("xmlns", ns)
 #                        parent[i] = newNode 
-                newNode = ElementTree.fromstring(ElementTree.tostring(newNode))
+                newNode = etree.fromstring(etree.tostring(newNode))
                 toAppend.append((parent, (i, len(newNode)-1), newNode) )
 #                parent[i:len(newNode)-1] = newNode[:]
 #                newNode.lineno = child.lineno
@@ -889,20 +899,13 @@ def iter_elems(tree):
             if elem.tag in tagsForTraversal:
                 stack.append((child, elem))
                 
-class FileWrapper(object):
-    def __init__(self, source):
-        self.source = source
-        self.lineno = 0
-    def read(self, bytes):
-        s = self.source.readline()
-        self.lineno += 1
-        return s
+#class FileWrapper(object):
+#    def __init__(self, source):
+#        self.source = source
+#        self.lineno = 0
+#    def read(self, bytes):
+#        s = self.source.readline()
+#        self.lineno += 1
+#        return s
     
-def xml_from_string(xmlstr):
-    f = FileWrapper(StringIO(xmlstr))
-    root = None
-    for event, elem in ElementTree.iterparse(f, events=("start", )):
-        if root is None: root = elem
-        elem.lineno = f.lineno
-    return root
 

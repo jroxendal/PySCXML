@@ -107,7 +107,7 @@ class Interpreter(object):
             
             externalEvent = self.externalQueue.get() # this call blocks until an event is available
             
-            if externalEvent.name == "cancel.invoke.%s" % self.dm["_sessionid"]:
+            if externalEvent.name == "cancel.invoke.%s" % self.dm.sessionid:
                 continue
             
             self.logger.info("external event found: %s", externalEvent.name)
@@ -397,7 +397,7 @@ class Interpreter(object):
         if isinstance(name, basestring): name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
         evt = Event(name, data, invokeid, sendid=sendid)
-        evt.origin = "#_scxml_" + self.dm["_sessionid"]
+        evt.origin = "#_scxml_" + self.dm.sessionid
         evt.origintype = ScxmlOriginType()
         #TODO: and for ecmascript?
         evt.language = "python"
