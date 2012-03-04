@@ -28,10 +28,16 @@ import errno
 import re
 from eventprocessor import Event
 from messaging import get_path
+from scxml import datamodel
+from scxml.datamodel import XPathDatamodel
+from lxml import etree
 
 def default_logfunction(label, msg):
     label = label or ""
     msg = msg or ""
+    if type(msg) is list and all(map(lambda x: isinstance(x, etree._Element), msg)):
+        msg = "\n".join(map(etree.tostring, msg))
+    if isinstance(msg, etree._Element): msg = etree.tostring(msg)
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 
 
@@ -256,7 +262,9 @@ class MultiSession(object):
         else:
             sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel)
         self.sm_mapping[sessionid] = sm
-#        sm.datamodel["_x"]["sessions"] = self
+        #TODO: fix this.
+        if not isinstance(sm.datamodel, XPathDatamodel):
+            sm.datamodel["_x"]["sessions"] = self
         self.set_processors(sm)
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
         return sm

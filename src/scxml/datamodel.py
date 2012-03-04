@@ -13,6 +13,7 @@ from lxml import etree
 from copy import deepcopy
 from scxml.datastructures import dictToXML
 from scxml.errors import ExecutableError, IllegalLocationError
+import logging
 
 
 try:
@@ -158,6 +159,7 @@ class ECMAScriptDataModel(ImperativeDataModel):
 
 class XPathDatamodel(object):
     def __init__(self):
+        self.logger = logging.getLogger("pyscxml.XPathDatamodel")
         #data context
         self.c = {"_empty" : etree.Element("empty")}
     
@@ -165,6 +167,8 @@ class XPathDatamodel(object):
     def __getitem__(self, key):
         if key.startswith("$"):
             field = key.split("/")[0][1:]
+            if field in hidden:
+                field = "_" + field
             expr = "/".join(["."] + key.split("/")[1:])
         else: # for numbers and strings
             field = "_empty"
@@ -173,17 +177,27 @@ class XPathDatamodel(object):
         return self.c[field].xpath(expr or ".", **self.c)
     
     def __setitem__(self, key, val):
+        print "setitem", key, val
         if type(val) == dict:
             val = dictToXML(val)
-        self.c[key] = deepcopy(val)
+        elif type(val).__name__ == "Event":
+            val = dictToXML(val.__dict__)
+        try:
+            self.c[key] = deepcopy(val)
+        except:
+            print "__setitem__ failed for key: %s and value: %s." % (key, val)
+#            self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
     def initDataField(self, id, val):
-        root = etree.Element("root")
-        if isinstance(val, etree._Element):
+        root = etree.Element("data")
+        print id,  type(val)
+        if etree.iselement(val):
             root.append(deepcopy(val))
             val = root
         else:
-            val = root.xpath(str(val), **self.c)
+            root.text = str(val)
+            val = root
+#            val = root.xpath(str(val), **self.c)
         self[id] = val
     
     def hasLocation(self, loc):
@@ -264,8 +278,8 @@ if __name__ == '__main__':
       <cd name="Something"/>
     </cds>
   </myCart>'''))
-    
-    print d["$cart/myCart/books/book[1]"]
+    d.initDataField("val", "123")
+    print d["$val"]
     
 #    assign = etree.fromstring('''<assign location="$cart/myCart/books/book[1]/title"  expr="'My favorite book'"/>''')
     assign = etree.fromstring('''<assign type="addattribute" location="$cart//book" expr="'hej'" attr="name">

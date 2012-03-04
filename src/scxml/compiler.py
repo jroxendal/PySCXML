@@ -50,7 +50,10 @@ def prepend_ns(tag):
     return ("{%s}" % ns) + tag
 
 def split_ns(node):
-    return node.tag[1:].split("}")
+    if "{" not in node.tag:
+        return ["", node.tag]
+    
+    return node.tag[1:].split("}") 
 
 ns = "http://www.w3.org/2005/07/scxml"
 pyscxml_ns = "http://code.google.com/p/pyscxml"
@@ -74,7 +77,7 @@ class Compiler(object):
         # used by data passed to invoked processes
         self.initData = {}
         self.script_src = {}
-#        self.lineno_mapping = {}
+#        self.sourceline_mapping = {}
         
         self.log_function = None
         self.strict_parse = False
@@ -113,7 +116,7 @@ class Compiler(object):
         failedList = filter(lambda x: isinstance(x[1], Exception), self.script_src.items())
         if not failedList: return
         # decorate the output.
-        linenums = map(lambda x: str(x[0].lineno), failedList)
+        linenums = map(lambda x: str(x[0].sourceline), failedList)
         if len(linenums) > 2:   
             linenums[:-2] = map(lambda x: x + ",", linenums[:-2])
         plur = ""
@@ -127,7 +130,7 @@ class Compiler(object):
         try:
             self.do_execute_content(parent)
         except SendError, e:
-            self.logger.error("Parsing of send node failed on line %s." % e.elem.lineno)
+            self.logger.error("Parsing of send node failed on line %s." % e.elem.sourceline)
             self.logger.error(str(e))
             self.raiseError("error." + e.error_type, e, sendid=e.sendid)
         except (CompositeError, AtomicError), e: #AttributeEvalError, ExprEvalError, ExecutableError
@@ -136,7 +139,7 @@ class Compiler(object):
             self.raiseError("error.execution." + type(getFirst(e)).__name__.lower(), e)
             
         except Exception, e:
-            self.logger.exception("An unknown error occurred when executing content in block on line %s." % parent.lineno)
+            self.logger.exception("An unknown error occurred when executing content in block on line %s." % parent.sourceline)
             self.raiseError("error.execution", e)
             
     
@@ -158,9 +161,10 @@ class Compiler(object):
                     eventName = node.get("event").split(".")
                     self.interpreter.raiseFunction(eventName, {})
                 elif node_name == "send":
-                    if not hasattr(node, "id_n"): node.id_n = 0
-                    else: node.id_n += 1
-                    sendid = node.get("id", "send_id_%s_%s" % (id(node), node.id_n))
+#                    if not hasattr(node, "id_n"): node.id_n = 0
+#                    else: node.id_n += 1
+#                    sendid = node.get("id", "send_id_%s_%s" % (id(node), node.id_n))
+                    sendid = "broken"
                     try:
                         self.parseSend(node, sendid)
                     except AttributeEvalError:
@@ -299,7 +303,7 @@ class Compiler(object):
         
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
-                output[name] = self.getExprValue(name, True)
+                output[name] = self.getExprValue(name if not isinstance(self.dm, XPathDatamodel) else "$" + name, True)
         
         return output
     
@@ -314,7 +318,7 @@ class Compiler(object):
             elif len(contentNode) > 0:
                 output = etree.tostring(contentNode[0])
             else:
-                self.logger.error("Line %s: error when parsing content node." % contentNode.lineno)
+                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
                 return 
         return output
     
@@ -345,7 +349,7 @@ class Compiler(object):
         try:
             data = self.parseData(sendNode)
         except ExprEvalError, e:
-            self.logger.exception("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "lineno", 'unknown'))
+            self.logger.exception("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "sourceline", 'unknown'))
 #            self.raiseError("error.execution", e, sendid=sendid)
             raise e
         
@@ -388,7 +392,7 @@ class Compiler(object):
                     sessionid = self.dm.sessionid + "." + target[2:]
                     sm = self.dm["_x"]["sessions"][sessionid]
                 except KeyError:
-                    e = SendCommunicationError("Line %s: No valid invoke target at '%s'." % (sendNode.lineno, sessionid))
+                    e = SendCommunicationError("Line %s: No valid invoke target at '%s'." % (sendNode.sourceline, sessionid))
                 sender = partial(sm.interpreter.send, event, data, sendid=sendid)
                 
             elif target.startswith("http://"): # target is a remote scxml processor
@@ -531,7 +535,7 @@ class Compiler(object):
                     src = scriptChild.text or self.script_src.get(scriptChild, "") or ""
 #                        except URLError, e:
 #                            msg = ("A URL error in a top level script element at line %s "
-#                            "prevented the document from executing. Error: %s") % (scriptChild.lineno, e)
+#                            "prevented the document from executing. Error: %s") % (scriptChild.sourceline, e)
 #                            
 #                            raise ScriptFetchError(msg)
                     try:
@@ -568,7 +572,7 @@ class Compiler(object):
 #                            TODO: what happens if donedata in the top-level final fails?
 #                             we can't set the _event.data with anything. answer: catch the error in 
 #                            the interpreter, insert error in outgoing done event.
-                            self.logger.exception("Line %s: Donedata crashed." % doneNode.lineno)
+                            self.logger.exception("Line %s: Donedata crashed." % doneNode.sourceline)
                             self.raiseError("error.execution", exception=e)
                         return {}
 #                            raise 
@@ -621,7 +625,7 @@ class Compiler(object):
                 parentState.initDatamodel = partial(initDatamodel, node.findall(prepend_ns("data")))
                 
             else:
-                self.logger.error("Parsing of element '%s' failed at line %s" % (node_tag, node.lineno or "unknown"))
+                self.logger.error("Parsing of element '%s' failed at line %s" % (node_tag, node.sourceline or "unknown"))
     
         return self.doc
 
@@ -652,7 +656,7 @@ class Compiler(object):
             try:
                 inv = self.parseInvoke(node, parentId, n)
             except Exception, e:
-                self.logger.exception("Line %s: Exception while parsing invoke." % (node.lineno))
+                self.logger.exception("Line %s: Exception while parsing invoke." % (node.sourceline))
                 self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
                 return
             wrapper.set_invoke(inv)
@@ -670,7 +674,7 @@ class Compiler(object):
                 inv.start(self.interpreter.externalQueue)
             except Exception, e:
 #                del self.dm["_x"]["sessions"][sessionid]
-                self.logger.exception("Line %s: Exception while parsing invoke xml." % (node.lineno))
+                self.logger.exception("Line %s: Exception while parsing invoke xml." % (node.sourceline))
                 self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
             
         wrapper = InvokeWrapper()
@@ -803,7 +807,7 @@ class Compiler(object):
                 try:
                     value = self.dm.evalExpr(node.text)
                 except:
-                    raise ParseError("Parsing of inline data failed for data tag on line %s." % node.lineno)
+                    raise ParseError("Parsing of inline data failed for data tag on line %s." % node.sourceline)
                 
             
             #TODO: should we be overwriting values here? see test 226.
@@ -844,9 +848,9 @@ class Compiler(object):
         root = None
         for event, elem in etree.iterparse(StringIO(xmlstr), events=("start", ), remove_comments=True):
             if root is None: root = elem
-#            setattr(elem, "lineno", f.lineno)
-#            elem.lineno = f.lineno
-#            self.lineno_mapping[elem] = f.lineno
+#            setattr(elem, "sourceline", f.sourceline)
+#            elem.sourceline = f.sourceline
+#            self.sourceline_mapping[elem] = f.sourceline
         return root
     
         
@@ -870,9 +874,9 @@ def preprocess(tree):
                 newNode = etree.fromstring(etree.tostring(newNode))
                 toAppend.append((parent, (i, len(newNode)-1), newNode) )
 #                parent[i:len(newNode)-1] = newNode[:]
-#                newNode.lineno = child.lineno
+#                newNode.sourceline = child.sourceline
 #                for n, desc in enumerate(newNode.getiterator()):
-#                    desc.lineno = newNode.lineno + n 
+#                    desc.sourceline = newNode.sourceline + n 
     for parent, (i, j), newNode in toAppend:
         parent[i:j] = newNode[:]
     
@@ -902,10 +906,10 @@ def iter_elems(tree):
 #class FileWrapper(object):
 #    def __init__(self, source):
 #        self.source = source
-#        self.lineno = 0
+#        self.sourceline = 0
 #    def read(self, bytes):
 #        s = self.source.readline()
-#        self.lineno += 1
+#        self.sourceline += 1
 #        return s
     
 

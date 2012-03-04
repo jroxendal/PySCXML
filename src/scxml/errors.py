@@ -31,7 +31,7 @@ class ExecutableError(CompositeError):
         name = type(self.exception).__name__
         article = "An" if name[0].lower() in "aieou" else "A" 
         return "%s %s occurred when evaluating %s on line %s:\n    %s  " \
-            % (article, name, split_ns(self.elem)[1], self.elem.lineno, self.exception)
+            % (article, name, split_ns(self.elem)[1], self.elem.sourceline, self.exception)
 
 class IllegalLocationError(AtomicError):
     pass
