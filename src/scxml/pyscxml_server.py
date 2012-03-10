@@ -28,6 +28,7 @@ import eventlet
 from StringIO import StringIO
 import os, urllib
 from pprint import pprint
+from scxml.datamodel import XPathDatamodel
 
 handler_mapping = {}
 
@@ -90,9 +91,20 @@ class PySCXMLServer(MultiSession):
         return sm
     
     def set_processors(self, sm):
+        MultiSession.set_processors(self, sm)
         d = dict( (io_type, {"location" : "http://%s:%s" % (self.host, self.port) + "/".join([self.session_path, sm.datamodel.sessionid, io_type])} ) 
                   for io_type in handler_mapping)
-        sm.datamodel["_ioprocessors"].update(d)  
+        
+        for k, v in d.items():
+            sm.datamodel[k] = v
+#        if isinstance(sm.datamodel, XPathDatamodel):
+#            from datastructures import dictToXML
+#            sm.datamodel["_ioprocessors"].append(dictToXML({"websocket" : {"location" : loc}})) 
+#        else:
+#            sm.datamodel["_ioprocessors"]["websocket"] = {"location" : loc}
+        
+        
+#        sm.datamodel["_ioprocessors"].update(d)
     
     def request_handler(self, environ, start_response):
         status = '200 OK'
@@ -138,7 +150,7 @@ class PySCXMLServer(MultiSession):
                 
             if sm.is_response:
                 sm.interpreter.externalQueue.put(event)
-                output, headers = sm.datamodel["_response"].get() #blocks
+                output, headers = sm.datamodel.response.get() #blocks
                 start_response(status, headers.items())
             else:
                 eventlet.spawn_after(0.1, sm.interpreter.externalQueue.put, event)
@@ -163,8 +175,12 @@ class WebsocketWSGI(PySCXMLServer):
         
     def set_processors(self, sm):
         PySCXMLServer.set_processors(self, sm)
-        sm.datamodel["_ioprocessors"]["websocket"] = {"location" : "ws://%s:%s/%s%s/websocket" % \
-                    (self.host, self.port, self.session_path, sm.datamodel.sessionid)}
+        loc = "ws://%s:%s/%s%s/websocket" % (self.host, self.port, self.session_path, sm.datamodel.sessionid)
+        if isinstance(sm.datamodel, XPathDatamodel):
+            from datastructures import dictToXML
+            sm.datamodel["_ioprocessors"].append(dictToXML({"websocket" : {"location" : loc}})) 
+        else:
+            sm.datamodel["_ioprocessors"]["websocket"] = {"location" : loc}
     
     def websocket_handler(self, ws):
         pathlist = filter(lambda x: bool(x), ws.path.split("/"))

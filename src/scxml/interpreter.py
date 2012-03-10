@@ -53,13 +53,13 @@ class Interpreter(object):
         self.logger = None
     
     
-    def interpret(self, document, parentQueue=None, invokeId=None):
+    def interpret(self, document, invokeId=None):
         '''Initializes the interpreter given an SCXMLDocument instance'''
         
         self.doc = document
 #        self.dm = self.doc.datamodel
         self.dm["In"] = self.In
-        self.dm["_parent"] = parentQueue
+#        self.dm["_parent"] = parentQueue
 
         self.invokeId = invokeId
         

@@ -41,7 +41,6 @@ from datamodel import *
 from errors import *
 from eventlet import Queue
 import scxml.pyscxml
-from scxml.datamodel import XPathDatamodel
 from copy import deepcopy
 
         
@@ -84,6 +83,9 @@ class Compiler(object):
         self.timer_mapping = {}
         self.instantiate_datamodel = None
         self.default_datamodel = None
+        self.invokeid_counter = 0
+        self.sendid_counter = 0
+        self.parentId = None
         
     
     def setupDatamodel(self, datamodel):
@@ -163,8 +165,10 @@ class Compiler(object):
                 elif node_name == "send":
 #                    if not hasattr(node, "id_n"): node.id_n = 0
 #                    else: node.id_n += 1
-#                    sendid = node.get("id", "send_id_%s_%s" % (id(node), node.id_n))
-                    sendid = "broken"
+                    
+                    sendid = node.get("id", "send_id_%s_%s" % (id(node), self.sendid_counter))
+                    self.sendid_counter += 1
+#                    sendid = "broken"
                     try:
                         self.parseSend(node, sendid)
                     except AttributeEvalError:
@@ -225,7 +229,7 @@ class Compiler(object):
                     elif self.parseAttr(node, "src"):
                         xml = urlopen(self.parseAttr(node, "src")).read()
                     try:
-                        multisession = self.dm["_x"]["sessions"]
+                        multisession = self.dm.sessions
                         sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
                         sm.compiler.initData = data
                         sm.start_threaded()
@@ -367,18 +371,22 @@ class Compiler(object):
             sender = partial(target.interpreter.send, event, data, sendid=sendid) 
         elif type in scxmlSendType:
             if target == "#_parent":
-                
+                try:
+                    toQueue = self.dm.sessions[self.parentId].interpreter.externalQueue
+                except KeyError:
+                    raise SendCommunicationError("There is no parent session.")
                 sender = partial(defaultSend, event, 
                               data, 
                               self.interpreter.invokeId, 
-                              toQueue=self.dm["_parent"])
+                              toQueue=toQueue)
             elif target == "#_internal":
                 self.interpreter.raiseFunction(event, data, sendid=sendid)
                 
             elif target.startswith("#_scxml_"): #sessionid
                 sessionid = target.split("#_scxml_")[-1]
                 try:
-                    toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
+#                    toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
+                    toQueue = self.dm.sessions[sessionid].interpreter.externalQueue
                 except KeyError:
                     raise SendCommunicationError("The session '%s' is inaccessible." % sessionid)
                 sender = partial(defaultSend, event, data, toQueue=toQueue)
@@ -390,7 +398,7 @@ class Compiler(object):
             elif target.startswith("#_") and not target == "#_response": # invokeid
                 try:
                     sessionid = self.dm.sessionid + "." + target[2:]
-                    sm = self.dm["_x"]["sessions"][sessionid]
+                    sm = self.dm.sessions[sessionid]
                 except KeyError:
                     e = SendCommunicationError("Line %s: No valid invoke target at '%s'." % (sendNode.sourceline, sessionid))
                 sender = partial(sm.interpreter.send, event, data, sendid=sendid)
@@ -668,10 +676,10 @@ class Compiler(object):
                 if isinstance(inv, InvokeSCXML):
                     def onCreated(sender, sm):
                         sessionid = sm.sessionid
-                        self.dm["_x"]["sessions"].make_session(sessionid, sm)
+                        self.dm.sessions.make_session(sessionid, sm)
 #                        self.dm["_x"]["sessions"][sessionid] = inv
                     dispatcher.connect(onCreated, "created", inv, weak=False)
-                inv.start(self.interpreter.externalQueue)
+                inv.start(self.dm.sessionid)
             except Exception, e:
 #                del self.dm["_x"]["sessions"][sessionid]
                 self.logger.exception("Line %s: Exception while parsing invoke xml." % (node.sourceline))
@@ -693,9 +701,11 @@ class Compiler(object):
     def parseInvoke(self, node, parentId, n):
         invokeid = node.get("id")
         if not invokeid:
-            if not hasattr(node, "id_n"): node.id_n = 0
-            else: node.id_n += 1
-            invokeid = "%s.%s.%s" % (parentId, n, node.id_n)
+            
+#            if not hasattr(node, "id_n"): node.id_n = 0
+#            else: node.id_n += 1
+            invokeid = "%s.%s.%s" % (parentId, n, self.invokeid_counter)
+            self.invokeid_counter +=1
             if node.get("idlocation"):  
                 self.dm[node.get("idlocation")] = invokeid
         type = self.parseAttr(node, "type", "scxml")
@@ -770,7 +780,7 @@ class Compiler(object):
             
         if self.doc.binding == "early":
             try:
-                self.setDataList(tree.getiterator(prepend_ns("data")))
+                self.setDataList(list(tree.getiterator(prepend_ns("data"))))
             except Exception, e:
                 self.logger.exception("Evaluation of a data element failed.")
         

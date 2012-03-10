@@ -39,6 +39,11 @@ def dictToXML(dictionary, root="root"):
         if etree.iselement(d):
             lastopened.append(deepcopy(d))
             return
+        elif isinstance(d, etree._ElementStringResult):
+            xml.data(str(d))
+            return
+#        if isinstance(d, list):
+#            xml.data("\n".join(d))
         for k, v in d.items():
             lastopened = xml.start(k, {})
             

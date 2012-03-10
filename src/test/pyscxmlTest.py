@@ -117,6 +117,7 @@ class RegressionTest(unittest.TestCase):
         print "Running W3C python tests..."
         
         failed = parallelize(filelist)
+#        failed = []
 #        sequentialize(filelist)   
         
         print "completed %s w3c python tests" % len(filelist)

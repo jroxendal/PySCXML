@@ -9,7 +9,7 @@ import traceback
 from errors import ExprEvalError, DataModelError
 import eventlet
 import re
-from lxml import etree
+from lxml import etree, objectify
 from copy import deepcopy
 from scxml.datastructures import dictToXML
 from scxml.errors import ExecutableError, IllegalLocationError
@@ -49,7 +49,7 @@ class ImperativeDataModel(object):
         self[id] = value
         
     def assign(self, assignNode):
-        if not self.dm.hasLocation(assignNode.get("location")):
+        if not self.hasLocation(assignNode.get("location")):
             msg = "The location expression '%s' was not instantiated in the datamodel." % assignNode.get("location")
             raise ExecutableError(IllegalLocationError(msg), assignNode)
         
@@ -161,7 +161,7 @@ class XPathDatamodel(object):
     def __init__(self):
         self.logger = logging.getLogger("pyscxml.XPathDatamodel")
         #data context
-        self.c = {"_empty" : etree.Element("empty")}
+        self.c = {"_empty" : objectify.Element("empty")}
     
         
     def __getitem__(self, key):
@@ -189,14 +189,15 @@ class XPathDatamodel(object):
 #            self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
     def initDataField(self, id, val):
-        root = etree.Element("data")
+        root = objectify.Element("data")
+        root.set("id", id)
         print id,  type(val)
         if etree.iselement(val):
             root.append(deepcopy(val))
             val = root
         else:
-            root.text = str(val)
-            val = root
+            val = objectify.fromstring("<data id='%s'>%s</data>" % (id, val))
+#            root._setText(str(val))
 #            val = root.xpath(str(val), **self.c)
         self[id] = val
     
@@ -225,15 +226,16 @@ class XPathDatamodel(object):
             return
         
         for elem in self[loc]:
-            if isinstance(val, etree._Element):
+            if etree.iselement(val):
                 val = deepcopy(val)
             if type == "replacechildren":
                 for child in elem:
                     elem.remove(child)
-                if isinstance(val, etree._Element):
+                if etree.iselement(val):
                     elem.append(val)
                 else:
-                    elem.text = val 
+                    elem.getparent()[elem.tag] = val
+#                    elem._setText(val) 
             elif type == "firstchild":
                 elem.insert(0, val)
             elif type == "lastchild":
@@ -265,7 +267,7 @@ if __name__ == '__main__':
     
     d = XPathDatamodel()
     
-    d.initDataField("cart", etree.fromstring('''<myCart xmlns="">
+    d.initDataField("cart", objectify.fromstring('''<myCart xmlns="">
     <books>
       <book>
         <title>The Zen Mind</title>
@@ -281,17 +283,17 @@ if __name__ == '__main__':
     d.initDataField("val", "123")
     print d["$val"]
     
-#    assign = etree.fromstring('''<assign location="$cart/myCart/books/book[1]/title"  expr="'My favorite book'"/>''')
-    assign = etree.fromstring('''<assign type="addattribute" location="$cart//book" expr="'hej'" attr="name">
+#    assign = objectify.fromstring('''<assign location="$cart/myCart/books/book[1]/title"  expr="'My favorite book'"/>''')
+    assign = objectify.fromstring('''<assign type="addattribute" location="$cart//book" expr="'hej'" attr="name">
   <bookinfo xmlns="">
     <isdn>12334455</isdn>
     <author>some author</author>
   </bookinfo>
 </assign>''')
     d.assign(assign)
-    d.assign(etree.fromstring('''<assign location="$cart//book/@num" expr="'lololo'" />'''))
+    d.assign(objectify.fromstring('''<assign location="$cart//book/@num" expr="'lololo'" />'''))
     
-    print etree.tostring(d.c["cart"])
+    print objectify.tostring(d.c["cart"])
     
     sys.exit()
     
