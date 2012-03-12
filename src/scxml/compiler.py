@@ -230,6 +230,11 @@ class Compiler(object):
                     contentNode = node.find(prepend_ns("content"))
                     if contentNode != None:
                         xml = self.parseContent(contentNode)
+                        if type(xml) is list:
+                            #TODO: if len(cnt) > 0, we could throw exception.
+                            xml = etree.tostring(xml[0])
+                        else:
+                            raise Exception("Error when parsing contentNode, content is %s" % xml)
                     elif node.get("expr"):
                         xml = self.getExprValue("(%s)" % node.get("expr"))
                     elif self.parseAttr(node, "src"):
@@ -723,7 +728,7 @@ class Compiler(object):
             self.invokeid_counter +=1
             if node.get("idlocation"):  
                 self.dm[node.get("idlocation")] = invokeid
-        type = self.parseAttr(node, "type", "scxml")
+        invtype = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         if src and src.startswith("file:"):
             newsrc, search_path = get_path(src.replace("file:", ""), self.dm["_x"]["self"].filedir or "")
@@ -733,22 +738,29 @@ class Compiler(object):
             src = "file:" + newsrc
         data = self.parseData(node, getContent=False)
         scxmlType = ["http://www.w3.org/TR/scxml", "scxml"]
-        if type.strip("/") in scxmlType: 
+        if invtype.strip("/") in scxmlType: 
             inv = InvokeSCXML(data)
             contentNode = node.find(prepend_ns("content"))
             if contentNode != None:
-                inv.content = etree.tostring(self.parseContent(contentNode)[0])
+                cnt = self.parseContent(contentNode)
+                if isinstance(cnt, basestring):
+                    inv.content = cnt
+                elif type(cnt) is list:
+                    #TODO: if len(cnt) > 0, we could throw exception.
+                    inv.content = etree.tostring(cnt[0])
+                else:
+                    raise Exception("Error when parsing contentNode, content is %s" % cnt)
             
-        elif type == "x-pyscxml-soap":
+        elif invtype == "x-pyscxml-soap":
             inv = InvokeSOAP()
-        elif type == "x-pyscxml-httpserver":
+        elif invtype == "x-pyscxml-httpserver":
             inv = InvokeHTTP()
         else:
-            raise NotImplementedError("The invoke type '%s' is not supported by the platform." % type)
+            raise NotImplementedError("The invoke type '%s' is not supported by the platform." % invtype)
         inv.invokeid = invokeid
         inv.parentSessionid = self.dm.sessionid
         inv.src = src
-        inv.type = type
+        inv.type = invtype
         inv.default_datamodel = self.default_datamodel   
         
         finalizeNode = node.find(prepend_ns("finalize")) 

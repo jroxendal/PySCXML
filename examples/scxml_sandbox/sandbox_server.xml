@@ -126,7 +126,8 @@
         
         <transition event="error">
             <send target="#_response" namelist="headers" eventexpr="_event.name">
-                <param name="exception" expr="str(_event.data['exception'])" /> 
+                <log expr="_event.data" />
+                <param name="exception" expr="str(_event.data)" /> 
             </send>
         </transition>
     </state>

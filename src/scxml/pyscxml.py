@@ -259,7 +259,6 @@ class MultiSession(object):
         not been started, only initialized.
          '''
         assert source or self.default_scxml_source
-            
         if isinstance(source, basestring):
             sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel,setup_session=False)
         else:
@@ -362,7 +361,7 @@ if __name__ == "__main__":
         </state>
     </scxml>
     '''
-    sm = StateMachine("assertions_passed/test242.scxml")
+    sm = StateMachine("invoke.xml")
     sm.start()
     
     listener = '''
