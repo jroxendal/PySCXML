@@ -197,7 +197,8 @@ class XPathDatamodel(object):
             val = root
         elif type(val) is list:
             for elem in val:
-                root.append(elem)
+                print elem
+                root.append(deepcopy(elem))
             val = root
         else:
             val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))

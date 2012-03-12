@@ -361,7 +361,7 @@ if __name__ == "__main__":
         </state>
     </scxml>
     '''
-    sm = StateMachine("invoke.xml")
+    sm = StateMachine("xpath_namelist.xml")
     sm.start()
     
     listener = '''

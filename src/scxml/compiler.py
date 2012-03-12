@@ -807,6 +807,7 @@ class Compiler(object):
             
         if self.doc.binding == "early":
             try:
+                #:TODO we shouldn't traverse the same top-level data nodes again here.
                 self.setDataList(list(tree.getiterator(prepend_ns("data"))))
             except Exception, e:
                 self.logger.exception("Evaluation of a data element failed.")
