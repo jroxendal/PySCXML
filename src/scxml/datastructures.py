@@ -37,7 +37,9 @@ def dictToXML(dictionary, root="root"):
     def parse(d):
         global lastopened
         if etree.iselement(d):
+            print "parse", d, d.tag, etree.tostring(d)
             lastopened.append(deepcopy(d))
+            
             return
         elif isinstance(d, etree._ElementStringResult):
             xml.data(str(d))
@@ -58,7 +60,9 @@ def dictToXML(dictionary, root="root"):
     
     parse(dictionary)
     xml.end(root)
-    return xml.close()
+    out = xml.close()
+    print etree.tostring(out, pretty_print=True)
+    return out
 
 if __name__ == '__main__':
     d = {

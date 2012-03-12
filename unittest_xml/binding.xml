@@ -6,7 +6,7 @@
         <state id="s1">
             <state>
                 <invoke>
-                    <content><![CDATA[
+                    <content>
                         <scxml xmlns="http://www.w3.org/2005/07/scxml" binding="late">
                             <datamodel>
                                 <data id="d1" expr="1" />
@@ -21,7 +21,7 @@
                             </state>
                             <final id="i_f" />
                         </scxml> 
-                ]]></content>
+                </content>
                 </invoke>
                 <transition event="done.invoke" target="f1" />
             </state>

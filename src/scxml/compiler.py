@@ -89,6 +89,7 @@ class Compiler(object):
         
     
     def setupDatamodel(self, datamodel):
+        
         self.datamodel = datamodel
         self.doc.datamodel = datamodel_mapping[datamodel]()
             
@@ -98,6 +99,11 @@ class Compiler(object):
         self.dm["__event"] = None
 #        self.dm["_x"]["sessions"] = {}
         
+        if datamodel == "xpath":
+            fns = etree.FunctionNamespace(None)
+            fns["In"] = lambda dummy, x: bool(self.interpreter.In(x))
+        else:
+            self.dm["In"] = self.interpreter.In
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
         if not elem.get(attr, elem.get(attr + "expr")):
@@ -301,14 +307,23 @@ class Compiler(object):
             expr = p.get("expr", p.get("location"))
 #            try:
             output[p.get("name")] = self.getExprValue(expr, True)
+            
 #            except Exception, e:
 #                self.raiseError("error.execution", e)
                 
         
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
-                output[name] = self.getExprValue(name if not isinstance(self.dm, XPathDatamodel) else "$" + name, True)
-        
+                if isinstance(self.dm, XPathDatamodel):
+                    val = self.getExprValue("$" + name, True)
+                    if len(val) == 1 and not len(val[0]): 
+                        val = self.getExprValue("$" + name + "/text()")
+                    else:
+                        val = self.getExprValue("$" + name + "/*", True)
+                    output[name] = val
+                else:
+                    output[name] = self.getExprValue(name, True)
+                
         return output
     
     def parseContent(self, contentNode):
@@ -318,9 +333,9 @@ class Compiler(object):
             if contentNode.get("expr"):
                 output = self.getExprValue("(%s)" % contentNode.get("expr"), True)
             elif len(contentNode) == 0:
-                output = contentNode.text
+                output = contentNode.xpath("./text()")
             elif len(contentNode) > 0:
-                output = etree.tostring(contentNode[0])
+                output = contentNode.xpath("./*")
             else:
                 self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
                 return 
@@ -711,7 +726,7 @@ class Compiler(object):
         type = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         if src and src.startswith("file:"):
-            newsrc, search_path = get_path(src.replace("file:", ""))
+            newsrc, search_path = get_path(src.replace("file:", ""), self.dm["_x"]["self"].filedir or "")
             if not newsrc:
                 #TODO: add search_path info to this exception.
                 raise Exception("file not found when searching the PYTHONPATH: %s" % src)
@@ -722,7 +737,7 @@ class Compiler(object):
             inv = InvokeSCXML(data)
             contentNode = node.find(prepend_ns("content"))
             if contentNode != None:
-                inv.content = self.parseContent(contentNode)
+                inv.content = etree.tostring(self.parseContent(contentNode)[0])
             
         elif type == "x-pyscxml-soap":
             inv = InvokeSOAP()
@@ -806,18 +821,25 @@ class Compiler(object):
                     self.logger.error("Data src not found : '%s'. \n\t%s" % (node.get("src"), value))
                     value = None
 #                    raise AttributeEvalError(value, node, "src")
-            elif len(list(node)) == 1:
-                value = etree.tostring(list(node)[0])
-                if isinstance(self.dm, XPathDatamodel):
-                    value = etree.fromstring(value)
-#                    value = deepcopy(node[0]) 
-                
-            #TODO: I should look for all whitespace chars when stripping.
-            elif node.text and node.text.strip(" "):
-                try:
-                    value = self.dm.evalExpr(node.text)
-                except:
-                    raise ParseError("Parsing of inline data failed for data tag on line %s." % node.sourceline)
+            
+            elif len(node) == 0:
+                value = node.xpath("./text()")
+            elif len(node) > 0:
+                value = node.xpath("./*")
+            
+#            elif len(node): # has children
+##                value = etree.tostring(node)
+#                if isinstance(self.dm, XPathDatamodel):
+#                    value = map(deepcopy, node)
+#                        
+##                    value = deepcopy(node[0]) 
+#                
+#            #TODO: I should look for all whitespace chars when stripping.
+#            elif node.text and node.text.strip(" "):
+#                try:
+#                    value = self.dm.evalExpr(node.text)
+#                except:
+#                    raise ParseError("Parsing of inline data failed for data tag on line %s." % node.sourceline)
                 
             
             #TODO: should we be overwriting values here? see test 226.

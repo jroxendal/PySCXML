@@ -50,6 +50,7 @@ class Interpreter(object):
         self.historyValue = {}
         self.dm = None
         self.invokeId = None
+        self.parentId = None
         self.logger = None
     
     
@@ -57,10 +58,6 @@ class Interpreter(object):
         '''Initializes the interpreter given an SCXMLDocument instance'''
         
         self.doc = document
-#        self.dm = self.doc.datamodel
-        self.dm["In"] = self.In
-#        self.dm["_parent"] = parentQueue
-
         self.invokeId = invokeId
         
         transition = Transition(document.rootState)
@@ -140,11 +137,8 @@ class Interpreter(object):
                 self.cancelInvoke(inv)
             self.configuration.delete(s)
             if isFinalState(s) and isScxmlState(s.parent):
-                if self.invokeId and self.dm["_parent"]:
-                    evt = Event(["done", "invoke", self.invokeId], s.donedata())
-                    evt.origintype = "scxml"
-                    evt.invokeid = self.invokeId
-                    self.dm["_parent"].put(evt)   
+                if self.invokeId and self.parentId and self.parentId in self.dm.sessions:
+                    self.send(["done", "invoke", self.invokeId], s.donedata(), self.invokeId, self.dm.sessions[self.parentId].interpreter.externalQueue)   
                 self.logger.info("Exiting interpreter")
                 dispatcher.send("signal_exit", self, final=s.id)
                 return

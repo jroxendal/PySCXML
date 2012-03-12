@@ -25,9 +25,6 @@ import logging
 from scxml.errors import ScriptFetchError
 import glob
 import traceback
-#xmlDir = "../../unittest_xml/"
-#if not os.path.isdir(xmlDir):
-#    xmlDir = "unittest_xml/"
      
 
 class RegressionTest(unittest.TestCase):

@@ -36,7 +36,8 @@ def default_logfunction(label, msg):
     label = label or ""
     msg = msg or ""
     if type(msg) is list:
-        msg = map(lambda x: etree.tostring(msg, pretty_print=True) if etree.iselement(msg) else msg)
+        msg = [etree.tostring(x).strip() if etree.iselement(x) else x for x in msg]
+        
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 
 
@@ -68,6 +69,7 @@ class StateMachine(object):
         @param default_datamodel: if omitted, any document started by this instance will have 
         its datamodel expressions evaluated as Python expressions. Set to 'ecmascript' to assume 
         EMCAScript expressions.
+        @param setup_session: for internal use.
         @raise IOError 
         @raise xml.parsers.expat.ExpatError 
         '''
@@ -360,7 +362,7 @@ if __name__ == "__main__":
         </state>
     </scxml>
     '''
-    sm = StateMachine("assertions_passed/test208.scxml")
+    sm = StateMachine("assertions_passed/test242.scxml")
     sm.start()
     
     listener = '''

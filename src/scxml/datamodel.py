@@ -189,14 +189,18 @@ class XPathDatamodel(object):
 #            self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
     def initDataField(self, id, val):
-        root = objectify.Element("data")
+        root = etree.Element("data")
         root.set("id", id)
         print id,  type(val)
         if etree.iselement(val):
             root.append(deepcopy(val))
             val = root
+        elif type(val) is list:
+            for elem in val:
+                root.append(elem)
+            val = root
         else:
-            val = objectify.fromstring("<data id='%s'>%s</data>" % (id, val))
+            val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
 #            root._setText(str(val))
 #            val = root.xpath(str(val), **self.c)
         self[id] = val

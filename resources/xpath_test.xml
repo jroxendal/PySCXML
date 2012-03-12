@@ -1,0 +1,52 @@
+<scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
+
+    <datamodel>
+        <data id="val" expr="123" />
+        <data id="val2">
+            <sub2 xmlns="">456</sub2>
+            <sub2 xmlns="">456</sub2>
+        </data>
+        <data id="val3">
+            <sub3 xmlns="">
+                <v>9</v>
+                <v>8</v>
+                <v>7</v>
+            </sub3>
+        </data>
+        <data id="cart">
+            <myCart xmlns="">
+                <books>
+                    <book>
+                        <title>The Zen Mind</title>
+                    </book>
+                    <book>
+                        <title>Freakonomics</title>
+                    </book>
+                </books>
+                <cds>
+                    <cd name="Something" />
+                </cds>
+            </myCart>
+        </data>
+    </datamodel>
+    
+    <state id="s1">
+        <onentry>
+            <send event="e">
+                <content>
+                123
+                </content>
+            </send>
+        </onentry>
+        
+        <transition event="e" target="f" cond="In('s1')">
+            <log label="caught e"  />
+        </transition>
+    </state>
+    
+    <final id="f">
+        <onentry>
+<!--             <log label="final" expr="$val" /> -->
+        </onentry>
+    </final>
+</scxml>
