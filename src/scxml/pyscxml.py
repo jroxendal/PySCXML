@@ -34,9 +34,18 @@ from lxml import etree
 
 def default_logfunction(label, msg):
     label = label or ""
-    msg = msg or ""
+#    msg = msg or ""
+    
+    def f(x):
+        if etree.iselement(x):
+            return etree.tostring(x).strip()
+        elif isinstance(etree._ElementStringResult):
+            return str(x)
+        
+        return x
+    
     if type(msg) is list:
-        msg = [etree.tostring(x).strip() if etree.iselement(x) else x for x in msg]
+        msg = map(f, msg)
         
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 

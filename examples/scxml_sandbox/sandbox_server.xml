@@ -60,12 +60,25 @@
                                         logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
                                         
                                         def log_func(signal, sender, label, val):
-                                            label = label + ":" if label else ""
                                             if sender.sm.sessionid == _sessionid + ".i":
+                                            
+                                                label = label or ""
+                                                
+                                                def f(x):
+                                                    if etree.iselement(x):
+                                                        return etree.tostring(x).strip()
+                                                    elif isinstance(etree._ElementStringResult):
+                                                        return str(x)
+                                                    
+                                                    return x
+                                                
                                                 if type(val) is list:
-                                                    val = map(lambda x: etree.tostring(x, pretty_print=True) if etree.iselement(x) else x, val)
-                                                log("elem", label + " " + (str(val) if val else "" )) 
-                                        
+                                                    msg = map(f, val)
+                                                
+                                                log("elem", "%s%s%s" % (label, ": " if label and val is not None else "", val))
+                                            
+                                            
+                                            
                                         dispatcher.connect(log_func, "invoke_log")
                                     </script>
                                 
