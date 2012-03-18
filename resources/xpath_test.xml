@@ -1,17 +1,9 @@
-<scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath" xmlns:fn="http://www.w3.org/2005/xpath-functions">
 
     <datamodel>
-        <data id="val" expr="123" />
-        <data id="val2">
-            <sub2 xmlns="">456</sub2>
-            <sub2 xmlns="">456</sub2>
-        </data>
-        <data id="val3">
-            <sub3 xmlns="">
-                <v>9</v>
-                <v>8</v>
-                <v>7</v>
-            </sub3>
+        <data id="myVar" expr="123" />
+        <data id="myVar2">
+            <sub xmlns="">456</sub>
         </data>
         <data id="cart">
             <myCart xmlns="">
@@ -32,15 +24,17 @@
     
     <state id="s1">
         <onentry>
+        
             <send event="e">
-                <content>
-                123
-                </content>
+              <param name="myVar" expr="$myVar/text()" />
+              <param name="myVar2" expr="$myVar2/sub" />
             </send>
         </onentry>
         
-        <transition event="e" target="f" cond="In('s1')">
+        <transition event="e" target="f">
             <log label="caught e"  />
+            <log expr="$_event/data/myVar = 123" />
+            <log expr="$_event/data/myVar2/sub = 456" />
         </transition>
     </state>
     

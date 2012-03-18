@@ -213,6 +213,8 @@ class Compiler(object):
                             self.dm[node.get("item")] = item
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
+                        except:
+                            raise
                         try:
                             if node.get("index"):
                                 self.dm[node.get("index")] = index

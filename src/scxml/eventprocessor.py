@@ -107,6 +107,8 @@ class ScxmlOriginType(object):
         return other in self.types
     def __ne__(self, other):
         return not self == other
+    def __str__(self):
+        return self.types[0]
 
 if __name__ == "__main__":
     print SCXMLEventProcessor.toxml("evt", "_parent", {}, "", "", language="json")

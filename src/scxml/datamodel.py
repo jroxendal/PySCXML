@@ -173,17 +173,24 @@ class XPathDatamodel(object):
         else: # for numbers and strings
             field = "_empty"
             expr = key
-        print field, expr
-        return self.c[field].xpath(expr or ".", **self.c)
+        
+        try:
+            return self.c[field].xpath(expr or ".", **self.c)
+        except KeyError:
+            raise DataModelError("No such data field '%s'." % key)
+        except Exception, e:
+            raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
     
     def __setitem__(self, key, val):
-        print "setitem", key, val
+#        print "setitem", key, val
         if type(val) == dict:
             val = dictToXML(val)
         elif type(val).__name__ == "Event":
             val = dictToXML(val.__dict__)
         try:
             self.c[key] = deepcopy(val)
+        except KeyError:
+            raise DataModelError("You can't assign to the name '%s'." % key)
         except:
             print "__setitem__ failed for key: %s and value: %s." % (key, val)
 #            self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
@@ -191,13 +198,12 @@ class XPathDatamodel(object):
     def initDataField(self, id, val):
         root = etree.Element("data")
         root.set("id", id)
-        print id,  type(val)
+#        print id,  type(val)
         if etree.iselement(val):
             root.append(deepcopy(val))
             val = root
         elif type(val) is list:
             for elem in val:
-                print elem
                 root.append(deepcopy(elem))
             val = root
         else:

@@ -71,7 +71,7 @@ class AttributeEvalError(CompositeError):
         name = type(self.exception).__name__
         article = "An" if name[0].lower() in "aieou" else "A" 
         return "%s %s occurred when evaluating %s's %s attribute on line %s:\n    %s  " \
-            % (article, name, split_ns(self.elem)[1], self.attr, self.elem.lineno, self.exception)
+            % (article, name, split_ns(self.elem)[1], self.attr, self.elem.sourceline, self.exception)
         
 
 
@@ -102,7 +102,7 @@ class ExecutableContainerError(ExecutableError):
         if hasattr(self.exception, "elem"):
             child_name = split_ns(self.exception.elem)[1]
         return "Stopped executing children of %s on line %s after %s raised an error:\n    %s" % \
-            (split_ns(self.elem)[1], self.elem.lineno, child_name, self.exception)
+            (split_ns(self.elem)[1], self.elem.sourceline, child_name, self.exception)
         
         
 
