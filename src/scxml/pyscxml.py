@@ -39,7 +39,7 @@ def default_logfunction(label, msg):
     def f(x):
         if etree.iselement(x):
             return etree.tostring(x).strip()
-        elif isinstance(etree._ElementStringResult):
+        elif isinstance(x, etree._ElementStringResult):
             return str(x)
         
         return x
@@ -120,7 +120,7 @@ class StateMachine(object):
         if hasattr(uri, "read"):
             return uri.read()
         elif isinstance(uri, basestring) and re.search("<(.+:)?scxml", uri): #"<scxml" in uri:
-            self.filename = "<string>"
+            self.filename = "<string source>"
             self.filedir = None
             return uri
         else:
@@ -370,7 +370,7 @@ if __name__ == "__main__":
         </state>
     </scxml>
     '''
-    sm = StateMachine("xpath_test.xml")
+    sm = StateMachine("assertions_ecmascript/test239.scxml")
     sm.start()
     
     listener = '''

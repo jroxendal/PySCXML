@@ -220,16 +220,16 @@ class ioprocessor(object):
 
 @ioprocessor('basichttp')
 def type_basichttp(session, data, sm, environ):
-    if "_scxmleventstruct" in data:
-        event = Processor.fromxml(data["_scxmleventstruct"], "unknown")
-    elif "_scxmleventname" in data:
+#    if "_scxmleventstruct" in data:
+#        event = Processor.fromxml(data["_scxmleventstruct"], "unknown")
+    if "_scxmleventname" in data:
         evtname = data.pop("_scxmleventname")
         event = Event(evtname, data)
         event.origintype = "basichttp"
         event.origin = "unreachable"
     else:
         pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
-        event = Event(["HTTP", environ['REQUEST_METHOD'].lower()] + pth, data=data)
+        event = Event(["HTTP", environ['REQUEST_METHOD']] + pth, data=data)
         event.origintype = "basichttp"
         event.origin = "unreachable"
         
@@ -253,3 +253,20 @@ if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.NOTSET)
     
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <state>
+            <onentry>
+            </onentry>
+            <transition event="*">
+                <log expr="$_event/data" />
+            </transition>
+        </state>
+    </scxml>
+    '''
+    import eventlet
+    from eventlet import wsgi
+    
+    server = PySCXMLServer("localhost", 8081, init_sessions={"xpath" : xml}, default_datamodel="xpath")
+    wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
+                

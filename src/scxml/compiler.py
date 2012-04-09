@@ -334,19 +334,21 @@ class Compiler(object):
         return output
     
     def parseContent(self, contentNode):
-        output = None
+        return self.dm.parseContent(contentNode)
         
-        if contentNode != None:
-            if contentNode.get("expr"):
-                output = self.getExprValue("(%s)" % contentNode.get("expr"), True)
-            elif len(contentNode) == 0:
-                output = contentNode.xpath("./text()")
-            elif len(contentNode) > 0:
-                output = contentNode.xpath("./*")
-            else:
-                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
-                return 
-        return output
+#        output = None
+#        
+#        if contentNode != None:
+#            if contentNode.get("expr"):
+#                output = self.getExprValue("(%s)" % contentNode.get("expr"), True)
+#            elif len(contentNode) == 0:
+#                output = contentNode.xpath("./text()")
+#            elif len(contentNode) > 0:
+#                output = contentNode.xpath("./*")
+#            else:
+#                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
+#                return 
+#        return output
     
     def parseCSSTime(self, timestr):
         n, unit = re.search("(\d+)(\w+)", timestr).groups()
@@ -750,6 +752,8 @@ class Compiler(object):
                 elif type(cnt) is list:
                     #TODO: if len(cnt) > 0, we could throw exception.
                     inv.content = etree.tostring(cnt[0])
+                elif self.datamodel == "ecmascript" and len(contentNode) > 0: # if cnt is a minidom object
+                    inv.content = etree.tostring(contentNode[0])
                 else:
                     raise Exception("Error when parsing contentNode, content is %s" % cnt)
             

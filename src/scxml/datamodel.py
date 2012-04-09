@@ -14,6 +14,7 @@ from copy import deepcopy
 from scxml.datastructures import dictToXML
 from scxml.errors import ExecutableError, IllegalLocationError
 import logging
+import xml.dom.minidom as minidom
 
 
 try:
@@ -66,7 +67,7 @@ class ImperativeDataModel(object):
 #        self.assign()
 
 class DataModel(dict, ImperativeDataModel):
-    
+    '''The default Python Datamodel'''    
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
     
@@ -93,7 +94,22 @@ class DataModel(dict, ImperativeDataModel):
     def isLegalName(self, name):
         #TODO: what about reserved names?
         return bool(re.match("[a-zA-Z_][0-9a-zA-Z_]*", name))
+    
+    def parseContent(self, contentNode):
+        output = None
         
+        if contentNode != None:
+            if contentNode.get("expr"):
+                output = self.evalExpr("(%s)" % contentNode.get("expr"))
+            elif len(contentNode) == 0:
+                output = contentNode.xpath("./text()")
+            elif len(contentNode) > 0:
+                output = contentNode.xpath("./*")
+            else:
+                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
+                return 
+        return output
+    
     @exceptionFormatter
     def evalExpr(self, expr):
         return eval(expr, self)
@@ -145,6 +161,21 @@ class ECMAScriptDataModel(ImperativeDataModel):
     def isLegalName(self, name):
         return bool(re.match("[a-zA-Z_$][0-9a-zA-Z_$]*", name))
     
+    
+    def parseContent(self, contentNode):
+        output = None
+        
+        if contentNode != None:
+            if contentNode.get("expr"):
+                output = self.evalExpr("(%s)" % contentNode.get("expr"))
+            elif len(contentNode) == 0:
+                output = contentNode.xpath("./text()")
+            elif len(contentNode) > 0:
+                output = minidom.parseString(etree.tostring(contentNode)).firstChild
+            else:
+                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
+                return 
+        return output
     
     def evalExpr(self, expr):
         with JSContext(self.g) as c:    
@@ -264,7 +295,22 @@ class XPathDatamodel(object):
                 elem.getparent().remove(elem)
             elif type == "addattribute":
                 elem.set(assignNode.get("attr"), str(val))
+    
+    def parseContent(self, contentNode):
+        output = None
         
+        if contentNode != None:
+            if contentNode.get("expr"):
+                output = self.evalExpr("(%s)" % contentNode.get("expr"))
+            elif len(contentNode) == 0:
+                output = contentNode.xpath("./text()")
+            elif len(contentNode) > 0:
+                output = contentNode.xpath("./*")
+            else:
+                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
+                return 
+        return output
+    
         
     
     def evalExpr(self, expr):
