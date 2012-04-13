@@ -13,7 +13,7 @@
     </datamodel>
     
         <state id="sandbox">
-            <transition event="HTTP.post" cond="_event.data.get('doc')">
+            <transition event="HTTP.POST" cond="_event.data.get('doc')">
 <!--                 <if cond="session"> -->
 <!--                     <send targetexpr="'#_scxml_' + session" event="quit" /> -->
 <!--                 </if> -->
