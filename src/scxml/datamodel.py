@@ -264,7 +264,7 @@ class XPathDatamodel(object):
             elemExpr = "/".join(loc.split("/")[:-1])
             attrExpr = loc.split("/")[-1]
             for elem in self[elemExpr]:
-                elem.set(attrExpr[1:], val)
+                elem.set(attrExpr[1:], str(val))
             return
         
         for elem in self[loc]:
