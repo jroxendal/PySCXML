@@ -46,7 +46,6 @@ def default_logfunction(label, msg):
     
     if type(msg) is list:
         msg = map(f, msg)
-        
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 
 
@@ -361,16 +360,35 @@ if __name__ == "__main__":
 #    sm = StateMachine("multi_script.xml")
 #    sm = StateMachine("assertions_ecmascript/test487.scxml")
 
-    xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
-        <state>
-            <onentry>
-                <send type="basichttp" target="http://localhost:8081/echo/basichttp" event="hello" httpResponse="true" />
-            </onentry>
-        </state>
-    </scxml>
+    xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<!-- test that XPath expressions can be used as location expressions.
+This example is taken from the spec -->
+<scxml xmlns="http://www.w3.org/2005/07/scxml"
+xmlns:conf="http://www.w3.org/2005/scxml-conformance"
+initial="s0" version="1.0" datamodel="xpath">
+  <datamodel>
+    <data id="cities">
+      <list xmlns="">
+        <city id="nyc" count="0">New York</city>
+        <city id="bos" count="0">Boston</city>
+      </list>
+    </data>
+  </datamodel>
+ 
+<state id="s0">
+  <onentry>
+    <assign location="$cities/list/city[@id='nyc']/@count" expr="1"/>
+  </onentry>
+   <transition cond="$cities/list/city[@id='nyc']/@count = 1" target="pass"/>
+   <transition target="fail"/>
+  </state>
+ 
+<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final> 
+ 
+</scxml>
     '''
-    sm = StateMachine("assertions_ecmascript/test239.scxml")
+    sm = StateMachine(xml)
     sm.start()
     
     listener = '''

@@ -251,7 +251,7 @@ class XPathDatamodel(object):
             return False
     
     def assign(self, assignNode):
-        loc = assignNode.get("location")
+        loc = assignNode.get("location")[1:]
         type = assignNode.get("type", "replacechildren")
         expr = assignNode.get("expr")
 #        loc = assignNode.get("location")

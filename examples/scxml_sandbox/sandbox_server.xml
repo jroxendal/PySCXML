@@ -59,12 +59,13 @@
                                         log_handler = EventHandler(logging.INFO)
                                         logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
                                         
-                                        def log_func(signal, sender, label, val):
+                                        def log_func(signal, sender, label, msg):
                                             if sender.sm.sessionid == _sessionid + ".i":
                                             
                                                 label = label or ""
                                                 
                                                 def f(x):
+                                                    
                                                     if etree.iselement(x):
                                                         return etree.tostring(x).strip()
                                                     elif isinstance(etree._ElementStringResult):
@@ -72,10 +73,10 @@
                                                     
                                                     return x
                                                 
-                                                if type(val) is list:
-                                                    msg = map(f, val)
-                                                
-                                                log("elem", "%s%s%s" % (label, ": " if label and val is not None else "", val))
+                                                if type(msg) is list:
+                                                    msg = map(f, msg)
+                                                print msg, type(msg) is list, msg
+                                                log("elem", "%s%s%s" % (label, ": " if label and msg is not None else "", msg))
                                             
                                             
                                             
