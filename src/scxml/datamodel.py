@@ -227,16 +227,16 @@ class XPathDatamodel(object):
 #            self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
     def initDataField(self, id, val):
-        root = etree.Element("data")
-        root.set("id", id)
+        data = etree.Element("data")
+        data.set("id", id)
 #        print id,  type(val)
         if etree.iselement(val):
-            root.append(deepcopy(val))
-            val = root
+            data.append(deepcopy(val))
+            val = data
         elif type(val) is list:
             for elem in val:
-                root.append(deepcopy(elem))
-            val = root
+                data.append(deepcopy(elem))
+            val = data
         else:
             val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
 #            root._setText(str(val))
@@ -251,7 +251,8 @@ class XPathDatamodel(object):
             return False
     
     def assign(self, assignNode):
-        loc = assignNode.get("location")[1:]
+#        loc = assignNode.get("location")[1:]
+        loc = assignNode.get("location")
         type = assignNode.get("type", "replacechildren")
         expr = assignNode.get("expr")
 #        loc = assignNode.get("location")
