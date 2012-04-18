@@ -6,13 +6,13 @@ Created on Nov 1, 2011
 from eventprocessor import Event
 import sys
 import traceback
-from errors import ExprEvalError, DataModelError
 import eventlet
 import re
 from lxml import etree, objectify
 from copy import deepcopy
 from scxml.datastructures import dictToXML
-from scxml.errors import ExecutableError, IllegalLocationError
+from errors import ExecutableError, IllegalLocationError,\
+    AttributeEvalError, ExprEvalError, DataModelError
 import logging
 import xml.dom.minidom as minidom
 
@@ -267,7 +267,8 @@ class XPathDatamodel(object):
             return
         
         if not len(loc_val):
-            raise IllegalLocationError("Empty nodeset at location '%s'." % loc)
+            e = IllegalLocationError("Empty nodeset at location '%s'." % loc)
+            raise AttributeEvalError(e, assignNode, "location")
         
         for elem in loc_val:
             if etree.iselement(val):

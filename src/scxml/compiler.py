@@ -189,7 +189,10 @@ class Compiler(object):
                         eventlet.greenthread.cancel(self.timer_mapping[sendid])
                         del self.timer_mapping[sendid]
                 elif node_name == "assign":
-                    self.dm.assign(node)
+                    try:
+                        self.dm.assign(node)
+                    except Exception, e:
+                        raise ExecutableError(e, node)
                 elif node_name == "script":
                     try:
                         src = node.text or self.script_src.get(node) or ""

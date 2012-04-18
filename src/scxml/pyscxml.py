@@ -366,9 +366,8 @@ This example is taken from the spec -->
 <scxml xmlns="http://www.w3.org/2005/07/scxml"
 xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" datamodel="xpath">
 
-  <datamodel>
-    <data id="var1" expr="1"/> 
-    <data id="var2" expr="2"/> 
+    <datamodel>
+    <data id="var1" expr="2"/> 
   </datamodel>
  
 <state id="s0">
@@ -381,11 +380,11 @@ xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" datamodel="x
   <onentry>
     <log label="event copy " expr="$var1"/>
     </onentry>
- </state>
+    </state>
 </scxml>
     '''
-#    sm = StateMachine(xml)
-    sm = StateMachine("xpath_donedata.xml")
+    sm = StateMachine(xml)
+#    sm = StateMachine("xpath_donedata.xml")
     sm.start()
     
     listener = '''
