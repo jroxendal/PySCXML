@@ -364,31 +364,28 @@ if __name__ == "__main__":
 <!-- test that XPath expressions can be used as location expressions.
 This example is taken from the spec -->
 <scxml xmlns="http://www.w3.org/2005/07/scxml"
-xmlns:conf="http://www.w3.org/2005/scxml-conformance"
-initial="s0" version="1.0" datamodel="xpath">
+xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" datamodel="xpath">
+
   <datamodel>
-    <data id="cities">
-      <list xmlns="">
-        <city id="nyc" count="0">New York</city>
-        <city id="bos" count="0">Boston</city>
-      </list>
-    </data>
+    <data id="var1" expr="1"/> 
+    <data id="var2" expr="2"/> 
   </datamodel>
  
 <state id="s0">
-  <onentry>
-    <assign location="$cities/list/city[@id='nyc']/@count" expr="1"/>
-  </onentry>
-   <transition cond="$cities/list/city[@id='nyc']/@count = 1" target="pass"/>
-   <transition target="fail"/>
+   <transition target="s1">
+     <assign location="var1" expr="3"/>
+     </transition>
   </state>
  
-<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
-<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final> 
- 
+<state id="s1">
+  <onentry>
+    <log label="event copy " expr="$var1"/>
+    </onentry>
+ </state>
 </scxml>
     '''
-    sm = StateMachine(xml)
+#    sm = StateMachine(xml)
+    sm = StateMachine("xpath_donedata.xml")
     sm.start()
     
     listener = '''

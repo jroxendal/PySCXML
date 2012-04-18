@@ -321,13 +321,16 @@ class Compiler(object):
         
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
+#                if isinstance(self.dm, XPathDatamodel):
+#                    val = self.getExprValue("$" + name, True)
+#                    if len(val) == 1 and not len(val[0]): 
+#                        val = self.getExprValue("$" + name + "/text()")
+#                    else:
+#                        val = self.getExprValue("$" + name + "/*", True)
+#                    output[name] = val
+#                else:
                 if isinstance(self.dm, XPathDatamodel):
-                    val = self.getExprValue("$" + name, True)
-                    if len(val) == 1 and not len(val[0]): 
-                        val = self.getExprValue("$" + name + "/text()")
-                    else:
-                        val = self.getExprValue("$" + name + "/*", True)
-                    output[name] = val
+                    output[name[1:]] = self.getExprValue(name, True)
                 else:
                     output[name] = self.getExprValue(name, True)
                 
@@ -597,19 +600,19 @@ class Compiler(object):
                 if node.find(prepend_ns("donedata")) != None:
                     
                     doneNode = node.find(prepend_ns("donedata"))
-                    def donedata():
+                    def donedata(node):
                         try:
-                            return self.parseData(doneNode)
+                            return self.parseData(node)
                         except Exception, e:
 #                            TODO: what happens if donedata in the top-level final fails?
 #                             we can't set the _event.data with anything. answer: catch the error in 
 #                            the interpreter, insert error in outgoing done event.
-                            self.logger.exception("Line %s: Donedata crashed." % doneNode.sourceline)
+                            self.logger.exception("Line %s: Donedata crashed." % node.sourceline)
                             self.raiseError("error.execution", exception=e)
                         return {}
 #                            raise 
                             
-                    s.donedata = donedata
+                    s.donedata = partial(donedata, doneNode)
 
                 else:
                     s.donedata = lambda:{}

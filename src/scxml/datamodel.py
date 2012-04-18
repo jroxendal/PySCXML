@@ -253,7 +253,7 @@ class XPathDatamodel(object):
     def assign(self, assignNode):
 #        loc = assignNode.get("location")[1:]
         loc = assignNode.get("location")
-        type = assignNode.get("type", "replacechildren")
+        assignType = assignNode.get("assignType", "replacechildren")
         expr = assignNode.get("expr")
 #        loc = assignNode.get("location")
         if expr:
@@ -261,7 +261,7 @@ class XPathDatamodel(object):
         else:
             val = assignNode[0]
         
-        if type == "replacechildren" and loc.split("/")[-1].startswith("@"):
+        if assignType == "replacechildren" and loc.split("/")[-1].startswith("@"): # replace attribute
             elemExpr = "/".join(loc.split("/")[:-1])
             attrExpr = loc.split("/")[-1]
             for elem in self[elemExpr]:
@@ -271,30 +271,29 @@ class XPathDatamodel(object):
         for elem in self[loc]:
             if etree.iselement(val):
                 val = deepcopy(val)
-            if type == "replacechildren":
+            if assignType == "replacechildren":
                 for child in elem:
                     elem.remove(child)
                 if etree.iselement(val):
                     elem.append(val)
                 else:
-                    elem.getparent()[elem.tag] = val
-#                    elem._setText(val) 
-            elif type == "firstchild":
+                    elem.text = str(val)
+            elif assignType == "firstchild":
                 elem.insert(0, val)
-            elif type == "lastchild":
+            elif assignType == "lastchild":
                 if elem:
                     elem[-1].addnext(val)
                 else:
                     elem.append(val)
-            elif type == "previoussibling":
+            elif assignType == "previoussibling":
                 elem.addprevious(val)
-            elif type == "nextsibling":
+            elif assignType == "nextsibling":
                 elem.addnext(val)
-            elif type == "replace":
+            elif assignType == "replace":
                 elem.getparent().replace(elem, val)
-            elif type == "delete":
+            elif assignType == "delete":
                 elem.getparent().remove(elem)
-            elif type == "addattribute":
+            elif assignType == "addattribute":
                 elem.set(assignNode.get("attr"), str(val))
     
     def parseContent(self, contentNode):

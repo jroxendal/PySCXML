@@ -32,7 +32,7 @@
     
     <state>
         <onentry>
-            <send event="e" namelist="val val2 val3">
+            <send event="e" namelist="$val $val2 $val3">
             </send>
         </onentry>
         

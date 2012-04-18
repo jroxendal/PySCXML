@@ -69,7 +69,7 @@ class PySCXMLServer(MultiSession):
         # any_legal_url_string != "session1" and any_legal_url_string != "session2" 
         server = PySCXMLServer("localhost", 8081, 
                                 init_sessions={"session1" : myStateMachine, "session2" : myStateMachine})
-        server.serve_forever()
+        
         
         
         '''
