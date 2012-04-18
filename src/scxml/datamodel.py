@@ -229,7 +229,6 @@ class XPathDatamodel(object):
     def initDataField(self, id, val):
         data = etree.Element("data")
         data.set("id", id)
-#        print id,  type(val)
         if etree.iselement(val):
             data.append(deepcopy(val))
             val = data
@@ -239,8 +238,6 @@ class XPathDatamodel(object):
             val = data
         else:
             val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
-#            root._setText(str(val))
-#            val = root.xpath(str(val), **self.c)
         self[id] = val
     
     def hasLocation(self, loc):
@@ -255,7 +252,8 @@ class XPathDatamodel(object):
         loc = assignNode.get("location")
         assignType = assignNode.get("assignType", "replacechildren")
         expr = assignNode.get("expr")
-#        loc = assignNode.get("location")
+        
+        loc_val = self[loc]
         if expr:
             val = self[expr]
         else:
@@ -268,7 +266,10 @@ class XPathDatamodel(object):
                 elem.set(attrExpr[1:], str(val))
             return
         
-        for elem in self[loc]:
+        if not len(loc_val):
+            raise IllegalLocationError("Empty nodeset at location '%s'." % loc)
+        
+        for elem in loc_val:
             if etree.iselement(val):
                 val = deepcopy(val)
             if assignType == "replacechildren":
