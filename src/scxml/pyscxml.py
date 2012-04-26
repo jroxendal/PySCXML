@@ -46,6 +46,7 @@ def default_logfunction(label, msg):
     
     if type(msg) is list:
         msg = map(f, msg)
+        msg = "\n".join(msg)
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 
 
@@ -360,31 +361,7 @@ if __name__ == "__main__":
 #    sm = StateMachine("multi_script.xml")
 #    sm = StateMachine("assertions_ecmascript/test487.scxml")
 
-    xml = '''<?xml version="1.0" encoding="UTF-8"?>
-<!-- test that XPath expressions can be used as location expressions.
-This example is taken from the spec -->
-<scxml xmlns="http://www.w3.org/2005/07/scxml"
-xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" datamodel="xpath">
-
-    <datamodel>
-    <data id="var1" expr="2"/> 
-  </datamodel>
- 
-<state id="s0">
-   <transition target="s1">
-     <assign location="var1" expr="3"/>
-     </transition>
-  </state>
- 
-<state id="s1">
-  <onentry>
-    <log label="event copy " expr="$var1"/>
-    </onentry>
-    </state>
-</scxml>
-    '''
-    sm = StateMachine(xml)
-#    sm = StateMachine("xpath_donedata.xml")
+    sm = StateMachine("xpath_test.xml")
     sm.start()
     
     listener = '''

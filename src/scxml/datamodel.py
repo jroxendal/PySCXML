@@ -15,6 +15,7 @@ from errors import ExecutableError, IllegalLocationError,\
     AttributeEvalError, ExprEvalError, DataModelError
 import logging
 import xml.dom.minidom as minidom
+import exceptions
 
 
 try:
@@ -250,14 +251,14 @@ class XPathDatamodel(object):
     def assign(self, assignNode):
 #        loc = assignNode.get("location")[1:]
         loc = assignNode.get("location")
-        assignType = assignNode.get("assignType", "replacechildren")
+        assignType = assignNode.get("type", "replacechildren")
         expr = assignNode.get("expr")
         
         loc_val = self[loc]
         if expr:
             val = self[expr]
         else:
-            val = assignNode[0]
+            val = assignNode.xpath("./*")
         
         if assignType == "replacechildren" and loc.split("/")[-1].startswith("@"): # replace attribute
             elemExpr = "/".join(loc.split("/")[:-1])
@@ -276,23 +277,34 @@ class XPathDatamodel(object):
             if assignType == "replacechildren":
                 for child in elem:
                     elem.remove(child)
-                if etree.iselement(val):
-                    elem.append(val)
+#                if etree.iselement(val):
+#                    elem.append(val)
+#                isinstance(val, list):
+                for e in val:
+                    elem.append(e) #TODO: what if e is a text node?
                 else:
                     elem.text = str(val)
             elif assignType == "firstchild":
-                elem.insert(0, val)
+                for e in reversed(val):
+                    elem.insert(0, e)
             elif assignType == "lastchild":
-                if elem:
-                    elem[-1].addnext(val)
-                else:
-                    elem.append(val)
+                for e in val:
+                    if len(elem):
+                        elem[-1].addnext(e)
+                    else:
+                        elem.append(e)
             elif assignType == "previoussibling":
-                elem.addprevious(val)
+                for e in reversed(val):
+                    elem.addprevious(e)
             elif assignType == "nextsibling":
-                elem.addnext(val)
+                for e in val:
+                    elem.addnext(e)
             elif assignType == "replace":
-                elem.getparent().replace(elem, val)
+                val = list(val)
+                first = val.pop()
+                elem.getparent().replace(elem, first)
+                for e in val:
+                    first.addnext(e)
             elif assignType == "delete":
                 elem.getparent().remove(elem)
             elif assignType == "addattribute":

@@ -45,10 +45,6 @@ class PySCXMLServer(MultiSession):
         StateMachine instance at that session, running the default document.
         If default_scxml_source is None, a call to an address that hasn't been 
         pre-initialized will fail with HTTP error 403 FORBIDDEN.
-        @param server_type: define the server as TYPE_DEFAULT or TYPE_RESPONSE.
-        TYPE_DEFAULT corresponds to the type of server that the W3C standard prefers,
-        use TYPE_RESPONSE for responding only if you explicetly need to include data 
-        in the HTTP response.
         @param init_sessions: a mapping where the keys correspond to sesssionids you 
         would like the server to be initialized with and the values to scxml document 
         strings you want those sessions to run. These will be constructed in the server 

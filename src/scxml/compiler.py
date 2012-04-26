@@ -192,7 +192,7 @@ class Compiler(object):
                     try:
                         self.dm.assign(node)
                     except Exception, e:
-                        raise ExecutableError(e, node)
+                        raise ExecutableError(AtomicError(e), node)
                 elif node_name == "script":
                     try:
                         src = node.text or self.script_src.get(node) or ""
