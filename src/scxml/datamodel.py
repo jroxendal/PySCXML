@@ -56,14 +56,34 @@ class ImperativeDataModel(object):
             raise ExecutableError(IllegalLocationError(msg), assignNode)
         
         #TODO: this should function like the data element.
-        expression = assignNode.get("expr") or assignNode.text.strip()
+#        expression = assignNode.get("expr") or assignNode.text.strip()
         
-        try:
-            #TODO: we might need to make a 'setlocation' method on the dm objects.
-            self.execExpr(assignNode.get("location") + " = " + expression)
-        except ExprEvalError, e:
-            raise ExecutableError(e, assignNode)
+#        try:
+#            #TODO: we might need to make a 'setlocation' method on the dm objects.
+#            self.execExpr(assignNode.get("location") + " = " + expression)
+#        except ExprEvalError, e:
+#            raise ExecutableError(e, assignNode)
+        self[assignNode.get("location")] = self.parseContent(assignNode)
+    
+    def getInnerXML(self, node):
+        return etree.tostring(node).split(">", 1)[1].rsplit("<", 1)[0]
+    
+    def normalizeContent(self, contentNode):
+        domNode = minidom.parseString(etree.tostring(contentNode)).documentElement
+        def f(node):
+            if node.nodeType == node.CDATA_SECTION_NODE:
+                return node.nodeValue
+            else:
+                return node.toxml()
         
+        contentStr = " ".join(map(f, domNode.childNodes))
+            
+#        if domNode.nodeType == domNode.CDATA_SECTION_NODE:
+#            return contentNode.text
+#        else:
+        return re.sub(r"\s+", " ", contentStr).strip()
+        
+    
 #    def initDataField(self, id, val):
 #        self.assign()
 
@@ -103,7 +123,8 @@ class DataModel(dict, ImperativeDataModel):
             if contentNode.get("expr"):
                 output = self.evalExpr("(%s)" % contentNode.get("expr"))
             elif len(contentNode) == 0:
-                output = contentNode.xpath("./text()")
+#                output = contentNode.xpath("./text()")
+                output = self.normalizeContent(contentNode)
             elif len(contentNode) > 0:
                 output = contentNode.xpath("./*")
             else:
@@ -169,13 +190,20 @@ class ECMAScriptDataModel(ImperativeDataModel):
         if contentNode != None:
             if contentNode.get("expr"):
                 output = self.evalExpr("(%s)" % contentNode.get("expr"))
-            elif len(contentNode) == 0:
-                output = contentNode.xpath("./text()")
-            elif len(contentNode) > 0:
-                output = minidom.parseString(etree.tostring(contentNode)).firstChild
+#            elif len(contentNode) == 0:
+#                output = self.normalizeContent(contentNode)
+#            elif len(contentNode) == 1:
+#                output = minidom.parseString(etree.tostring(contentNode)).firstChild.childNodes[0]
             else:
-                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
-                return 
+                try:
+                    innerXML = self.getInnerXML(contentNode)
+                    output = minidom.parseString(innerXML).documentElement
+                except:
+                    try:
+                        output = self.normalizeContent(contentNode)
+                    except:
+                        self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
+                 
         return output
     
     def evalExpr(self, expr):
@@ -235,7 +263,17 @@ class XPathDatamodel(object):
             val = data
         elif type(val) is list:
             for elem in val:
-                data.append(deepcopy(elem))
+                if etree.iselement(elem):
+                    data.append(deepcopy(elem))
+                else: #elem is text node
+                    #TODO: this is bad
+                    try:
+                        data[-1].tail = str(elem)
+                    except IndexError:
+                        if not data.text:
+                            data.text = str(elem)
+                        else:
+                            data.text += data.text + str(elem) 
             val = data
         else:
             val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
@@ -310,7 +348,7 @@ class XPathDatamodel(object):
             elif assignType == "delete":
                 elem.getparent().remove(elem)
             elif assignType == "addattribute":
-                elem.set(assignNode.get("attr"), str(val))
+                elem.set(assignNode.get("attr"), " ".join(val))
     
     def parseContent(self, contentNode):
         output = None
