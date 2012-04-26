@@ -257,6 +257,7 @@ class XPathDatamodel(object):
         loc_val = self[loc]
         if expr:
             val = self[expr]
+            if type(val) is not list: val = [val]
         else:
             val = assignNode.xpath("./*")
         
@@ -281,9 +282,10 @@ class XPathDatamodel(object):
 #                    elem.append(val)
 #                isinstance(val, list):
                 for e in val:
-                    elem.append(e) #TODO: what if e is a text node?
-                else:
-                    elem.text = str(val)
+                    if etree.iselement(e):
+                        elem.append(e)
+                    else:
+                        elem.text = str(e)
             elif assignType == "firstchild":
                 for e in reversed(val):
                     elem.insert(0, e)
