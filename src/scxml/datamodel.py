@@ -12,7 +12,7 @@ from lxml import etree, objectify
 from copy import deepcopy
 from scxml.datastructures import dictToXML
 from errors import ExecutableError, IllegalLocationError,\
-    AttributeEvalError, ExprEvalError, DataModelError
+    AttributeEvalError, ExprEvalError, DataModelError, AtomicError
 import logging
 import xml.dom.minidom as minidom
 import exceptions
@@ -273,7 +273,7 @@ class XPathDatamodel(object):
                         if not data.text:
                             data.text = str(elem)
                         else:
-                            data.text += data.text + str(elem) 
+                            data.text += str(elem) 
             val = data
         else:
             val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
@@ -303,7 +303,11 @@ class XPathDatamodel(object):
             elemExpr = "/".join(loc.split("/")[:-1])
             attrExpr = loc.split("/")[-1]
             for elem in self[elemExpr]:
-                elem.set(attrExpr[1:], str(val))
+                try:
+                    elem.set(attrExpr[1:], " ".join(val))
+                except TypeError:
+                    e = TypeError("Cannot assing to attribute: Illegal value %s" % val)
+                    raise ExecutableError(DataModelError(e), assignNode)
             return
         
         if not len(loc_val):

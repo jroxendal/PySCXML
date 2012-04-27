@@ -191,6 +191,8 @@ class Compiler(object):
                 elif node_name == "assign":
                     try:
                         self.dm.assign(node)
+                    except CompositeError:
+                        raise
                     except Exception, e:
                         raise ExecutableError(AtomicError(e), node)
                 elif node_name == "script":
