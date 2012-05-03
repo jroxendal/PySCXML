@@ -66,7 +66,14 @@ class ImperativeDataModel(object):
 #            self.execExpr(assignNode.get("location") + " = " + expression)
 #        except ExprEvalError, e:
 #            raise ExecutableError(e, assignNode)
-        self[assignNode.get("location")] = self.parseContent(assignNode)
+
+        if assignNode.get("expr"):
+            self.evalExpr(assignNode.get("location") + "= %s" % assignNode.get("expr"))
+        else:
+            self[assignNode.get("location")] = self.parseContent(assignNode)
+#        print "assign", val
+#        self[assignNode.get("location")] = self.parseContent(assignNode)
+#        print self[assignNode.get("location")] 
     
     def getInnerXML(self, node):
         return etree.tostring(node).split(">", 1)[1].rsplit("<", 1)[0]
@@ -118,6 +125,13 @@ class DataModel(dict, ImperativeDataModel):
     def isLegalName(self, name):
         #TODO: what about reserved names?
         return bool(re.match("[a-zA-Z_][0-9a-zA-Z_]*", name))
+    
+    def assign(self, assignNode):
+        if not self.hasLocation(assignNode.get("location")):
+            msg = "The location expression '%s' was not instantiated in the datamodel." % assignNode.get("location")
+            raise ExecutableError(IllegalLocationError(msg), assignNode)
+        
+        self[assignNode.get("location")] = self.parseContent(assignNode)
     
     def parseContent(self, contentNode):
         output = None
@@ -186,13 +200,27 @@ class ECMAScriptDataModel(ImperativeDataModel):
     def isLegalName(self, name):
         return bool(re.match("[a-zA-Z_$][0-9a-zA-Z_$]*", name))
     
+    def assign(self, assignNode):
+        if not self.hasLocation(assignNode.get("location")):
+            msg = "The location expression '%s' was not instantiated in the datamodel." % assignNode.get("location")
+            raise ExecutableError(IllegalLocationError(msg), assignNode)
+        
+
+        if assignNode.get("expr"):
+            self.evalExpr(assignNode.get("location") + "= %s" % assignNode.get("expr"))
+        else:
+            self[assignNode.get("location")] = self.parseContent(assignNode)
+#        print "assign", val
+#        self[assignNode.get("location")] = self.parseContent(assignNode)
+#        print self[assignNode.get("location")] 
+    
     
     def parseContent(self, contentNode):
         output = None
         
         if contentNode != None:
             if contentNode.get("expr"):
-                output = self.evalExpr("(%s)" % contentNode.get("expr"))
+                output = self.evalExpr("%s" % contentNode.get("expr"))
 #            elif len(contentNode) == 0:
 #                output = self.normalizeContent(contentNode)
 #            elif len(contentNode) == 1:
