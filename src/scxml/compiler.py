@@ -218,8 +218,6 @@ class Compiler(object):
                             self.dm[node.get("item")] = item
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
-                        except:
-                            raise
                         try:
                             if node.get("index"):
                                 self.dm[node.get("index")] = index
@@ -569,8 +567,9 @@ class Compiler(object):
                 s = State(node.get("id"), None, n)
                 s.initial = self.parseInitial(node)
                 self.doc.name = node.get("name", "")
-                if "name" in node.attrib:
-                    self.dm["_name"] = node.get("name")
+                self.dm.initDataField("_name", node.get("name", ""))
+#                if "name" in node.attrib:
+#                    self.dm["_name"] = node.get("name")
                 for scriptChild in node.findall(prepend_ns("script")):
                     src = scriptChild.text or self.script_src.get(scriptChild, "") or ""
 #                        except URLError, e:

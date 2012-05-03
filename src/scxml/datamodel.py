@@ -47,6 +47,9 @@ def exceptionFormatter(f):
 class ImperativeDataModel(object):
     '''A base class for the python and ecmascript datamodels'''
     
+#    def __init__(self):
+#        self["_x"] = {}
+    
     def initDataField(self, id, value):
         self[id] = value
         
@@ -222,6 +225,7 @@ class XPathDatamodel(object):
         self.logger = logging.getLogger("pyscxml.XPathDatamodel")
         #data context
         self.c = {"_empty" : objectify.Element("empty")}
+        self["_x"] = {}
     
         
     def __getitem__(self, key):
@@ -235,7 +239,10 @@ class XPathDatamodel(object):
             expr = key
         
         try:
-            return self.c[field].xpath(expr or ".", **self.c)
+            if etree.iselement(self.c[field]):
+                return self.c[field].xpath(expr or ".", **self.c)
+            else:
+                return self.c[field]
         except KeyError:
             raise DataModelError("No such data field '%s'." % key)
         except Exception, e:
@@ -244,11 +251,11 @@ class XPathDatamodel(object):
     def __setitem__(self, key, val):
 #        print "setitem", key, val
         if type(val) == dict:
-            val = dictToXML(val)
+            val = dictToXML(val, root="data", root_attrib={"id" : key})
         elif type(val).__name__ == "Event":
-            val = dictToXML(val.__dict__)
+            val = dictToXML(val.__dict__, root="data", root_attrib={"id" : key})
         try:
-            self.c[key] = deepcopy(val)
+            self.c[key] = val
         except KeyError:
             raise DataModelError("You can't assign to the name '%s'." % key)
         except:
@@ -296,6 +303,7 @@ class XPathDatamodel(object):
         if expr:
             val = self[expr]
             if type(val) is not list: val = [val]
+            val = map(deepcopy, val)
         else:
             val = assignNode.xpath("./*")
         
@@ -352,7 +360,7 @@ class XPathDatamodel(object):
             elif assignType == "delete":
                 elem.getparent().remove(elem)
             elif assignType == "addattribute":
-                elem.set(assignNode.get("attr"), " ".join(val))
+                elem.set(assignNode.get("attr"), " ".join(map(str,val)))
     
     def parseContent(self, contentNode):
         output = None
@@ -375,7 +383,9 @@ class XPathDatamodel(object):
         return self[expr]
         
     def execExpr(self, expr):
-        raise Exception("multiline expressions can't be executed on the xpath datamodel.")
+#        TODO: should fail on exmode=strict
+        self.logger.warn("The script element is ignored by the xpath datamodel.")
+#        raise DataModelError("multiline expressions can't be executed on the xpath datamodel.")
     
 if __name__ == '__main__':
 #    import PyV8 #@UnresolvedImport

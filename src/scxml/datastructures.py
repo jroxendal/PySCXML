@@ -29,10 +29,10 @@ class OrderedSet(list):
         self.__init__()
     
     
-def dictToXML(dictionary, root="root"):
+def dictToXML(dictionary, root="root", root_attrib={}):
     '''takes a python dictionary and returns an xml representation as an lxml Element.'''
     xml = etree.TreeBuilder()
-    xml.start(root, {})
+    xml.start(root, root_attrib)
     lastopened = None
     def parse(d):
         global lastopened
