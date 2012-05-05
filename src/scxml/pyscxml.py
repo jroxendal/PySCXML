@@ -31,6 +31,7 @@ from messaging import get_path
 from scxml import datamodel
 from scxml.datamodel import XPathDatamodel
 from lxml import etree
+import sys
 
 def default_logfunction(label, msg):
     label = label or ""
@@ -357,6 +358,10 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.NOTSET)
     
+    if len(sys.argv) > 1:
+        sm = StateMachine(sys.argv[1])
+        sm.start()
+        sys.exit()
     
 #    sm = StateMachine("assertions_passed/test192.scxml")
 #    sm = StateMachine("multi_script.xml")

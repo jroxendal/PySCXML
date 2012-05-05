@@ -257,7 +257,7 @@ class XPathDatamodel(object):
     
         
     def __getitem__(self, key):
-        if key.startswith("$"):
+        if key.startswith("$") and not "and" in key and not "or" in key:
             field = key.split("/")[0][1:]
             if field in hidden:
                 field = "_" + field
@@ -278,6 +278,8 @@ class XPathDatamodel(object):
     
     def __setitem__(self, key, val):
 #        print "setitem", key, val
+        #TODO: fix hiding of _event
+        if key == "__event": key = "_event"
         if type(val) == dict:
             val = dictToXML(val, root="data", root_attrib={"id" : key})
         elif type(val).__name__ == "Event":
@@ -287,8 +289,8 @@ class XPathDatamodel(object):
         except KeyError:
             raise DataModelError("You can't assign to the name '%s'." % key)
         except:
-            print "__setitem__ failed for key: %s and value: %s." % (key, val)
-#            self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
+#            print "__setitem__ failed for key: %s and value: %s." % (key, val)
+            self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
     def initDataField(self, id, val):
         data = etree.Element("data")
@@ -446,7 +448,7 @@ if __name__ == '__main__':
     d.assign(assign)
     d.assign(objectify.fromstring('''<assign location="$cart//book/@num" expr="'lololo'" />'''))
     
-    print objectify.tostring(d.c["cart"])
+#    print objectify.tostring(d.c["cart"])
     
     sys.exit()
     

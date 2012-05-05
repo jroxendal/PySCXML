@@ -12,7 +12,7 @@ This file is part of pyscxml.
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with PySCXML.  If not, see <http://www.gnu.org/licenses/>.
+    along with PySCXML. If not, see <http://www.gnu.org/licenses/>.
     
     @author Johan Roxendal
     @contact: johan@roxendal.com
@@ -76,6 +76,7 @@ class Compiler(object):
         # used by data passed to invoked processes
         self.initData = {}
         self.script_src = {}
+        self.datamodel = None
 #        self.sourceline_mapping = {}
         
         self.log_function = None
@@ -205,8 +206,9 @@ class Compiler(object):
                 elif node_name == "if":
                     self.parseIf(node)
                 elif node_name == "foreach":
+                    startIndex = 0 if self.datamodel != "ecmascript" else 1 
                     try:
-                        itr = enumerate(self.getExprValue(node.get("array"), True))
+                        itr = enumerate(self.getExprValue(node.get("array"), True), startIndex)
                     except ExprEvalError, e:
                         raise AttributeEvalError(e, node, "array")
                     except TypeError, e:
@@ -568,8 +570,6 @@ class Compiler(object):
                 s.initial = self.parseInitial(node)
                 self.doc.name = node.get("name", "")
                 self.dm.initDataField("_name", node.get("name", ""))
-#                if "name" in node.attrib:
-#                    self.dm["_name"] = node.get("name")
                 for scriptChild in node.findall(prepend_ns("script")):
                     src = scriptChild.text or self.script_src.get(scriptChild, "") or ""
 #                        except URLError, e:
@@ -836,37 +836,16 @@ class Compiler(object):
         for node in datalist:
             key = node.get("id")
             value = None
-            if node.get("expr"):
-                try:
-                    value = self.getExprValue("(%s)" % node.get("expr"), True)
-                except Exception, e:
-                    self.raiseError("error.execution", AttributeEvalError(e, node, "expr"))
-            elif node.get("src"):
+            
+            if node.get("src"):
                 value = dl_mapping[node]
                 if isinstance(value, Exception):
                     self.logger.error("Data src not found : '%s'. \n\t%s" % (node.get("src"), value))
                     value = None
-#                    raise AttributeEvalError(value, node, "src")
+            elif node.get("expr") or len(node) > 0 or node.text:
+                value = self.parseContent(node)
             
-            elif len(node) == 0:
-                value = node.xpath("./text()")
-            elif len(node) > 0:
-                value = node.xpath("./*")
             
-#            elif len(node): # has children
-##                value = etree.tostring(node)
-#                if isinstance(self.dm, XPathDatamodel):
-#                    value = map(deepcopy, node)
-#                        
-##                    value = deepcopy(node[0]) 
-#                
-#            #TODO: I should look for all whitespace chars when stripping.
-#            elif node.text and node.text.strip(" "):
-#                try:
-#                    value = self.dm.evalExpr(node.text)
-#                except:
-#                    raise ParseError("Parsing of inline data failed for data tag on line %s." % node.sourceline)
-                
             
             #TODO: should we be overwriting values here? see test 226.
 #            if not self.dm.get(key): self.dm[key] = value
@@ -903,13 +882,15 @@ class Compiler(object):
     
     def xml_from_string(self, xmlstr):
 #        f = FileWrapper(StringIO(xmlstr))
-        root = None
-        for event, elem in etree.iterparse(StringIO(xmlstr), events=("start", ), remove_comments=True):
-            if root is None: root = elem
+#        root = None
+#        for event, elem in etree.iterparse(StringIO(xmlstr), events=("start", ), remove_comments=True):
+#            if root is None: root = elem
 #            setattr(elem, "sourceline", f.sourceline)
 #            elem.sourceline = f.sourceline
 #            self.sourceline_mapping[elem] = f.sourceline
-        return root
+        parser = etree.XMLParser(strip_cdata=False,remove_comments=True)
+        tree = etree.XML(xmlstr, parser)
+        return tree
     
         
 
