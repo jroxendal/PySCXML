@@ -259,8 +259,8 @@ class XPathDatamodel(object):
     def __getitem__(self, key):
         if key.startswith("$") and not "and" in key and not "or" in key:
             field = key.split("/")[0][1:]
-            if field in hidden:
-                field = "_" + field
+#            if field in hidden:
+#                field = "_" + field
             expr = "/".join(["."] + key.split("/")[1:])
         else: # for numbers and strings
             field = "_empty"
@@ -277,13 +277,17 @@ class XPathDatamodel(object):
             raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
     
     def __setitem__(self, key, val):
-#        print "setitem", key, val
         #TODO: fix hiding of _event
         if key == "__event": key = "_event"
         if type(val) == dict:
             val = dictToXML(val, root="data", root_attrib={"id" : key})
         elif type(val).__name__ == "Event":
-            val = dictToXML(val.__dict__, root="data", root_attrib={"id" : key})
+            eventxml = dictToXML(val.__dict__, root="data", root_attrib={"id" : key})
+            #TODO: content broken
+            for child in eventxml.find("data"):
+                child.set("id", child.tag)
+                child.tag = "data"
+            val = eventxml 
         try:
             self.c[key] = val
         except KeyError:

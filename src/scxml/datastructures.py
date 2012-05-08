@@ -68,6 +68,7 @@ if __name__ == '__main__':
           "foo" : {"inner" : etree.fromstring("<elem/>")}
          }
     from eventprocessor import Event
-    e = Event("hello", data={"d1" : etree.fromstring("<elem/>")})
-    print e.__dict__
-    print etree.tostring( dictToXML(e.__dict__))
+#    e = Event("hello", data={"d1" : etree.fromstring("<elem/>")})
+    e = Event("hello", data={"d1" : 123})
+#    print e.__dict__
+    print etree.tostring( dictToXML({"p1" : "val"}, root="data", root_attrib={"id" : "key"}), pretty_print=True)

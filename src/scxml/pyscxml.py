@@ -365,9 +365,8 @@ if __name__ == "__main__":
     
 #    sm = StateMachine("assertions_passed/test192.scxml")
 #    sm = StateMachine("multi_script.xml")
-    sm = StateMachine("assertions_ecmascript/test452.scxml")
 
-#    sm = StateMachine("xpath_test.xml")
+    sm = StateMachine("xpath_test.xml")
     sm.start()
     
     listener = '''

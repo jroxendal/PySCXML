@@ -206,7 +206,7 @@ class Compiler(object):
                 elif node_name == "if":
                     self.parseIf(node)
                 elif node_name == "foreach":
-                    startIndex = 0 if self.datamodel != "ecmascript" else 1 
+                    startIndex = 0 if self.datamodel != "xpath" else 1 
                     try:
                         itr = enumerate(self.getExprValue(node.get("array"), True), startIndex)
                     except ExprEvalError, e:
@@ -252,7 +252,6 @@ class Compiler(object):
                         sm.compiler.initData = data
                         sm.start_threaded()
                         timeout = self.parseCSSTime(self.parseAttr(node, "timeout", "0s"))
-#                        timeout = self.parseCSSTime(node.get("timeout", "0s"))
                         if timeout:
                             def cancel():
                                 if not sm.isFinished():
@@ -343,20 +342,6 @@ class Compiler(object):
     
     def parseContent(self, contentNode):
         return self.dm.parseContent(contentNode)
-        
-#        output = None
-#        
-#        if contentNode != None:
-#            if contentNode.get("expr"):
-#                output = self.getExprValue("(%s)" % contentNode.get("expr"), True)
-#            elif len(contentNode) == 0:
-#                output = contentNode.xpath("./text()")
-#            elif len(contentNode) > 0:
-#                output = contentNode.xpath("./*")
-#            else:
-#                self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
-#                return 
-#        return output
     
     def parseCSSTime(self, timestr):
         n, unit = re.search("(\d+)(\w+)", timestr).groups()
