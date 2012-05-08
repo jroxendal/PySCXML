@@ -18,7 +18,7 @@
     </state>
 
     <state id="s1">
-        <transition cond="$var1/data/param1=1" target="pass" />
+        <transition cond="$var1/data/data[@id='param1']=1" target="pass" />
     </state>
 
     <final id="pass">

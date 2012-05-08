@@ -363,10 +363,12 @@ if __name__ == "__main__":
         sm.start()
         sys.exit()
     
-#    sm = StateMachine("assertions_passed/test192.scxml")
+    sm = StateMachine("assertions_ecmascript/test453.scxml")
 #    sm = StateMachine("multi_script.xml")
 
-    sm = StateMachine("xpath_test.xml")
+#    sm = StateMachine("xpath_test.xml")
+#    sm = StateMachine("xpath_basic.xml")
+
     sm.start()
     
     listener = '''
