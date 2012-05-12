@@ -364,21 +364,7 @@ if __name__ == "__main__":
         sm.start()
         sys.exit()
     
-#    sm = StateMachine("assertions_ecmascript/test453.scxml")
-
-    xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
-        <datamodel>
-            <data id="doc" src="file:test540.txt" />
-        </datamodel>
-        <state>
-            <onentry>
-                <log expr="$doc/text()" />
-            </onentry>
-        </state>
-    </scxml>
-    '''
-    sm = StateMachine(xml)
+    sm = StateMachine("assertions_ecmascript/test277.scxml")
     sm.start()
     
     

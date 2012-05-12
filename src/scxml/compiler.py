@@ -800,7 +800,8 @@ class Compiler(object):
             try:
                 self.setDataList(tree.find(prepend_ns("datamodel")))
             except Exception, e:
-                raise ParseError("Parsing of data tag caused document startup to fail. \n%s" % e)
+                self.raiseError("error.execution", e)
+#                raise ParseError("Parsing of data tag caused document startup to fail. \n%s" % e)
             
             
         if self.doc.binding == "early":
