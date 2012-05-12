@@ -32,6 +32,7 @@ from scxml import datamodel
 from scxml.datamodel import XPathDatamodel
 from lxml import etree
 import sys
+import time
 
 def default_logfunction(label, msg):
     label = label or ""
@@ -366,10 +367,21 @@ if __name__ == "__main__":
     sm = StateMachine("assertions_ecmascript/test453.scxml")
 #    sm = StateMachine("multi_script.xml")
 
-#    sm = StateMachine("xpath_test.xml")
-#    sm = StateMachine("xpath_basic.xml")
-
+    import threading
+#    sm = StateMachine("microonde.xml")
+    sm = StateMachine("macrostep_test.xml")
     sm.start()
+#    sm.start_threaded()
+#    t = threading.Thread(target=sm.start)
+#    t.start()
+#    sm.start()
+#    print "after start"
+#    sm.send("arret")
+#    t.join()
+#    print "after join"
+#    eventlet.greenthread.sleep()
+#    with StateMachine("microonde.xml") as sm:
+#        sm.send("arret")
     
     listener = '''
         <scxml>

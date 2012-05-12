@@ -90,7 +90,8 @@ class Interpreter(object):
 
                 if enabledTransitions:
                     self.microstep(enabledTransitions)
-                eventlet.greenthread.sleep(seconds=0)
+#                eventlet.greenthread.sleep()
+            eventlet.greenthread.sleep()
                 
                     
             

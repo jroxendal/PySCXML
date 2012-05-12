@@ -38,7 +38,7 @@ class RegressionTest(unittest.TestCase):
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
                                "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
                                "internal_transition.xml", "binding.xml", "finalize.xml",
-                               "internal_parallel.xml", "xpath_basic.xml"]
+                               "internal_parallel.xml"] #, "xpath_basic.xml"
 #        logging.basicConfig(level=logging.NOTSET)
         for name in runToCompletionList:
             print "Running " + name 
