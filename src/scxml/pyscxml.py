@@ -364,13 +364,25 @@ if __name__ == "__main__":
         sm.start()
         sys.exit()
     
-    sm = StateMachine("assertions_ecmascript/test453.scxml")
-#    sm = StateMachine("multi_script.xml")
+#    sm = StateMachine("assertions_ecmascript/test453.scxml")
 
-    import threading
-#    sm = StateMachine("microonde.xml")
-    sm = StateMachine("macrostep_test.xml")
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
+        <datamodel>
+            <data id="doc" src="file:test540.txt" />
+        </datamodel>
+        <state>
+            <onentry>
+                <log expr="$doc/text()" />
+            </onentry>
+        </state>
+    </scxml>
+    '''
+    sm = StateMachine(xml)
     sm.start()
+    
+    
+    
 #    sm.start_threaded()
 #    t = threading.Thread(target=sm.start)
 #    t.start()
