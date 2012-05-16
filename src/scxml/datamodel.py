@@ -252,29 +252,33 @@ class XPathDatamodel(object):
     def __init__(self):
         self.logger = logging.getLogger("pyscxml.XPathDatamodel")
         #data context
-        self.c = {"_empty" : objectify.Element("empty")}
+#        self.c = {"_empty" : objectify.Element("empty")}
+        self.root = etree.Element("root")
         self["_x"] = {}
+        
     
         
     def __getitem__(self, key):
-        if key.startswith("$") and not "and" in key and not "or" in key:
-            field = key.split("/")[0][1:]
+#        if key.startswith("$") and not "and" in key and not "or" in key:
+#            field = key.split("/")[0][1:]
 #            if field in hidden:
 #                field = "_" + field
-            expr = "/".join(["."] + key.split("/")[1:])
-        else: # for numbers and strings
-            field = "_empty"
-            expr = key
+#            expr = "/".join(["."] + key.split("/")[1:])
+#        else: # for numbers and strings
+#            field = "_empty"
+#            expr = key
         
-        try:
-            if etree.iselement(self.c[field]):
-                return self.c[field].xpath(expr or ".", **self.c)
-            else:
-                return self.c[field]
-        except KeyError:
-            raise DataModelError("No such data field '%s'." % key)
-        except Exception, e:
-            raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
+#        try:
+        data_dict = dict([(node.get("id"), node) for node in list(self.root)])
+        return self.root.xpath(key, **data_dict)
+#            if etree.iselement(key):
+#                return self.c[field].xpath(expr or ".", **self.c)
+#            else:
+#                return self.c[field]
+#        except KeyError:
+#            raise DataModelError("No such data field '%s'." % key)
+#        except Exception, e:
+#            raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
     
     def __setitem__(self, key, val):
         #TODO: fix hiding of _event
@@ -288,8 +292,14 @@ class XPathDatamodel(object):
                 child.set("id", child.tag)
                 child.tag = "data"
             val = eventxml 
+        else:
+            val = etree.fromstring("<data id='%s'>%s</data>" % (key, val))
         try:
-            self.c[key] = val
+#            self.c[key] = val
+            current = self.root.find("data[@id='%s']" % key)
+            if current is not None:
+                self.root.remove(current)
+            self.root.append(val)
         except KeyError:
             raise DataModelError("You can't assign to the name '%s'." % key)
         except:
@@ -297,28 +307,31 @@ class XPathDatamodel(object):
             self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
     def initDataField(self, id, val):
-        data = etree.Element("data")
-        data.set("id", id)
-        if etree.iselement(val):
-            data.append(deepcopy(val))
-            val = data
-        elif type(val) is list:
-            for elem in val:
-                if etree.iselement(elem):
-                    data.append(deepcopy(elem))
-                else: #elem is text node
-                    #TODO: this is bad
-                    try:
-                        data[-1].tail = str(elem)
-                    except IndexError:
-                        if not data.text:
-                            data.text = str(elem)
-                        else:
-                            data.text += str(elem) 
-            val = data
-        else:
-            val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
         self[id] = val
+        return
+        
+#        data = etree.Element("data")
+#        data.set("id", id)
+#        if etree.iselement(val):
+#            data.append(deepcopy(val))
+#            val = data
+#        elif type(val) is list:
+#            for elem in val:
+#                if etree.iselement(elem):
+#                    data.append(deepcopy(elem))
+#                else: #elem is text node
+#                    #TODO: this is bad
+#                    try:
+#                        data[-1].tail = str(elem)
+#                    except IndexError:
+#                        if not data.text:
+#                            data.text = str(elem)
+#                        else:
+#                            data.text += str(elem) 
+#            val = data
+#        else:
+#            val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
+#        self[id] = val
     
     def hasLocation(self, loc):
         try:
@@ -440,6 +453,9 @@ if __name__ == '__main__':
     </cds>
   </myCart>'''))
     d.initDataField("val", "123")
+    
+    d["val"] = 456
+    
     print d["$val"]
     
 #    assign = objectify.fromstring('''<assign location="$cart/myCart/books/book[1]/title"  expr="'My favorite book'"/>''')
@@ -460,61 +476,4 @@ if __name__ == '__main__':
 #    d = DataModel()
     
     
-    d["__event"] = Event("yeah")
-    print "scxml" ==  d.evalExpr("_event").origintype
     
-#    ctxt = PyV8.JSContext()     
-#    ctxt.enter()                
-#    ctxt.eval("""function f() {
-#                throw "err";
-#            }""")
-#    ctxt.eval("function g() {f();}")
-#    
-#    try:
-#        ctxt.eval("g();")
-#    except Exception, e:
-#        print sys.exc_info()[1]
-    
-    
-    sys.exit()
-    try:
-        d.evalExpr("g()")
-    except Exception, e:
-        print e
-#        tb_list = traceback.extract_tb(sys.exc_info()[2])
-#        print tb_list
-#        print dir(e), e.args, e.message
-#        with JSContext(d.g) as c:
-#            print e
-        
-        
-    
-#    print d["hello"]
-#    d.c.locals["hello"] = None
-#    
-#    print d.hasLocation("hello")
-#    print d.hasLocation("lol")
-    
-#    d = DataModel()
-    
-    
-#    print d.hasLocation("lol")
-    
-#    c = PyV8.JSContext()
-#    c.enter()
-    
-    
-#    def add():
-#        d["thread"] = 1234
-#            
-#    t = Thread(target=add)
-#    with JSLocker():
-#        t.start()
-    
-    
-#    t.join()
-#    print d["thread"]
-    
-#    d["f"] = d.evalExpr("1/0")
-#    with JSContext(d.g) as c:
-#        print c.eval("throw 'oops'")

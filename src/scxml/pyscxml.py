@@ -364,7 +364,7 @@ if __name__ == "__main__":
         sm.start()
         sys.exit()
     
-    sm = StateMachine("assertions_ecmascript/test277.scxml")
+    sm = StateMachine("xpath_test.xml")
     sm.start()
     
     

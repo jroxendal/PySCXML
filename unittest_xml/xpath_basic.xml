@@ -18,6 +18,9 @@
     </state>
 
     <state id="s1">
+        <onentry>
+            <log label="s1" expr="$_event" />
+        </onentry>
         <transition cond="$var1/data/data[@id='param1']=1" target="pass" />
     </state>
 

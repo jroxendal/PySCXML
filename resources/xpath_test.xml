@@ -1,50 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- test that foreach works correctly, iterating over node set in document 
-    order. This tests assertions 483-485 -->
-<scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" 
-    version="1.0" datamodel="xpath">
+<scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
     <datamodel>
-        <data id="val" expr="123" />
-        <data id="val2">
-            <sub2 xmlns="">456</sub2>
-            <sub2 xmlns="">456</sub2>
-        </data>
-        <data id="val3">
-            <sub3 xmlns="">
-                <v>9</v>
-                <v>8</v>
-                <v>7</v>
-            </sub3>
-        </data>
-        <data id="cart">
-            <myCart xmlns="">
-                <books>
-                    <book>
-                        <title>The Zen Mind</title>
-                    </book>
-                    <book>
-                        <title>Freakonomics</title>
-                    </book>
-                </books>
-                <cds>
-                    <cd name="Something" />
-                </cds>
-            </myCart>
-        </data>
+        <data id="Var1" expr="0" />
     </datamodel>
-    
-    <state id="s1">
+    <state>
         <onentry>
-            <log expr="'sending'"></log>
-            <send event="e" >
-                <content expr="$val2/*" />
-            </send>
+            <assign location="$Var1" expr="$Var1 + 1" />
         </onentry>
-        <transition event="e" target="f">
-            <log expr="$_event" />
-        </transition>
-    </state>
         
-    <final id="f" />
+        <transition target="f" cond="$_event = 1" />
+    </state>
 
+    <final id="f">
+        <onentry>
+            <log labal="final" expr="*" />
+        </onentry>
+    </final>
 </scxml>
