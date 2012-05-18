@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- we test exmode=strict.    The  processor must refect this document and should return an error to the 
+calling context.  If the document enters the initial state we fail.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" foo="bar" exmode="strict" initial="s0" datamodel="xpath">
+
+     
+<state id="s0">
+  <transition target="fail"/>
+</state>
+ 
+
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+</scxml>

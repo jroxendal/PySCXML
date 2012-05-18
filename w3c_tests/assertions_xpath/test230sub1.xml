@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- when invoked, send childToParent to parent.  If it is forwarded back to us, print out its
+fields and terminate.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath">
+
+<state id="s0">
+   <onentry>
+    <send target="#_parent" event="childToParent"/> 
+    <send event="timeout" delay="2s"/>
+    </onentry> 
+    
+  <transition event="childToParent" target="final">
+    <log label="name is " expr="_event/name"/>
+    <log label="type is " expr="_event/type"/>
+    <log label="sendid is " expr="_event/sendid"/>
+    <log label="origin is " expr="_event/origin"/>
+    <log label="origintype is " expr="_event/origintype"/>
+    <log label="invokeid is " expr="_event/invokeid"/>
+    <log label="data is " expr="_event/data"/>
+    </transition>
+  <transition event="*" target="final"/>  
+  </state>
+  
+<final id="final"/>
+
+</scxml>
