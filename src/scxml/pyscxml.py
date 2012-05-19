@@ -102,9 +102,9 @@ class StateMachine(object):
         self.doc = self.compiler.parseXML(self._open_document(source), self.interpreter)
         self.interpreter.dm = self.doc.datamodel
         self.datamodel = self.doc.datamodel
-#        self.doc.datamodel.initDataField("_x", "")
         self.doc.datamodel["_x"] = {"self" : self}
-        self.doc.datamodel.initDataField("_sessionid", self.sessionid) 
+        self.doc.datamodel.self = self
+        self.doc.datamodel["_sessionid"] = self.sessionid 
         self.doc.datamodel.sessionid = self.sessionid 
         self.name = self.doc.name
         self.is_response = self.compiler.is_response
@@ -364,7 +364,13 @@ if __name__ == "__main__":
         sm.start()
         sys.exit()
     
-    sm = StateMachine("xpath_test.xml")
+    '''
+    test411.scxml
+test413.scxml
+test467.scxml
+'''
+    
+    sm = StateMachine("assertions_xpath/test413.scxml")
     sm.start()
     
     

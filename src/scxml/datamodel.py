@@ -50,8 +50,6 @@ class ImperativeDataModel(object):
 #    def __init__(self):
 #        self["_x"] = {}
     
-    def initDataField(self, id, value):
-        self[id] = value
         
     def assign(self, assignNode):
         if not self.hasLocation(assignNode.get("location")):
@@ -94,8 +92,6 @@ class ImperativeDataModel(object):
         return re.sub(r"\s+", " ", contentStr).strip()
         
     
-#    def initDataField(self, id, val):
-#        self.assign()
 
 class DataModel(dict, ImperativeDataModel):
     '''The default Python Datamodel'''    
@@ -248,28 +244,28 @@ class ECMAScriptDataModel(ImperativeDataModel):
     def execExpr(self, expr):
         self.evalExpr(expr)
 
+
 class XPathDatamodel(object):
     def __init__(self):
         self.logger = logging.getLogger("pyscxml.XPathDatamodel")
-        #data context
-#        self.c = {"_empty" : objectify.Element("empty")}
-        self.root = etree.Element("root")
-        self["_x"] = {}
+        
+        # we need a reference to the datamodel in order to implement In()
+        class datamodel(etree.ElementBase): pass
+        
+        self.root = datamodel("")
+        self.root._parent = self
+        
+#        self["_x"] = {}
+        
+        # for when we need to two xpath variables to refer to the same element.
+        self.references = {}
         
     
         
     def __getitem__(self, key):
-#        if key.startswith("$") and not "and" in key and not "or" in key:
-#            field = key.split("/")[0][1:]
-#            if field in hidden:
-#                field = "_" + field
-#            expr = "/".join(["."] + key.split("/")[1:])
-#        else: # for numbers and strings
-#            field = "_empty"
-#            expr = key
-        
-#        try:
         data_dict = dict([(node.get("id"), node) for node in list(self.root)])
+        data_dict.update(self.references)
+        
         return self.root.xpath(key, **data_dict)
 #            if etree.iselement(key):
 #                return self.c[field].xpath(expr or ".", **self.c)
@@ -292,6 +288,14 @@ class XPathDatamodel(object):
                 child.set("id", child.tag)
                 child.tag = "data"
             val = eventxml 
+        elif type(val) is list:
+            data = etree.fromstring("<data id='%s' />" % key)
+            for elem in val:
+                data.append(elem)
+            val = data
+#        elif etree.iselement(val):
+#            val = 
+#            val = deepcopy(val)
         else:
             val = etree.fromstring("<data id='%s'>%s</data>" % (key, val))
         try:
@@ -306,32 +310,9 @@ class XPathDatamodel(object):
 #            print "__setitem__ failed for key: %s and value: %s." % (key, val)
             self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
-    def initDataField(self, id, val):
-        self[id] = val
-        return
-        
-#        data = etree.Element("data")
-#        data.set("id", id)
-#        if etree.iselement(val):
-#            data.append(deepcopy(val))
-#            val = data
-#        elif type(val) is list:
-#            for elem in val:
-#                if etree.iselement(elem):
-#                    data.append(deepcopy(elem))
-#                else: #elem is text node
-#                    #TODO: this is bad
-#                    try:
-#                        data[-1].tail = str(elem)
-#                    except IndexError:
-#                        if not data.text:
-#                            data.text = str(elem)
-#                        else:
-#                            data.text += str(elem) 
-#            val = data
-#        else:
-#            val = etree.fromstring("<data id='%s'>%s</data>" % (id, val))
-#        self[id] = val
+    def __contains__(self, key):
+        return self.root.find("data[@id='%s']" % key) is not None
+    
     
     def hasLocation(self, loc):
         try:
@@ -359,7 +340,11 @@ class XPathDatamodel(object):
             attrExpr = loc.split("/")[-1]
             for elem in self[elemExpr]:
                 try:
-                    elem.set(attrExpr[1:], " ".join(val))
+                    assert not any(map(etree.iselement, val))
+                    elem.set(attrExpr[1:], " ".join(map(str, val)))
+                except AssertionError:
+                    e = TypeError("Cannot assing to Element to attribute: Illegal type %s" % val)
+                    raise ExecutableError(DataModelError(e), assignNode)
                 except TypeError:
                     e = TypeError("Cannot assing to attribute: Illegal value %s" % val)
                     raise ExecutableError(DataModelError(e), assignNode)
@@ -439,7 +424,7 @@ if __name__ == '__main__':
     
     d = XPathDatamodel()
     
-    d.initDataField("cart", objectify.fromstring('''<myCart xmlns="">
+    d["cart"] = etree.fromstring('''<myCart xmlns="">
     <books>
       <book>
         <title>The Zen Mind</title>
@@ -451,12 +436,11 @@ if __name__ == '__main__':
     <cds>
       <cd name="Something"/>
     </cds>
-  </myCart>'''))
-    d.initDataField("val", "123")
+  </myCart>''')
     
-    d["val"] = 456
+#    d["val"] = 456
     
-    print d["$val"]
+    print d["$cart"]
     
 #    assign = objectify.fromstring('''<assign location="$cart/myCart/books/book[1]/title"  expr="'My favorite book'"/>''')
     assign = objectify.fromstring('''<assign type="addattribute" location="$cart//book" expr="'hej'" attr="name">

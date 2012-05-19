@@ -43,7 +43,6 @@ class RegressionTest(unittest.TestCase):
         for name in runToCompletionList:
             print "Running " + name 
             sm = StateMachine(name)
-            sm.name = name
             sm.start()
             self.assert_(sm.isFinished())
         
@@ -136,11 +135,21 @@ class RegressionTest(unittest.TestCase):
         print "completed %s w3c ecmascript tests" % len(filelist)
         if failed:
             self.fail("Failed tests:\n" + "\n".join(failed))
-    
+        
+    def testW3cXpath(self):
+        os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_xpath/"
+        filelist = [f for f in glob.glob(os.environ["PYSCXMLPATH"] + "/*xml") if "sub" not in f]
+        print "Running W3C xpath tests..."
+        failed = parallelize(filelist)
+        print "completed %s w3c xpath tests" % len(filelist)
+        if failed:
+            self.fail("Failed tests:\n" + "\n".join(failed))
+        
     def runTest(self):
         self.testInterpreter()
         self.testW3cEcma()
         self.testW3cPython()
+        self.testW3cXpath()
         
 
 class W3CTester(StateMachine):
@@ -160,10 +169,10 @@ def runtest(doc_uri):
     xml = open(doc_uri).read()
     try:
         sm = W3CTester(xml)
-        sm.name = doc_uri
 
         with eventlet.timeout.Timeout(12):
             sm.start()
+            
         
         didPass = sm.didPass
     

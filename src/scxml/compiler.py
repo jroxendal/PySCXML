@@ -25,7 +25,7 @@ from functools import partial
 from messaging import UrlGetter, get_path
 from louie import dispatcher
 from urllib2 import URLError
-from eventlet.green.urllib2 import urlopen
+from eventlet.green.urllib2 import urlopen #@UnresolvedImport
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import *
 from xml.parsers.expat import ExpatError
@@ -66,6 +66,12 @@ datamodel_mapping = {
     "xpath" : XPathDatamodel
 }
 
+#TODO: this should be namespaced
+fns = etree.FunctionNamespace(None)
+def in_func(context, x):
+    return context.context_node._parent.self.interpreter.In(x)
+fns["In"] = in_func
+
 
 class Compiler(object):
     '''The class responsible for compiling the statemachine'''
@@ -100,10 +106,7 @@ class Compiler(object):
         self.dm["__event"] = None
 #        self.dm["_x"]["sessions"] = {}
         
-        if datamodel == "xpath":
-            fns = etree.FunctionNamespace(None)
-            fns["In"] = lambda dummy, x: bool(self.interpreter.In(x))
-        else:
+        if datamodel != "xpath":
             self.dm["In"] = self.interpreter.In
     
     def parseAttr(self, elem, attr, default=None, is_list=False):
@@ -217,19 +220,25 @@ class Compiler(object):
                     
                     for index, item in itr:
                         try:
-                            self.dm[node.get("item")] = item
+                            if self.datamodel != "xpath":
+                                self.dm[node.get("item")] = item
+                            else:
+                                self.dm.references["item"] = item
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
                         try:
                             if node.get("index"):
-                                self.dm[node.get("index")] = index
+                                if self.datamodel != "xpath":
+                                    self.dm[node.get("index")] = index
+                                else:
+                                    self.dm.references["pos"] = index
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "index")
                         try:
                             self.do_execute_content(node)
                         except Exception, e:
                             raise ExecutableContainerError(e, node)
-                            
+            #TODO: delete xpath references? (see above) 
             elif node_ns == pyscxml_ns:
                 if node_name == "start_session":
                     xml = None
@@ -554,7 +563,7 @@ class Compiler(object):
                 s = State(node.get("id"), None, n)
                 s.initial = self.parseInitial(node)
                 self.doc.name = node.get("name", "")
-                self.dm.initDataField("_name", node.get("name", ""))
+                self.dm["_name"] = node.get("name", "")
                 for scriptChild in node.findall(prepend_ns("script")):
                     src = scriptChild.text or self.script_src.get(scriptChild, "") or ""
 #                        except URLError, e:
@@ -727,10 +736,10 @@ class Compiler(object):
         invtype = self.parseAttr(node, "type", "scxml")
         src = self.parseAttr(node, "src")
         if src and src.startswith("file:"):
-            newsrc, search_path = get_path(src.replace("file:", ""), self.dm["_x"]["self"].filedir or "")
+            newsrc, search_path = get_path(src.replace("file:", ""), self.dm.self.filedir or "")
             if not newsrc:
                 #TODO: add search_path info to this exception.
-                raise Exception("file not found when searching the PYTHONPATH: %s" % src)
+                raise IOError(2, "File not found when searching the PYTHONPATH: %s" % src)
             src = "file:" + newsrc
         data = self.parseData(node, getContent=False)
         scxmlType = ["http://www.w3.org/TR/scxml", "scxml"]
@@ -795,8 +804,9 @@ class Compiler(object):
         for data in tree.getiterator(prepend_ns("data")):
             self.dm[data.get("id")] = None
         
+        top_level = tree.find(prepend_ns("datamodel"))
         # set top-level datamodel element
-        if tree.find(prepend_ns("datamodel")) is not None:
+        if top_level is not None:
             try:
                 self.setDataList(tree.find(prepend_ns("datamodel")))
             except Exception, e:
@@ -806,10 +816,11 @@ class Compiler(object):
             
         if self.doc.binding == "early":
             try:
-                #:TODO we shouldn't traverse the same top-level data nodes again here.
-                self.setDataList(list(tree.getiterator(prepend_ns("data"))))
+                top_level = top_level if top_level is not None else []
+                # filtering out the top-level data elements
+                self.setDataList([data for data in tree.getiterator(prepend_ns("data")) if data not in top_level])
             except Exception, e:
-                self.logger.exception("Evaluation of a data element failed.")
+                self.logger.exception("Parsing of a data element failed.")
         
         for key, value in self.initData.items():
             if key in self.dm: self.dm[key] = value
@@ -836,8 +847,7 @@ class Compiler(object):
             #TODO: should we be overwriting values here? see test 226.
 #            if not self.dm.get(key): self.dm[key] = value
 #            self.dm.setdefault(key, value)
-#            self.dm[key] = value
-            self.dm.initDataField(key, value)
+            self.dm[key] = value
             
     def parallelize_download(self, nodelist):
         def download(node):
