@@ -15,7 +15,7 @@
   </state>
   
 <state id="s1">
-   <transition cond="$copyOfEventData/data/param1=1" target="pass"/>
+   <transition cond="$copyOfEventData/data/data[@id='param1']=1" target="pass"/>
   <transition target="fail"/>
   </state>
   

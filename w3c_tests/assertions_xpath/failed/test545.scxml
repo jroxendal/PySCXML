@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that xml content in send is place as XML under event/data --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" name="scxmltest" initial="s0" version="1.0" datamodel="xpath">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that xml content in send is place as XML under event/data -->
+<scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" name="scxmltest" initial="s0" version="1.0" datamodel="xpath">
   
 <state id="s0">
   <onentry>
@@ -6,7 +7,9 @@
      <content><foo xmlns=""><bar>3</bar></foo></content>
      </send>
   </onentry>
-  
+   <transition event="*">
+    <log expr="$_event/data" />
+   </transition>
    <transition event="*" cond="$_event/data/foo/bar = 3" target="pass"/>
    <transition event="*" target="fail"/>
   </state>

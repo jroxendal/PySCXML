@@ -2,7 +2,8 @@
 childToParent once its running.  Then we send it the event parentToChild using its invokeid as the target.  
 If it receives this event, it sends sends the event eventReceived to its parent session (ths session). 
 If we get this event, we pass, otherwise test192sub1.scxml eventually times out sends invoke.done and we fail.
-We also set a timeout in this process to make sure the test doesn't hang  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath">
+We also set a timeout in this process to make sure the test doesn't hang  -->
+<scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath">
   
 <state id="s0" initial="s01">
   <onentry>
