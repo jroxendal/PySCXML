@@ -223,7 +223,7 @@ class Compiler(object):
                             if self.datamodel != "xpath":
                                 self.dm[node.get("item")] = item
                             else:
-                                self.dm.references["item"] = item
+                                self.dm.references[node.get("item")] = item
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
                         try:
