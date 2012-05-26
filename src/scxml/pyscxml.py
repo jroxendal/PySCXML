@@ -369,8 +369,22 @@ if __name__ == "__main__":
 test413.scxml
 test467.scxml
 '''
+        
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
+        <datamodel>
+          <data id="apa" />
+        </datamodel>
+        <state>
+            <onentry>
+               <log expr="($apa/text())" />
+            </onentry>
+        </state>
+    </scxml>
+    '''
     
-    sm = StateMachine("assertions_xpath/test413.scxml")
+#    sm = StateMachine("assertions_xpath/test413.scxml")
+    sm = StateMachine("xpath_test.xml")
     sm.start()
     
     

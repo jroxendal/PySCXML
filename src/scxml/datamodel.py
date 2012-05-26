@@ -266,6 +266,7 @@ class XPathDatamodel(object):
         data_dict = dict([(node.get("id"), node) for node in list(self.root)])
         data_dict.update(self.references)
         
+#        print "data_dict", data_dict
         return self.root.xpath(key, **data_dict)
 #            if etree.iselement(key):
 #                return self.c[field].xpath(expr or ".", **self.c)
@@ -297,7 +298,7 @@ class XPathDatamodel(object):
 #            val = 
 #            val = deepcopy(val)
         else:
-            val = etree.fromstring("<data id='%s'>%s</data>" % (key, val))
+            val = etree.fromstring("<data id='%s'>%s</data>" % (key, val or ""))
         try:
 #            self.c[key] = val
             current = self.root.find("data[@id='%s']" % key)
