@@ -5,7 +5,7 @@ python:
 
 # command to install dependencies
 install:
-    - sudo apt-get install libboost-python-dev
+    - sudo apt-get install libboost-python-dev libb8-dev
     - pip install -r requirements-test.txt --use-mirrors
     - pip install . --use-mirrors
 
