@@ -2,4 +2,5 @@ Louie
 eventlet
 restlib
 suds
+lxml
 
