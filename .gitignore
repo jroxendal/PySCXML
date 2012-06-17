@@ -23,8 +23,11 @@ pip-log.txt
 #Translations
 *.mo
 
-#Mr Developer
+# Mr Developer
 .mr.developer.cfg
 /.settings
 /.project
 /.pydevproject
+
+# gedit
+*~
