@@ -54,6 +54,7 @@ def dictToXML(dictionary, root="root", root_attrib={}):
             elif type(v) == dict:
                 parse(v)
             else:
+                v = v if v is not None else ""
                 xml.data(str(v))
             xml.end(k)
     
@@ -63,6 +64,12 @@ def dictToXML(dictionary, root="root", root_attrib={}):
     return out
 
 if __name__ == '__main__':
+    import sys
+    
+    print etree.tostring(dictToXML({"lol" : None}))
+    
+    
+    sys.exit()
     d = {
          "apa" : {"bepa" : 123, "cepa" : 34},
           "foo" : {"inner" : etree.fromstring("<elem/>")}

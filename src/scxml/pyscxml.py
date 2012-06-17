@@ -383,8 +383,8 @@ test467.scxml
     </scxml>
     '''
     
-#    sm = StateMachine("assertions_xpath/test413.scxml")
-    sm = StateMachine("xpath_test.xml")
+    sm = StateMachine("assertions_xpath/test147.scxml")
+#    sm = StateMachine("xpath_test.xml")
     sm.start()
     
     

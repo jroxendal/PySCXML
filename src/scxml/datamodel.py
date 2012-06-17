@@ -298,7 +298,8 @@ class XPathDatamodel(object):
 #            val = 
 #            val = deepcopy(val)
         else:
-            val = etree.fromstring("<data id='%s'>%s</data>" % (key, val or ""))
+            val = "" if val is None else val
+            val = etree.fromstring("<data id='%s'>%s</data>" % (key, val))
         try:
 #            self.c[key] = val
             current = self.root.find("data[@id='%s']" % key)
