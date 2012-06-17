@@ -1,6 +1,6 @@
 language: python
+# TODO: restore 2.6 once a 32b Ubuntu 11.10 PyV8 package is done
 python:
-    - "2.6"
     - "2.7"
 
 # command to install dependencies
