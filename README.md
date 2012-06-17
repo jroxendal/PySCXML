@@ -50,15 +50,14 @@ Version 0.6.5:
 PySCXML is on [PyPi](http://pypi.python.org/pypi/pyscxml/). Download and install using `pip install pyscxml` or `easy_install pyscxml` for Python 2.6 or 2.7. Or manually:
 
 Python 3.x:
-
 PySCXML is distributed for python 2.5 or greater. I may one day automate builds for both platforms but for now, if you're looking to run PySCXML on python 3.x you'll have to manually run the 2to3 conversion tool on the source tree prior to install. Just do a checkout, navigate to the `src` folder and run `2to3 -n -w scxml/`. Then do the same thing for louie and any of the optional libraries. Drop the resulting sources into your site-packages or anywhere else in your pythonpath. Note that since 2to3 won't convert suds the resulting PySCXML install can't handle invoking soap webservices.
 
 Python 2.x:
 
-  # Add the src folder to your pythonpath, either by installing a package from the [downloads](http://code.google.com/p/pyscxml/downloads/list) or by otherwise linking to the project source folder downloaded through subversion. 
-  # PySCXML's only dependency so far is [Louie](http://louie.berlios.de/), which will be installed automatically if setup.py is used. Two releases of the library are now supplied: the lite package (with only Louie as dependency) and the full release (with all optional installs included).
-  # Write up an SCXML document you would like interpreted, or use one of the example files in the unittest_xml folder included in the tarball. Make sure to keep to the supported tags.
-  # Now you just need to connect the two. Some sample code below.
+1. Add the src folder to your pythonpath, either by installing a package from the [downloads](http://code.google.com/p/pyscxml/downloads/list) or by otherwise linking to the project source folder downloaded through subversion. 
+2. PySCXML's only dependency so far is [Louie](http://louie.berlios.de/), which will be installed automatically if setup.py is used. Two releases of the library are now supplied: the lite package (with only Louie as dependency) and the full release (with all optional installs included).
+3. Write up an SCXML document you would like interpreted, or use one of the example files in the unittest_xml folder included in the tarball. Make sure to keep to the supported tags.
+4. Now you just need to connect the two. Some sample code below.
 
 
 	from scxml.pyscxml import StateMachine
@@ -208,8 +207,8 @@ The logger outputs more detailed information about the error, for debug purposes
 
 To Harel, one of the main benefits of the statechart notation is that the diagrams can be 'zoomed' into or out of, making the relationship of distinct modules of a system more clear. In the case of SCXML, this characteristic also provides a mechanism for modularization. There are two distinct ways of accomplishing this:
 
-  # XInclude (removed since v. 0.8, use XSLT or some other tempating system instead)
-  # Invoke
+1. XInclude (removed since v. 0.8, use XSLT or some other tempating system instead)
+2. Invoke
 
 Using invoke we can define a statemachine with its own datamodel that we interact with using `<send />` with the target attribute set to the id of the invoked process . The invoked statemachine responds by sending to `target="#_parent"`. 
 
