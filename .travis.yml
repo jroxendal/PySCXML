@@ -4,7 +4,7 @@ python:
 
 # command to install dependencies
 install:
-    - sudo apt-get -q install libboost-python-dev libv8-dev
+    - sudo apt-get -qq install libboost-python-dev libv8-dev
     - wget https://github.com/downloads/pyjs/pyjs/pyv8-build.2012-05-15.tar.gz
     - tar xzvf pyv8-build.2012-05-15.tar.gz
     - pip install -r requirements.txt --use-mirrors
