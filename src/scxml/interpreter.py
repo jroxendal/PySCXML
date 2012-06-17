@@ -50,17 +50,14 @@ class Interpreter(object):
         self.historyValue = {}
         self.dm = None
         self.invokeId = None
+        self.parentId = None
         self.logger = None
     
     
-    def interpret(self, document, parentQueue=None, invokeId=None):
+    def interpret(self, document, invokeId=None):
         '''Initializes the interpreter given an SCXMLDocument instance'''
         
         self.doc = document
-#        self.dm = self.doc.datamodel
-        self.dm["In"] = self.In
-        self.dm["_parent"] = parentQueue
-
         self.invokeId = invokeId
         
         transition = Transition(document.rootState)
@@ -93,7 +90,8 @@ class Interpreter(object):
 
                 if enabledTransitions:
                     self.microstep(enabledTransitions)
-                eventlet.greenthread.sleep(seconds=0)
+#                eventlet.greenthread.sleep()
+            eventlet.greenthread.sleep()
                 
                     
             
@@ -107,7 +105,7 @@ class Interpreter(object):
             
             externalEvent = self.externalQueue.get() # this call blocks until an event is available
             
-            if externalEvent.name == "cancel.invoke.%s" % self.dm["_sessionid"]:
+            if externalEvent.name == "cancel.invoke.%s" % self.dm.sessionid:
                 continue
             
             self.logger.info("external event found: %s", externalEvent.name)
@@ -140,11 +138,8 @@ class Interpreter(object):
                 self.cancelInvoke(inv)
             self.configuration.delete(s)
             if isFinalState(s) and isScxmlState(s.parent):
-                if self.invokeId and self.dm["_parent"]:
-                    evt = Event(["done", "invoke", self.invokeId], s.donedata())
-                    evt.origintype = "scxml"
-                    evt.invokeid = self.invokeId
-                    self.dm["_parent"].put(evt)   
+                if self.invokeId and self.parentId and self.parentId in self.dm.sessions:
+                    self.send(["done", "invoke", self.invokeId], s.donedata(), self.invokeId, self.dm.sessions[self.parentId].interpreter.externalQueue)   
                 self.logger.info("Exiting interpreter")
                 dispatcher.send("signal_exit", self, final=s.id)
                 return
@@ -397,7 +392,7 @@ class Interpreter(object):
         if isinstance(name, basestring): name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
         evt = Event(name, data, invokeid, sendid=sendid)
-        evt.origin = "#_scxml_" + self.dm["_sessionid"]
+        evt.origin = "#_scxml_" + self.dm.sessionid
         evt.origintype = ScxmlOriginType()
         #TODO: and for ecmascript?
         evt.language = "python"

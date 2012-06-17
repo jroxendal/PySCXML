@@ -28,6 +28,7 @@ import eventlet
 from StringIO import StringIO
 import os, urllib
 from pprint import pprint
+from scxml.datamodel import XPathDatamodel
 
 handler_mapping = {}
 
@@ -44,10 +45,6 @@ class PySCXMLServer(MultiSession):
         StateMachine instance at that session, running the default document.
         If default_scxml_source is None, a call to an address that hasn't been 
         pre-initialized will fail with HTTP error 403 FORBIDDEN.
-        @param server_type: define the server as TYPE_DEFAULT or TYPE_RESPONSE.
-        TYPE_DEFAULT corresponds to the type of server that the W3C standard prefers,
-        use TYPE_RESPONSE for responding only if you explicetly need to include data 
-        in the HTTP response.
         @param init_sessions: a mapping where the keys correspond to sesssionids you 
         would like the server to be initialized with and the values to scxml document 
         strings you want those sessions to run. These will be constructed in the server 
@@ -68,7 +65,7 @@ class PySCXMLServer(MultiSession):
         # any_legal_url_string != "session1" and any_legal_url_string != "session2" 
         server = PySCXMLServer("localhost", 8081, 
                                 init_sessions={"session1" : myStateMachine, "session2" : myStateMachine})
-        server.serve_forever()
+        
         
         
         '''
@@ -90,9 +87,20 @@ class PySCXMLServer(MultiSession):
         return sm
     
     def set_processors(self, sm):
-        d = dict( (io_type, {"location" : "http://%s:%s" % (self.host, self.port) + "/".join([self.session_path, sm.datamodel["_sessionid"], io_type])} ) 
+        MultiSession.set_processors(self, sm)
+        d = dict( (io_type, {"location" : "http://%s:%s" % (self.host, self.port) + "/".join([self.session_path, sm.datamodel.sessionid, io_type])} ) 
                   for io_type in handler_mapping)
-        sm.datamodel["_ioprocessors"].update(d)  
+        
+        for k, v in d.items():
+            sm.datamodel[k] = v
+#        if isinstance(sm.datamodel, XPathDatamodel):
+#            from datastructures import dictToXML
+#            sm.datamodel["_ioprocessors"].append(dictToXML({"websocket" : {"location" : loc}})) 
+#        else:
+#            sm.datamodel["_ioprocessors"]["websocket"] = {"location" : loc}
+        
+        
+#        sm.datamodel["_ioprocessors"].update(d)
     
     def request_handler(self, environ, start_response):
         status = '200 OK'
@@ -138,7 +146,7 @@ class PySCXMLServer(MultiSession):
                 
             if sm.is_response:
                 sm.interpreter.externalQueue.put(event)
-                output, headers = sm.datamodel["_response"].get() #blocks
+                output, headers = sm.datamodel.response.get() #blocks
                 start_response(status, headers.items())
             else:
                 eventlet.spawn_after(0.1, sm.interpreter.externalQueue.put, event)
@@ -163,8 +171,12 @@ class WebsocketWSGI(PySCXMLServer):
         
     def set_processors(self, sm):
         PySCXMLServer.set_processors(self, sm)
-        sm.datamodel["_ioprocessors"]["websocket"] = {"location" : "ws://%s:%s/%s%s/websocket" % \
-                    (self.host, self.port, self.session_path, sm.datamodel["_sessionid"])}
+        loc = "ws://%s:%s/%s%s/websocket" % (self.host, self.port, self.session_path, sm.datamodel.sessionid)
+        if isinstance(sm.datamodel, XPathDatamodel):
+            from datastructures import dictToXML
+            sm.datamodel["_ioprocessors"].append(dictToXML({"websocket" : {"location" : loc}})) 
+        else:
+            sm.datamodel["_ioprocessors"]["websocket"] = {"location" : loc}
     
     def websocket_handler(self, ws):
         pathlist = filter(lambda x: bool(x), ws.path.split("/"))
@@ -188,7 +200,7 @@ class WebsocketWSGI(PySCXMLServer):
 
     def websocket_response(self, sm, session):
         while self.clients[session]:
-            evt_xml = sm.datamodel["_websocket"].get() # blocks
+            evt_xml = sm.datamodel.websocket.get() # blocks
             for ws in self.clients[session]:
                 ws.send(evt_xml)
 
@@ -204,16 +216,16 @@ class ioprocessor(object):
 
 @ioprocessor('basichttp')
 def type_basichttp(session, data, sm, environ):
-    if "_scxmleventstruct" in data:
-        event = Processor.fromxml(data["_scxmleventstruct"], "unknown")
-    elif "_scxmleventname" in data:
+#    if "_scxmleventstruct" in data:
+#        event = Processor.fromxml(data["_scxmleventstruct"], "unknown")
+    if "_scxmleventname" in data:
         evtname = data.pop("_scxmleventname")
         event = Event(evtname, data)
         event.origintype = "basichttp"
         event.origin = "unreachable"
     else:
         pth = filter(lambda x: bool(x), environ["PATH_INFO"].split("/")[3:])
-        event = Event(["HTTP", environ['REQUEST_METHOD'].lower()] + pth, data=data)
+        event = Event(["HTTP", environ['REQUEST_METHOD']] + pth, data=data)
         event.origintype = "basichttp"
         event.origin = "unreachable"
         
@@ -237,3 +249,20 @@ if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.NOTSET)
     
+    xml = '''
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+        <state>
+            <onentry>
+            </onentry>
+            <transition event="*">
+                <log expr="$_event/data" />
+            </transition>
+        </state>
+    </scxml>
+    '''
+    import eventlet
+    from eventlet import wsgi
+    
+    server = PySCXMLServer("localhost", 8081, init_sessions={"xpath" : xml}, default_datamodel="xpath")
+    wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
+                

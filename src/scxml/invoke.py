@@ -25,7 +25,6 @@ from scxml.messaging import UrlGetter
 import logging
 import eventlet
 
-
 class InvokeWrapper(object):
     
     def __init__(self):
@@ -93,8 +92,8 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.cancelled = False
         self.default_datamodel = "python"
     
-    def start(self, parentQueue):
-        self.parentQueue = parentQueue
+    def start(self, parentId):
+        self.parentId = parentId
         if self.src:
             self.getter.get_async(self.src, None)
         else:
@@ -102,15 +101,19 @@ class InvokeSCXML(BaseFetchingInvoke):
     
     def _start(self, doc):
         if self.cancelled: return
-        from pyscxml import StateMachine
+        from scxml.pyscxml import StateMachine
+        
         self.sm = StateMachine(doc, 
                                sessionid=self.parentSessionid + "." + self.invokeid, 
                                default_datamodel=self.default_datamodel,
-                               log_function=lambda label, val: dispatcher.send(signal="invoke_log", sender=self, label=label, val=val))
+                               log_function=lambda label, val: dispatcher.send(signal="invoke_log", sender=self, label=label, msg=val),
+                               setup_session=False)
         self.interpreter = self.sm.interpreter
         self.sm.compiler.initData = self.initData
+        self.sm.compiler.parentId = self.parentId
+        self.sm.interpreter.parentId = self.parentId
         dispatcher.send("created", sender=self, sm=self.sm)
-        self.sm._start_invoke(self.parentQueue, self.invokeid)
+        self.sm._start_invoke(self.invokeid)
         eventlet.spawn(self.sm.interpreter.mainEventLoop)
 
     
@@ -126,10 +129,6 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.cancelled = True
         if not self.sm: return;
         self.sm.interpreter.running = False
-        class DummyQueue(object):
-            def put(self, item):
-                pass
-        self.sm.datamodel["_parent"] = DummyQueue()
         self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
     
     

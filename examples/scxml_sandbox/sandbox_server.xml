@@ -13,7 +13,7 @@
     </datamodel>
     
         <state id="sandbox">
-            <transition event="HTTP.post" cond="_event.data.get('doc')">
+            <transition event="HTTP.POST" cond="_event.data.get('doc')">
 <!--                 <if cond="session"> -->
 <!--                     <send targetexpr="'#_scxml_' + session" event="quit" /> -->
 <!--                 </if> -->
@@ -48,7 +48,7 @@
                             <state id="connected">
                                 <onentry>
                                     <script>
-                                        
+                                        from lxml import etree
                                         class EventHandler(logging.Handler):
                                             def __init__(self, level=logging.NOTSET):
                                                 logging.Handler.__init__(self, level=level)
@@ -59,11 +59,27 @@
                                         log_handler = EventHandler(logging.INFO)
                                         logging.getLogger("pyscxml.%s.i" % _sessionid).addHandler(log_handler)
                                         
-                                        def log_func(signal, sender, label, val):
-                                            label = label + ":" if label else ""
-                                            if sender.sm is _x["sessions"].get(_sessionid + ".i"):
-                                                log("elem", label + " " + (str(val) if val else "" )) 
-                                        
+                                        def log_func(signal, sender, label, msg):
+                                            if sender.sm.sessionid == _sessionid + ".i":
+                                            
+                                                label = label or ""
+                                                
+                                                def f(x):
+                                                    
+                                                    if etree.iselement(x):
+                                                        return etree.tostring(x).strip()
+                                                    elif isinstance(etree._ElementStringResult):
+                                                        return str(x)
+                                                    
+                                                    return x
+                                                
+                                                if type(msg) is list:
+                                                    msg = map(f, msg)
+                                                print msg, type(msg) is list, msg
+                                                log("elem", "%s%s%s" % (label, ": " if label and msg is not None else "", msg))
+                                            
+                                            
+                                            
                                         dispatcher.connect(log_func, "invoke_log")
                                     </script>
                                 
@@ -124,7 +140,8 @@
         
         <transition event="error">
             <send target="#_response" namelist="headers" eventexpr="_event.name">
-                <param name="exception" expr="str(_event.data['exception'])" /> 
+                <log expr="_event.data" />
+                <param name="exception" expr="str(_event.data)" /> 
             </send>
         </transition>
     </state>

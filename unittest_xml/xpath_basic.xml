@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- test that XPath expressions can be used as value expressions. -->
+<scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance"
+    initial="s0" version="1.0" datamodel="xpath">
+    <datamodel>
+        <data id="var1" />
+    </datamodel>
+
+    <state id="s0">
+        <onentry>
+            <send event="event1">
+                <param name="param1" expr="1" />
+            </send>
+        </onentry>
+        <transition event="event1" target="s1">
+            <assign location="$var1" expr="$_event/data" />
+        </transition>
+    </state>
+
+    <state id="s1">
+        <onentry>
+            <log label="s1" expr="$_event" />
+        </onentry>
+        <transition cond="$var1/data/data[@id='param1']=1" target="pass" />
+    </state>
+
+    <final id="pass">
+    </final>
+
+</scxml>

@@ -28,10 +28,27 @@ import errno
 import re
 from eventprocessor import Event
 from messaging import get_path
+from scxml import datamodel
+from scxml.datamodel import XPathDatamodel
+from lxml import etree
+import sys
+import time
 
 def default_logfunction(label, msg):
     label = label or ""
-    msg = msg or ""
+#    msg = msg or ""
+    
+    def f(x):
+        if etree.iselement(x):
+            return etree.tostring(x).strip()
+        elif isinstance(x, etree._ElementStringResult):
+            return str(x)
+        
+        return x
+    
+    if type(msg) is list:
+        msg = map(f, msg)
+        msg = "\n".join(msg)
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 
 
@@ -40,7 +57,7 @@ class StateMachine(object):
     This class provides the entry point for the PySCXML library. 
     '''
     
-    def __init__(self, source, log_function=default_logfunction, sessionid=None, default_datamodel="python"):
+    def __init__(self, source, log_function=default_logfunction, sessionid=None, default_datamodel="python", setup_session=True):
         '''
         @param source: the scxml document to parse. source may be either:
         
@@ -63,6 +80,7 @@ class StateMachine(object):
         @param default_datamodel: if omitted, any document started by this instance will have 
         its datamodel expressions evaluated as Python expressions. Set to 'ecmascript' to assume 
         EMCAScript expressions.
+        @param setup_session: for internal use.
         @raise IOError 
         @raise xml.parsers.expat.ExpatError 
         '''
@@ -85,11 +103,13 @@ class StateMachine(object):
         self.interpreter.dm = self.doc.datamodel
         self.datamodel = self.doc.datamodel
         self.doc.datamodel["_x"] = {"self" : self}
+        self.doc.datamodel.self = self
         self.doc.datamodel["_sessionid"] = self.sessionid 
+        self.doc.datamodel.sessionid = self.sessionid 
         self.name = self.doc.name
         self.is_response = self.compiler.is_response
-        
-        MultiSession().make_session(self.sessionid, self)
+        if setup_session:
+            MultiSession().make_session(self.sessionid, self)
         
         
 #        self.setIOProcessors(self.datamodel)
@@ -103,7 +123,7 @@ class StateMachine(object):
         if hasattr(uri, "read"):
             return uri.read()
         elif isinstance(uri, basestring) and re.search("<(.+:)?scxml", uri): #"<scxml" in uri:
-            self.filename = "<string>"
+            self.filename = "<string source>"
             self.filedir = None
             return uri
         else:
@@ -121,9 +141,9 @@ class StateMachine(object):
         self.compiler.instantiate_datamodel()
         self.interpreter.interpret(self.doc)
     
-    def _start_invoke(self, parentQueue=None, invokeid=None):
+    def _start_invoke(self, invokeid=None):
         self.compiler.instantiate_datamodel()
-        self.interpreter.interpret(self.doc, parentQueue, invokeid)
+        self.interpreter.interpret(self.doc, invokeid)
     
     
     def start(self):
@@ -251,19 +271,21 @@ class MultiSession(object):
         not been started, only initialized.
          '''
         assert source or self.default_scxml_source
-        if isinstance(source, StateMachine):
-            sm = source
+        if isinstance(source, basestring):
+            sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel,setup_session=False)
         else:
-            sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel)
+            sm = source # source is assumed to be a StateMachine instance
         self.sm_mapping[sessionid] = sm
-        sm.datamodel["_x"]["sessions"] = self
+        #TODO: fix this.
+#        if not isinstance(sm.datamodel, XPathDatamodel):
+        sm.datamodel.sessions = self
         self.set_processors(sm)
         dispatcher.connect(self.on_sm_exit, "signal_exit", sm)
         return sm
     
     def set_processors(self, sm):
-        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]},
-                                              "basichttp" : {"location" : "#_scxml_" + sm.datamodel["_sessionid"]} }
+        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.sessionid},
+                                              "basichttp" : {"location" : "#_scxml_" + sm.sessionid} }
         
     
     def send(self, event, data={}, to_session=None):
@@ -337,22 +359,47 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.NOTSET)
     
+    if len(sys.argv) > 1:
+        sm = StateMachine(sys.argv[1])
+        sm.start()
+        sys.exit()
     
-#    sm = StateMachine("assertions_passed/test192.scxml")
-#    sm = StateMachine("multi_script.xml")
-#    sm = StateMachine("assertions_ecmascript/test487.scxml")
-
+    '''
+    test411.scxml
+test413.scxml
+test467.scxml
+'''
+        
     xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
+        <datamodel>
+          <data id="apa" />
+        </datamodel>
         <state>
             <onentry>
-                <send type="basichttp" target="http://localhost:8081/echo/basichttp" event="hello" httpResponse="true" />
+               <log expr="($apa/text())" />
             </onentry>
         </state>
     </scxml>
     '''
-    sm = StateMachine(xml)
+    
+#    sm = StateMachine("assertions_xpath/test413.scxml")
+    sm = StateMachine("xpath_test.xml")
     sm.start()
+    
+    
+    
+#    sm.start_threaded()
+#    t = threading.Thread(target=sm.start)
+#    t.start()
+#    sm.start()
+#    print "after start"
+#    sm.send("arret")
+#    t.join()
+#    print "after join"
+#    eventlet.greenthread.sleep()
+#    with StateMachine("microonde.xml") as sm:
+#        sm.send("arret")
     
     listener = '''
         <scxml>

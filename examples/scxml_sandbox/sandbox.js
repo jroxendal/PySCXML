@@ -162,10 +162,11 @@ function connect(address) {
 		}
 	};
 	socket.onerror = function(event) {
-//		console.log("error event", event);
-//		addToLog('WebSocket Error');
+		console.log("error event", event);
+//		addToLog('WebSocket Error. If this error persists, try using Firefox instead.');
 	};
-	socket.onclose = function() {
+	socket.onclose = function(event) {
+		$.log("onclose", event);
 		addToLog('Closed');
 	};
 

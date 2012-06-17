@@ -31,7 +31,7 @@ register_datamodel("safe_python", SafePythonDataModel)
 
 
 def main(address):
-    os.environ["PYSCXMLPATH"] = "example_docs"
+    os.environ["PYSCXMLPATH"] = "example_docs:resources"
     files = dict([(x, z) for (x, y, z) in os.walk("example_docs") if ".svn" not in x])
     json.dump(files, open("example_list.json", "w"))
     
@@ -58,17 +58,6 @@ def main(address):
                 output.append("%s\t\t%s\t\t%s" % (sessionid, "{" + ", ".join([s.id for s in sm.interpreter.configuration if s.id != "__main__"]) + "}", sm.isFinished()))
             return ["\n".join(output)]
         
-#        if session == "persist":
-#            headers = {"Content-Type" : "text/plain"}
-#            start_response("200 OK", headers.items())
-#            
-#            fs = cgi.FieldStorage(fp=environ["wsgi.input"],
-#                               environ=environ,
-#                               keep_blank_values=True)
-#            
-#            json.load(open("persistent/list.json"))
-#            
-#            return [""]
         
         type = pathlist[1]
         

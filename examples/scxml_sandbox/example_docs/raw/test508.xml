@@ -5,9 +5,10 @@
 
     <state id="s0">
         <onentry>
+            <log label="hello" />
             <send event="timeout" delay="30s" />
             <send event="test"
-                target="http://pyscxml.spyderbrain.com:8081/508/raw"
+                target="http://localhost:8082/508/raw"
                 type="basichttp">
                 <param name="address"
                     expr="_ioprocessors['basichttp']['location']" />

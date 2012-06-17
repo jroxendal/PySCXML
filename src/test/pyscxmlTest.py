@@ -25,9 +25,6 @@ import logging
 from scxml.errors import ScriptFetchError
 import glob
 import traceback
-#xmlDir = "../../unittest_xml/"
-#if not os.path.isdir(xmlDir):
-#    xmlDir = "unittest_xml/"
      
 
 class RegressionTest(unittest.TestCase):
@@ -41,12 +38,11 @@ class RegressionTest(unittest.TestCase):
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
                                "donedata.xml", "error_management.xml", "invoke.xml", "history.xml", 
                                "internal_transition.xml", "binding.xml", "finalize.xml",
-                               "internal_parallel.xml"]
+                               "internal_parallel.xml", "xpath_basic.xml"]
 #        logging.basicConfig(level=logging.NOTSET)
         for name in runToCompletionList:
             print "Running " + name 
             sm = StateMachine(name)
-            sm.name = name
             sm.start()
             self.assert_(sm.isFinished())
         
@@ -117,6 +113,7 @@ class RegressionTest(unittest.TestCase):
         print "Running W3C python tests..."
         
         failed = parallelize(filelist)
+#        failed = []
 #        sequentialize(filelist)   
         
         print "completed %s w3c python tests" % len(filelist)
@@ -138,11 +135,21 @@ class RegressionTest(unittest.TestCase):
         print "completed %s w3c ecmascript tests" % len(filelist)
         if failed:
             self.fail("Failed tests:\n" + "\n".join(failed))
-    
+        
+    def testW3cXpath(self):
+        os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_xpath/"
+        filelist = [f for f in glob.glob(os.environ["PYSCXMLPATH"] + "/*xml") if "sub" not in f]
+        print "Running W3C xpath tests..."
+        failed = parallelize(filelist)
+        print "completed %s w3c xpath tests" % len(filelist)
+        if failed:
+            self.fail("Failed tests:\n" + "\n".join(failed))
+        
     def runTest(self):
         self.testInterpreter()
         self.testW3cEcma()
         self.testW3cPython()
+        self.testW3cXpath()
         
 
 class W3CTester(StateMachine):
@@ -162,10 +169,10 @@ def runtest(doc_uri):
     xml = open(doc_uri).read()
     try:
         sm = W3CTester(xml)
-        sm.name = doc_uri
 
         with eventlet.timeout.Timeout(12):
             sm.start()
+            
         
         didPass = sm.didPass
     
