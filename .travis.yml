@@ -1,13 +1,18 @@
 language: python
 python:
-    - "2.5"
     - "2.6"
     - "2.7"
+
 # command to install dependencies
 install:
+    - sudo apt-get -qq install libboost-python-dev libv8-dev
+    - wget https://github.com/downloads/pyjs/pyjs/pyv8-build.2012-05-15.tar.gz
+    - tar xzvf pyv8-build.2012-05-15.tar.gz
     - pip install -r requirements.txt --use-mirrors
     - pip install . --use-mirrors
-# # command to run tests
+
+# command to run tests
 script:
+    - export PYTHONPATH=`pwd`/pyv8-build
     - cd src/test
     - python pyscxmlTest.py
