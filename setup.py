@@ -7,11 +7,11 @@ filename = "0.8.3-20120108"
 setup(name="pyscxml",
       version=filename,
       description="A pure Python SCXML parser/interpreter",
-      long_description="Use PySCXML to parse and execute an SCXML document. PySCXML aims for full compliance with the W3C standard. Features include but are not limited to multisession support, HTTP serving with easily configured REST service configuration and complete HTTP IO processor. Supports the ECMAScript datamodel through PyV8.",
+      long_description="Use PySCXML to parse and execute an SCXML document. PySCXML aims for full compliance with the W3C standard. Features include but are not limited to multisession support, HTTP serving with easily configured REST service configuration and complete HTTP IO processor. Supports the ECMAScript datamodel through PyV8 and XPATH through lxml.",
       author="Johan Roxendal",
       author_email="johan@roxendal.com",
-      url="http://code.google.com/p/pyscxml/",
-      download_url="http://code.google.com/p/pyscxml/downloads/list?q=full",
+      url="http://github.com/jroxendal/PySCXML",
+      download_url="http://github.com/jroxendal/PySCXML",
       packages=["scxml"],
       package_dir={"" : "src"},
       license="LGPLv3",
@@ -31,5 +31,5 @@ setup(name="pyscxml",
           'Topic :: Text Processing :: Markup :: XML'
           
       ],
-      install_requires=['Louie', 'eventlet', 'suds', 'restlib']
+      install_requires=['Louie', 'eventlet', 'suds', 'restlib', "lxml"]
      )
