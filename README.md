@@ -1,5 +1,6 @@
 #PySCXML
 
+[![Build Status](https://secure.travis-ci.org/jroxendal/PySCXML.png?branch=master)](http://travis-ci.org/jroxendal/PySCXML)
 
 PySCXML (pronounced _pixel_) supplies an SCXML parser and interpreter for the Python programming language. For an online console demonstrating the capabilities of PySCXML, check out http://pyscxml.spyderbrain.com
 
@@ -203,7 +204,7 @@ In the current working draft (Dec 16 2010), two types of errors are defined: _er
 The logger outputs more detailed information about the error, for debug purposes. Errors also get an Exception subclass in their `_event` variable, get it through `_event.data`. Use it to get details on the exception, such as on which line number. Of course, you can also consult the logger that info. 
 
 
-##Modularization## 
+##Modularization 
 
 To Harel, one of the main benefits of the statechart notation is that the diagrams can be 'zoomed' into or out of, making the relationship of distinct modules of a system more clear. In the case of SCXML, this characteristic also provides a mechanism for modularization. There are two distinct ways of accomplishing this:
 
@@ -439,7 +440,7 @@ To learn more about the response server and on building distributed applications
 There's experimental support for receiving events through websockets. Contact the mailing list for more information. 
 
 ####SCXML Event Processor for JavaScript####
-Since the websocket server sends events to its clients in the SCXML messaging XML format, these messages will need to be decoded as they reach the client. The server also receives events in the same format. I've supplied an encoder/decoder in the example folder (or just grab it from [here](https://github.com/jroxendal/PySCXML/blob/xpath/examples/scxml_sandbox/SCXMLEventProcessor.js).
+Since the websocket server sends events to its clients in the SCXML messaging XML format, these messages will need to be decoded as they reach the client. The server also receives events in the same format. I've supplied an encoder/decoder in the example folder (or just grab it from [here](https://github.com/jroxendal/PySCXML/blob/xpath/examples/scxml_sandbox/SCXMLEventProcessor.js)).
 
 
 ##Extending PySCXML##
@@ -451,7 +452,7 @@ The first, `custom_executable`, defines a handler function for all nodes of a pa
 	from scxml.pyscxml import custom_executable
 	@custom_executable("http://my_namespace.com")
 	def handler(node):
-	    ….
+	    ...
 
 
 
