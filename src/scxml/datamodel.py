@@ -263,11 +263,13 @@ class XPathDatamodel(object):
     
         
     def __getitem__(self, key):
+        
         data_dict = dict([(node.get("id"), node) for node in list(self.root)])
         data_dict.update(self.references)
-        
-#        print "data_dict", data_dict
-        return self.root.xpath(key, **data_dict)
+        try:
+            return self.root.xpath(key, **data_dict)
+        except etree.XPathEvalError, e:
+            raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
 #            if etree.iselement(key):
 #                return self.c[field].xpath(expr or ".", **self.c)
 #            else:
@@ -290,16 +292,19 @@ class XPathDatamodel(object):
                 child.tag = "data"
             val = eventxml 
         elif type(val) is list:
-            data = etree.fromstring("<data id='%s' />" % key)
+            data = etree.fromstring("<data id='%s' xmlns='' />" % key)
             for elem in val:
-                data.append(elem)
+                if etree.iselement(elem):
+                    data.append(elem)
+                else: #assume text
+                    data.text = elem
             val = data
 #        elif etree.iselement(val):
 #            val = 
 #            val = deepcopy(val)
         else:
             val = "" if val is None else val
-            val = etree.fromstring("<data id='%s'>%s</data>" % (key, val))
+            val = etree.fromstring("<data id='%s' xmlns=''>%s</data>" % (key, val))
         try:
 #            self.c[key] = val
             current = self.root.find("data[@id='%s']" % key)
@@ -362,6 +367,7 @@ class XPathDatamodel(object):
             if assignType == "replacechildren":
                 for child in elem:
                     elem.remove(child)
+                elem.text = ""
 #                if etree.iselement(val):
 #                    elem.append(val)
 #                isinstance(val, list):
@@ -408,7 +414,7 @@ class XPathDatamodel(object):
                 output = contentNode.xpath("./*")
             else:
                 self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
-                return 
+                return
         return output
     
         

@@ -29,11 +29,8 @@ from eventlet.green.urllib2 import urlopen #@UnresolvedImport
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import *
 from xml.parsers.expat import ExpatError
-from threading import Timer
-from StringIO import StringIO
 #from xml.etree import ElementTree as etree
 from lxml import etree
-#import lxml
 import textwrap
     
 import time
@@ -41,7 +38,6 @@ from datamodel import *
 from errors import *
 from eventlet import Queue
 import scxml.pyscxml
-from copy import deepcopy
 
         
 
@@ -114,7 +110,13 @@ class Compiler(object):
             return default
         else:
             try:
-                output = elem.get(attr) or self.getExprValue(elem.get(attr + "expr"), True)
+                expr = elem.get(attr + "expr")
+                if self.datamodel == "xpath":
+                    output = elem.get(attr) or self.getExprValue("string(%s)" % expr, True)
+                    output = str(output)
+                else:
+                    output = elem.get(attr) or self.getExprValue(expr, True)
+                    
             except ExprEvalError, e:
                 raise AttributeEvalError(e, elem, attr + "expr")
             return output if not is_list else output.split(" ")
@@ -211,7 +213,10 @@ class Compiler(object):
                 elif node_name == "foreach":
                     startIndex = 0 if self.datamodel != "xpath" else 1 
                     try:
-                        itr = enumerate(self.getExprValue(node.get("array"), True), startIndex)
+                        array = self.getExprValue(node.get("array"), True)
+                        itr = enumerate(array, startIndex)
+#                        if self.datamodel == "xpath":
+#                            assert all(map(lambda x: x, array)) 
                     except ExprEvalError, e:
                         raise AttributeEvalError(e, node, "array")
                     except TypeError, e:
@@ -223,9 +228,14 @@ class Compiler(object):
                             if self.datamodel != "xpath":
                                 self.dm[node.get("item")] = item
                             else:
+                                # if it's not a correct QName: crash.
+                                etree.QName(node.get("item"))
                                 self.dm.references[node.get("item")] = item
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
+                        except ValueError, e:
+                            raise AttributeEvalError(DataModelError(e), node, "item")
+                            
                         try:
                             if node.get("index"):
                                 if self.datamodel != "xpath":
@@ -367,11 +377,17 @@ class Compiler(object):
         
         
         type = self.parseAttr(sendNode, "type", "scxml")
-        event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None
+        e = self.parseAttr(sendNode, "event")
+#        if len(e) and self.datamodel == "xpath":
+#            e = e[0]
+        event = e.split(".") if e is not None else None
         eventstr = ".".join(event) if event else ""
         if not eventstr:
-            raise SendExecutionError("Illegal send value: '%s'" % eventstr) 
+            raise SendExecutionError("Illegal send value: '%s'" % eventstr)
+         
         target = self.parseAttr(sendNode, "target")
+#        if len(target) and self.datamodel == "xpath":
+#            target = target[0]
         if target == "#_response": type = "x-pyscxml-response"
         sender = None
         #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ? 
@@ -406,8 +422,7 @@ class Compiler(object):
                               self.interpreter.invokeId, 
                               toQueue=toQueue)
             elif target == "#_internal":
-                self.interpreter.raiseFunction(event, data, sendid=sendid)
-                
+                sender = partial(self.interpreter.raiseFunction, event, data, sendid=sendid)
             elif target.startswith("#_scxml_"): #sessionid
                 sessionid = target.split("#_scxml_")[-1]
                 try:
@@ -688,6 +703,10 @@ class Compiler(object):
         def start_invoke(wrapper):
             try:
                 inv = self.parseInvoke(node, parentId, n)
+            except InvokeError, e:
+                self.logger.exception("Line %s: Exception while parsing invoke." % (node.sourceline))
+                self.raiseError("error.execution.invoke.parseerror", e )
+                return
             except Exception, e:
                 self.logger.exception("Line %s: Exception while parsing invoke." % (node.sourceline))
                 self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
@@ -752,6 +771,11 @@ class Compiler(object):
                     inv.content = cnt
                 elif type(cnt) is list:
                     #TODO: if len(cnt) > 0, we could throw exception.
+                    if len(cnt) == 0:
+                        raise InvokeError("Line %s: The invoke content is empty." % node.sourceline)
+                    if cnt[0].xpath("local-name()") != "scxml":
+                        raise InvokeError("Line %s: The invoke content is invalid for content: \n%s" % 
+                                          (node.sourceline, etree.tostring(cnt[0])))
                     inv.content = etree.tostring(cnt[0])
                 elif self.datamodel == "ecmascript" and len(contentNode) > 0: # if cnt is a minidom object
                     inv.content = etree.tostring(contentNode[0])
@@ -870,10 +894,19 @@ class Compiler(object):
         return output
             
     def addDefaultNamespace(self, xmlStr):
-        if not etree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":
-            self.logger.warn("Your document lacks the correct "
+        root = etree.fromstring(xmlStr)
+        warnmsg = ("Your document lacks the correct "
                 "default namespace declaration. It has been added for you, for parsing purposes.")
+        
+        if root.nsmap.get(None) and root.nsmap.get(None) == "":
+            print re.sub("xmlns=[\"'][\"']", "xmlns='http://www.w3.org/2005/07/scxml'", xmlStr)
+            return re.sub("xmlns=[\"'][\"']", "xmlns='http://www.w3.org/2005/07/scxml'", xmlStr)
+        elif not root.nsmap.get(None) or not root.nsmap[None] == "http://www.w3.org/2005/07/scxml":
+            self.logger.warn(warnmsg)
             return xmlStr.replace("<scxml", "<scxml xmlns='http://www.w3.org/2005/07/scxml'", 1)
+        
+#        elif root.get("xmlns"):
+#            return etree.tostring(root)
         return xmlStr
     
     def xml_from_string(self, xmlstr):

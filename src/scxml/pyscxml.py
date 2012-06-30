@@ -286,7 +286,7 @@ class MultiSession(object):
     def set_processors(self, sm):
         sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.sessionid},
                                               "basichttp" : {"location" : "#_scxml_" + sm.sessionid} }
-        
+
     
     def send(self, event, data={}, to_session=None):
         '''send an event to the specified session. if to_session is None or "", 
@@ -383,55 +383,8 @@ test467.scxml
     </scxml>
     '''
     
-    sm = StateMachine("assertions_xpath/test147.scxml")
-#    sm = StateMachine("xpath_test.xml")
+#    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
+    sm = StateMachine("assertions_xpath/test483.scxml")
     sm.start()
     
-    
-    
-#    sm.start_threaded()
-#    t = threading.Thread(target=sm.start)
-#    t.start()
-#    sm.start()
-#    print "after start"
-#    sm.send("arret")
-#    t.join()
-#    print "after join"
-#    eventlet.greenthread.sleep()
-#    with StateMachine("microonde.xml") as sm:
-#        sm.send("arret")
-    
-    listener = '''
-        <scxml>
-            <state>
-                <transition event="e1" target="f">
-                    <log expr="_event.origin" />
-                    <send event="e2" targetexpr="_event.origin"  />
-                </transition>
-            </state>
-            <final id="f" />
-        </scxml>
-    '''
-    sender = '''
-    <scxml>
-        <state>
-            <onentry>
-                <log label="sending event" />
-                <send event="e1" target="#_scxml_session1"  />
-            </onentry>
-            <transition event="e2" target="f" />
-        </state>
-        <final id="f" />
-    </scxml>
-    '''
-    
-    
-    
-#    ms = MultiSession(init_sessions={"session1" : listener, "session2" : sender})
-#    ms.start()
-#    with ms:
-#        pass
-##        eventlet.greenthread.sleep(1)
-#    print all(map(lambda x: x.isFinished(), ms))
-        
     
