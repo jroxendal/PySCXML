@@ -4,7 +4,7 @@ import os
 #os.chdir("assertions_all/failed")
 #os.chdir("assertions_ecma/failed")
 #os.chdir("stoplist/failed")
-os.chdir("new_xpath_tests/failed")
+os.chdir("assertions_xpath/failed")
 logging.basicConfig(level=logging.NOTSET)
 
 nextFile = filter(lambda x: x.endswith("xml"), os.listdir("."))[0]

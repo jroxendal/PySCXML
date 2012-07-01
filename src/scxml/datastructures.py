@@ -28,53 +28,69 @@ class OrderedSet(list):
     def clear(self):
         self.__init__()
     
-    
 def dictToXML(dictionary, root="root", root_attrib={}):
     '''takes a python dictionary and returns an xml representation as an lxml Element.'''
-    xml = etree.TreeBuilder()
-    xml.start(root, root_attrib)
-    lastopened = None
-    def parse(d):
-        global lastopened
+    def parse(d, parent):
         if etree.iselement(d):
-            lastopened.append(deepcopy(d))
+            parent.append(deepcopy(d))
             
             return
         elif isinstance(d, etree._ElementStringResult):
-            xml.data(str(d))
+            parent.text = str(d)
+#            xml.data(str(d))
             return
 #        if isinstance(d, list):
 #            xml.data("\n".join(d))
         for k, v in d.items():
-            lastopened = xml.start(k, {})
+#            close = True
+            if etree.iselement(k):
+                new = deepcopy(k)
+                parent.append(new)
+#                parent = new
+#                close = False
+            else:
+                new = etree.Element(k)
+                parent.append(new)
+#                parent = new
+#                parent = xml.start(k, {})
             
             if type(v) == list:
                 for item in v:
-                    parse(item)
+                    parse(item, new)
             elif type(v) == dict:
-                parse(v)
+                parse(v, new)
             else:
                 v = v if v is not None else ""
-                xml.data(str(v))
-            xml.end(k)
+                new.text = str(v)
+#                xml.data(str(v))
+#            if close:
+#                xml.end(k)
     
-    parse(dictionary)
-    xml.end(root)
-    out = xml.close()
-    return out
+    
+#    xml = etree.TreeBuilder()
+#    parent = xml.start(root, root_attrib)
+    root = etree.Element(root, attrib=root_attrib)
+    parse(dictionary, root)
+#    xml.end(root)
+#    out = xml.close()
+    return root
 
 if __name__ == '__main__':
     import sys
     
-    print etree.tostring(dictToXML({"lol" : None}))
     
-    
-    sys.exit()
+#    d = {
+#         "apa" : {"bepa" : 123, "cepa" : 34},
+#          "foo" : {"inner" : etree.fromstring("<elem/>")}
+#         }
+    p = etree.Element("parent")
     d = {
-         "apa" : {"bepa" : 123, "cepa" : 34},
-          "foo" : {"inner" : etree.fromstring("<elem/>")}
+         p : "123",
+         "lol" : 3
          }
     from eventprocessor import Event
+    print etree.tostring( dictToXML(Event("hello", data={"d1" : 123}).__dict__, root="data", root_attrib={"id" : "key"}), pretty_print=True)
+    sys.exit()
 #    e = Event("hello", data={"d1" : etree.fromstring("<elem/>")})
     e = Event("hello", data={"d1" : 123})
 #    print e.__dict__

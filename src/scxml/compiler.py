@@ -252,6 +252,7 @@ class Compiler(object):
             elif node_ns == pyscxml_ns:
                 if node_name == "start_session":
                     xml = None
+#                    TODO: why are we using both parseData and parseContent here?
                     data = self.parseData(node, getContent=False)
                     contentNode = node.find(prepend_ns("content"))
                     if contentNode != None:
@@ -321,7 +322,7 @@ class Compiler(object):
             except Exception, e:
                 raise ExecutableContainerError(e, node)
     
-    def parseData(self, child, getContent=True):
+    def parseData(self, child, getContent=True, forSend=False):
         '''
         Given a parent node, returns a data object corresponding to 
         its param child nodes, namelist attribute or content child element.
@@ -335,28 +336,22 @@ class Compiler(object):
         output = {}
         for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("location"))
-#            try:
-            output[p.get("name")] = self.getExprValue(expr, True)
-            
-#            except Exception, e:
-#                self.raiseError("error.execution", e)
+            if self.datamodel == "xpath" and forSend:
+                output[etree.Element("data", attrib={"id" : p.get("name")})] = expr
                 
-        
+            else:
+                output[p.get("name")] = self.getExprValue(expr, True)
+            
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
-#                if isinstance(self.dm, XPathDatamodel):
-#                    val = self.getExprValue("$" + name, True)
-#                    if len(val) == 1 and not len(val[0]): 
-#                        val = self.getExprValue("$" + name + "/text()")
-#                    else:
-#                        val = self.getExprValue("$" + name + "/*", True)
-#                    output[name] = val
-#                else:
-                if isinstance(self.dm, XPathDatamodel):
-                    output[name[1:]] = self.getExprValue(name, True)
+                if self.datamodel == "xpath":
+                    if forSend:
+                        output[etree.Element("data", attrib={"id" : name})] = self.getExprValue("$" + name, True)
+                    else:
+                        output[name[1:]] = self.getExprValue(name, True)
                 else:
                     output[name] = self.getExprValue(name, True)
-                
+        
         return output
     
     def parseContent(self, contentNode):
@@ -373,7 +368,8 @@ class Compiler(object):
             if not self.dm.hasLocation(sendNode.get("idlocation")):
                 msg = "The location expression '%s' was not instantiated in the datamodel." % sendNode.get("location")
                 raise ExecutableError(IllegalLocationError(msg), sendNode)
-            self.dm[sendNode.get("idlocation")] = sendid 
+#            self.dm[sendNode.get("idlocation")] = sendid 
+            self.dm.assign(etree.Element("assign", attrib={"location" :  sendNode.get("idlocation"), "expr" : "'%s'" % sendid}))
         
         
         type = self.parseAttr(sendNode, "type", "scxml")
@@ -390,10 +386,12 @@ class Compiler(object):
 #            target = target[0]
         if target == "#_response": type = "x-pyscxml-response"
         sender = None
-        #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ? 
-        defaultSend = partial(self.interpreter.send, sendid=sendid if sendNode.get("id", sendNode.get("idlocation")) else None)
+        #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ?
+        defaultSendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None 
+        defaultSend = partial(self.interpreter.send, sendid=defaultSendid, eventtype="external")
         try:
-            data = self.parseData(sendNode)
+            data = self.parseData(sendNode, forSend=True)
+            
         except ExprEvalError, e:
             self.logger.exception("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "sourceline", 'unknown'))
 #            self.raiseError("error.execution", e, sendid=sendid)
@@ -409,8 +407,7 @@ class Compiler(object):
             sender = partial(defaultSend, event, data)
         elif isinstance(target, scxml.pyscxml.StateMachine):
             #TODO: what happens if this target isFinished when this executes?
-            sendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None
-            sender = partial(target.interpreter.send, event, data, sendid=sendid) 
+            sender = partial(target.interpreter.send, event, data, sendid=defaultSendid) 
         elif type in scxmlSendType:
             if target == "#_parent":
                 try:
@@ -524,7 +521,10 @@ class Compiler(object):
         if delay:
             self.timer_mapping[sendid] = eventlet.spawn_after(delay, sender)
         else:
-            sender()
+            try:
+                sender()
+            except Exception, e:
+                raise SendExecutionError("An unknown error occurred when parsing send on line %s." % sendNode.sourceline)
         
     
     def getUrlGetter(self):
@@ -566,7 +566,12 @@ class Compiler(object):
         preprocess(tree)
         self.is_response = tree.get("{%s}%s" % (pyscxml_ns, "response")) in ("true", "True")
         self.setupDatamodel(tree.get("datamodel", self.default_datamodel))
-        self.instantiate_datamodel = partial(self.setDatamodel, tree)
+        def init():
+            try:
+                self.setDatamodel(tree)
+            except Exception, e:
+                self.raiseError("error.execution", e)
+        self.instantiate_datamodel = init
         self.init_scripts(tree)
         
         for n, parent, node in iter_elems(tree):
@@ -853,7 +858,6 @@ class Compiler(object):
     def setDataList(self, datalist):
         
         dl_mapping = self.parallelize_download(filter(lambda x: x.get("src"), datalist))
-        
         for node in datalist:
             key = node.get("id")
             value = None

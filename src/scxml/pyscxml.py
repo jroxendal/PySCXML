@@ -384,7 +384,7 @@ test467.scxml
     '''
     
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
-    sm = StateMachine("assertions_xpath/test483.scxml")
+    sm = StateMachine("assertions_xpath/test242.scxml")
     sm.start()
     
     

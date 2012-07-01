@@ -255,8 +255,6 @@ class XPathDatamodel(object):
         self.root = datamodel("")
         self.root._parent = self
         
-#        self["_x"] = {}
-        
         # for when we need to two xpath variables to refer to the same element.
         self.references = {}
         
@@ -270,32 +268,25 @@ class XPathDatamodel(object):
             return self.root.xpath(key, **data_dict)
         except etree.XPathEvalError, e:
             raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
-#            if etree.iselement(key):
-#                return self.c[field].xpath(expr or ".", **self.c)
-#            else:
-#                return self.c[field]
-#        except KeyError:
-#            raise DataModelError("No such data field '%s'." % key)
-#        except Exception, e:
-#            raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
     
     def __setitem__(self, key, val):
-        #TODO: fix hiding of _event
         if key == "__event": key = "_event"
+        if key in assignOnce and key in self:
+            raise DataModelError("The field '%s' is read only." % key)
         if type(val) == dict:
             val = dictToXML(val, root="data", root_attrib={"id" : key})
         elif type(val).__name__ == "Event":
             eventxml = dictToXML(val.__dict__, root="data", root_attrib={"id" : key})
             #TODO: content broken
-            for child in eventxml.find("data"):
-                child.set("id", child.tag)
-                child.tag = "data"
+#            for child in eventxml.find("data"):
+#                child.set("id", child.tag)
+#                child.tag = "data"
             val = eventxml 
         elif type(val) is list:
             data = etree.fromstring("<data id='%s' xmlns='' />" % key)
             for elem in val:
                 if etree.iselement(elem):
-                    data.append(elem)
+                    data.append(deepcopy(elem))
                 else: #assume text
                     data.text = elem
             val = data
@@ -330,9 +321,16 @@ class XPathDatamodel(object):
     
     def assign(self, assignNode):
 #        loc = assignNode.get("location")[1:]
+
         loc = assignNode.get("location")
         assignType = assignNode.get("type", "replacechildren")
         expr = assignNode.get("expr")
+        
+#        TODO: we can still assign to children of event. 
+#        plus, we can still create an _event field under <datamodel>
+        if loc[1:] in assignOnce + ["_event"]:
+            raise DataModelError("The field '%s' is read only." % loc)
+#        if (loc in assignOnce and loc in self):
         
         loc_val = self[loc]
         if expr:
@@ -409,7 +407,7 @@ class XPathDatamodel(object):
             if contentNode.get("expr"):
                 output = self.evalExpr("(%s)" % contentNode.get("expr"))
             elif len(contentNode) == 0:
-                output = contentNode.xpath("./text()")
+                output = contentNode.xpath("normalize-space(./text())")
             elif len(contentNode) > 0:
                 output = contentNode.xpath("./*")
             else:
