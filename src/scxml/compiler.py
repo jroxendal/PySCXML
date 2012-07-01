@@ -38,6 +38,8 @@ from datamodel import *
 from errors import *
 from eventlet import Queue
 import scxml.pyscxml
+from datastructures import xpathparser
+
 
         
 
@@ -327,6 +329,7 @@ class Compiler(object):
         Given a parent node, returns a data object corresponding to 
         its param child nodes, namelist attribute or content child element.
         '''
+
         contentNode = child.find(prepend_ns("content"))
         if getContent and contentNode != None:
             return self.parseContent(contentNode)
@@ -337,7 +340,7 @@ class Compiler(object):
         for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("location"))
             if self.datamodel == "xpath" and forSend:
-                output[etree.Element("data", attrib={"id" : p.get("name")})] = expr
+                output[xpathparser.makeelement("data", attrib={"id" : p.get("name")})] = expr
                 
             else:
                 output[p.get("name")] = self.getExprValue(expr, True)
@@ -346,7 +349,7 @@ class Compiler(object):
             for name in child.get("namelist").split(" "):
                 if self.datamodel == "xpath":
                     if forSend:
-                        output[etree.Element("data", attrib={"id" : name})] = self.getExprValue("$" + name, True)
+                        output[xpathparser.makeelement("data", attrib={"id" : name})] = self.getExprValue("$" + name, True)
                     else:
                         output[name[1:]] = self.getExprValue(name, True)
                 else:
@@ -374,16 +377,12 @@ class Compiler(object):
         
         type = self.parseAttr(sendNode, "type", "scxml")
         e = self.parseAttr(sendNode, "event")
-#        if len(e) and self.datamodel == "xpath":
-#            e = e[0]
         event = e.split(".") if e is not None else None
         eventstr = ".".join(event) if event else ""
         if not eventstr:
             raise SendExecutionError("Illegal send value: '%s'" % eventstr)
          
         target = self.parseAttr(sendNode, "target")
-#        if len(target) and self.datamodel == "xpath":
-#            target = target[0]
         if target == "#_response": type = "x-pyscxml-response"
         sender = None
         #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ?
@@ -423,7 +422,6 @@ class Compiler(object):
             elif target.startswith("#_scxml_"): #sessionid
                 sessionid = target.split("#_scxml_")[-1]
                 try:
-#                    toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
                     toQueue = self.dm.sessions[sessionid].interpreter.externalQueue
                 except KeyError:
                     raise SendCommunicationError("The session '%s' is inaccessible." % sessionid)

@@ -8,6 +8,55 @@ Created on Jan 4, 2010
 from lxml import etree
 from copy import deepcopy
 
+
+class Nodeset(list):
+    def toXML(self):
+        def f(x, y):
+            return str(x) + "\n" +  str(y)
+        return reduce(f, self)
+        
+            
+        
+class XpathElement(etree.ElementBase):
+        
+    def xpath(self, _path, namespaces=None, extensions=None, smart_strings=True, **_variables):
+        result = etree.ElementBase.xpath(self, _path, namespaces=namespaces, extensions=extensions, smart_strings=smart_strings, **_variables)
+        if type(result) is list:
+            return Nodeset(result)
+        else: return result
+    
+    def append(self, node):
+        if node is None: return
+        if etree.iselement(node): 
+            etree.ElementBase.append(self, node)
+            return
+        nodelist = [node] if not isinstance(node, list) else node
+        
+        for child in nodelist:
+            try:
+                etree.ElementBase.append(self, deepcopy(child))
+            except TypeError:
+                child = "" if child is None else child
+                if len(self):
+                    if self[-1].tail is None: 
+                        self[-1].tail = str(child)
+                    else:
+                        self[-1].tail += "\n%s" % str(child)
+                else:
+                    if self.text is None: 
+                        self.text = str(child)
+                    else:
+                        self.text += "\n%s" % str(child)
+                    
+    def __str__(self):
+        return etree.tostring(self)
+        
+
+
+
+xpathparser = etree.XMLParser()
+xpathparser.set_element_class_lookup(etree.ElementDefaultClassLookup(element=XpathElement))
+
 class OrderedSet(list):
     def delete(self, elem):
         try:
@@ -30,29 +79,19 @@ class OrderedSet(list):
     
 def dictToXML(dictionary, root="root", root_attrib={}):
     '''takes a python dictionary and returns an xml representation as an lxml Element.'''
+    parser = xpathparser
     def parse(d, parent):
-        if etree.iselement(d):
+        if not type(d) is dict:
             parent.append(deepcopy(d))
-            
             return
-        elif isinstance(d, etree._ElementStringResult):
-            parent.text = str(d)
-#            xml.data(str(d))
-            return
-#        if isinstance(d, list):
-#            xml.data("\n".join(d))
+        
         for k, v in d.items():
-#            close = True
-            if etree.iselement(k):
-                new = deepcopy(k)
-                parent.append(new)
-#                parent = new
-#                close = False
+            if isinstance(k, basestring):
+                new = parser.makeelement(k)
             else:
-                new = etree.Element(k)
-                parent.append(new)
-#                parent = new
-#                parent = xml.start(k, {})
+                new = deepcopy(k)
+            parent.append(new)
+            
             
             if type(v) == list:
                 for item in v:
@@ -62,17 +101,11 @@ def dictToXML(dictionary, root="root", root_attrib={}):
             else:
                 v = v if v is not None else ""
                 new.text = str(v)
-#                xml.data(str(v))
-#            if close:
-#                xml.end(k)
+#                print new, v
     
     
-#    xml = etree.TreeBuilder()
-#    parent = xml.start(root, root_attrib)
-    root = etree.Element(root, attrib=root_attrib)
+    root = parser.makeelement(root, attrib=root_attrib)
     parse(dictionary, root)
-#    xml.end(root)
-#    out = xml.close()
     return root
 
 if __name__ == '__main__':

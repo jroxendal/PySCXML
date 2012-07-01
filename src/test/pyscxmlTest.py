@@ -32,7 +32,7 @@ class RegressionTest(unittest.TestCase):
     This test class is run from the context of the build.xml found in the project root.
     '''
     
-    def testInterpreter(self):
+    def block_testInterpreter(self):
         os.environ["PYSCXMLPATH"] = "../../unittest_xml:./unittest_xml"
         runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
@@ -103,7 +103,7 @@ class RegressionTest(unittest.TestCase):
         
 
 
-    def testW3cPython(self):
+    def block_testW3cPython(self):
 #        logging.basicConfig(level=logging.NOTSET)
         os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_passed"
         
@@ -121,7 +121,7 @@ class RegressionTest(unittest.TestCase):
             self.fail("Failed tests:\n" + "\n".join(failed))
             
         
-    def testW3cEcma(self):
+    def block_testW3cEcma(self):
 #        logging.basicConfig(level=logging.NOTSET)
         os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_ecmascript/"
         
@@ -143,7 +143,7 @@ class RegressionTest(unittest.TestCase):
         failed = parallelize(filelist)
         print "completed %s w3c xpath tests" % len(filelist)
         if failed:
-            self.fail("Failed tests:\n" + "\n".join(failed))
+            self.fail(("%d failed tests:\n" % len(failed)) + "\n".join(failed))
         
     def runTest(self):
         self.testInterpreter()

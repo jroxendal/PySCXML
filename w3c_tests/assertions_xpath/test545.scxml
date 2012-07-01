@@ -8,7 +8,9 @@
      </send>
   </onentry>
    <transition event="*" cond="$_event/data/foo/bar = 3" target="pass"/>
-   <transition event="*" target="fail"/>
+   <transition event="*" target="fail">
+    <log expr="$_event/data" />
+   </transition>
   </state>
     
 <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>

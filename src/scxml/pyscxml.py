@@ -46,7 +46,7 @@ def default_logfunction(label, msg):
         
         return x
     
-    if type(msg) is list:
+    if isinstance(msg, list):
         msg = map(f, msg)
         msg = "\n".join(msg)
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
@@ -384,7 +384,8 @@ test467.scxml
     '''
     
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
-    sm = StateMachine("assertions_xpath/test242.scxml")
+    sm = StateMachine("assertions_xpath/test277.scxml")
+    os.environ["PYSCXMLPATH"] += ":" + sm.filedir
     sm.start()
     
     
