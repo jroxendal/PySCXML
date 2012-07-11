@@ -32,7 +32,7 @@ class RegressionTest(unittest.TestCase):
     This test class is run from the context of the build.xml found in the project root.
     '''
     
-    def block_testInterpreter(self):
+    def testInterpreter(self):
         os.environ["PYSCXMLPATH"] = "../../unittest_xml:./unittest_xml"
         runToCompletionList = ["colors.xml", "parallel.xml", "issue_164.xml", "twolock_door.xml", 
                                "if_block.xml", "parallel2.xml", "parallel3.xml", "parallel4.xml", 
@@ -103,7 +103,7 @@ class RegressionTest(unittest.TestCase):
         
 
 
-    def block_testW3cPython(self):
+    def testW3cPython(self):
 #        logging.basicConfig(level=logging.NOTSET)
         os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_passed"
         
@@ -121,7 +121,7 @@ class RegressionTest(unittest.TestCase):
             self.fail("Failed tests:\n" + "\n".join(failed))
             
         
-    def block_testW3cEcma(self):
+    def testW3cEcma(self):
 #        logging.basicConfig(level=logging.NOTSET)
         os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_ecmascript/"
         
