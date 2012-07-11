@@ -10,7 +10,6 @@ Version 0.8.3:
  * The type argument to the PySCXMLServer has been removed. 
  * Invoked scxml documents are now real sessions in pyscxml.
 
-
 Version 0.8.2:
  * enter order has been changed from generational to document order. Also, invoke now takes place in enter order, and invoke cancellation in exit order. 
  * a path environment variable (mirroring PYTHONPATH) has been added to better support document location in invoke src. see below for more information on the change. 
@@ -29,6 +28,7 @@ Version 0.8 brings too many changes to mention in any detail. Many of them are i
 
 Version 0.7.2:
   * never mind the change made in 0.7.1 below. though this change might come back later, the w3c wg is still discussing the issue, so for now we'll leave it as before.  
+
 Version 0.7.1:
   * onexit in the child of a parallel block no longer causes all siblings in the parallel block to be exited. 
 
@@ -39,6 +39,7 @@ Version 0.6.6:
   * though not actually requiring an update of old documents, the transition element has gained the type attribute, supporting the values `external` (the default value) and `internal`, which may simplify some document types. [Wikipedia](http://en.wikipedia.org/wiki/UML_state_machine?oldid=0#Local_versus_external_transitions) explains.
   * targeting invoke instances with send has been changed from `target="#invokeid"` to `target="#_invokeid"`. 
   * invoke type="x-pyscxml-responseserver" has been replaced with the more general type="x-pyscxml-httpserver", meant for invoking REST-based services, but that can also be used for invoking the PySCXMLServer running with TYPE_RESPONSE.
+
 Version 0.6.5:
   * The global datamodel, with databinding="early", is now instantiated as StateMachine.start is called instead of at StateMachine.__init__.
   * StateMachine.start() no longer starts a hidden thread. StateMachine.start_threaded() mirrors the old functionality. 

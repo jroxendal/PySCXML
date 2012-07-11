@@ -381,7 +381,7 @@ class Interpreter(object):
         return name in map(lambda x: x.id, self.configuration)
     
     
-    def send(self, name, data={}, invokeid = None, toQueue = None, sendid=None):
+    def send(self, name, data={}, invokeid = None, toQueue = None, sendid=None, eventtype="platform"):
         """Send an event to the statemachine 
         @param name: a dot delimited string, the event name
         @param data: the data associated with the event
@@ -391,7 +391,7 @@ class Interpreter(object):
         """
         if isinstance(name, basestring): name = name.split(".")
         if not toQueue: toQueue = self.externalQueue
-        evt = Event(name, data, invokeid, sendid=sendid)
+        evt = Event(name, data, invokeid, sendid=sendid, eventtype=eventtype)
         evt.origin = "#_scxml_" + self.dm.sessionid
         evt.origintype = ScxmlOriginType()
         #TODO: and for ecmascript?

@@ -29,11 +29,8 @@ from eventlet.green.urllib2 import urlopen #@UnresolvedImport
 from eventprocessor import Event, SCXMLEventProcessor as Processor
 from invoke import *
 from xml.parsers.expat import ExpatError
-from threading import Timer
-from StringIO import StringIO
 #from xml.etree import ElementTree as etree
 from lxml import etree
-#import lxml
 import textwrap
     
 import time
@@ -41,7 +38,8 @@ from datamodel import *
 from errors import *
 from eventlet import Queue
 import scxml.pyscxml
-from copy import deepcopy
+from datastructures import xpathparser
+
 
         
 
@@ -114,7 +112,13 @@ class Compiler(object):
             return default
         else:
             try:
-                output = elem.get(attr) or self.getExprValue(elem.get(attr + "expr"), True)
+                expr = elem.get(attr + "expr")
+                if self.datamodel == "xpath":
+                    output = elem.get(attr) or self.getExprValue("string(%s)" % expr, True)
+                    output = str(output)
+                else:
+                    output = elem.get(attr) or self.getExprValue(expr, True)
+                    
             except ExprEvalError, e:
                 raise AttributeEvalError(e, elem, attr + "expr")
             return output if not is_list else output.split(" ")
@@ -211,7 +215,10 @@ class Compiler(object):
                 elif node_name == "foreach":
                     startIndex = 0 if self.datamodel != "xpath" else 1 
                     try:
-                        itr = enumerate(self.getExprValue(node.get("array"), True), startIndex)
+                        array = self.getExprValue(node.get("array"), True)
+                        itr = enumerate(array, startIndex)
+#                        if self.datamodel == "xpath":
+#                            assert all(map(lambda x: x, array)) 
                     except ExprEvalError, e:
                         raise AttributeEvalError(e, node, "array")
                     except TypeError, e:
@@ -222,9 +229,16 @@ class Compiler(object):
                             if self.datamodel != "xpath":
                                 self.dm[node.get("item")] = item
                             else:
-                                self.dm.setReference(node.get("item"), item)
+                               # self.dm.setReference(node.get("item"), item)
+                                # if it's not a correct QName: crash.
+                                etree.QName(node.get("item"))
+                                self.dm.references[node.get("item")] = item
+                                
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
+                        except ValueError, e:
+                            raise AttributeEvalError(DataModelError(e), node, "item")
+                            
                         try:
                             if node.get("index"):
                                 if self.datamodel != "xpath":
@@ -241,6 +255,7 @@ class Compiler(object):
             elif node_ns == pyscxml_ns:
                 if node_name == "start_session":
                     xml = None
+#                    TODO: why are we using both parseData and parseContent here?
                     data = self.parseData(node, getContent=False)
                     contentNode = node.find(prepend_ns("content"))
                     if contentNode != None:
@@ -310,11 +325,12 @@ class Compiler(object):
             except Exception, e:
                 raise ExecutableContainerError(e, node)
     
-    def parseData(self, child, getContent=True):
+    def parseData(self, child, getContent=True, forSend=False):
         '''
         Given a parent node, returns a data object corresponding to 
         its param child nodes, namelist attribute or content child element.
         '''
+
         contentNode = child.find(prepend_ns("content"))
         if getContent and contentNode != None:
             return self.parseContent(contentNode)
@@ -324,28 +340,22 @@ class Compiler(object):
         output = {}
         for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("location"))
-#            try:
-            output[p.get("name")] = self.getExprValue(expr, True)
-            
-#            except Exception, e:
-#                self.raiseError("error.execution", e)
+            if self.datamodel == "xpath" and forSend:
+                output[xpathparser.makeelement("data", attrib={"id" : p.get("name")})] = expr
                 
-        
+            else:
+                output[p.get("name")] = self.getExprValue(expr, True)
+            
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
-#                if isinstance(self.dm, XPathDatamodel):
-#                    val = self.getExprValue("$" + name, True)
-#                    if len(val) == 1 and not len(val[0]): 
-#                        val = self.getExprValue("$" + name + "/text()")
-#                    else:
-#                        val = self.getExprValue("$" + name + "/*", True)
-#                    output[name] = val
-#                else:
-                if isinstance(self.dm, XPathDatamodel):
-                    output[name[1:]] = self.getExprValue(name, True)
+                if self.datamodel == "xpath":
+                    if forSend:
+                        output[xpathparser.makeelement("data", attrib={"id" : name})] = self.getExprValue("$" + name, True)
+                    else:
+                        output[name[1:]] = self.getExprValue(name, True)
                 else:
                     output[name] = self.getExprValue(name, True)
-                
+        
         return output
     
     def parseContent(self, contentNode):
@@ -362,21 +372,26 @@ class Compiler(object):
             if not self.dm.hasLocation(sendNode.get("idlocation")):
                 msg = "The location expression '%s' was not instantiated in the datamodel." % sendNode.get("location")
                 raise ExecutableError(IllegalLocationError(msg), sendNode)
-            self.dm[sendNode.get("idlocation")] = sendid 
+#            self.dm[sendNode.get("idlocation")] = sendid 
+            self.dm.assign(etree.Element("assign", attrib={"location" :  sendNode.get("idlocation"), "expr" : "'%s'" % sendid}))
         
         
         type = self.parseAttr(sendNode, "type", "scxml")
-        event = self.parseAttr(sendNode, "event").split(".") if self.parseAttr(sendNode, "event") else None
+        e = self.parseAttr(sendNode, "event")
+        event = e.split(".") if e is not None else None
         eventstr = ".".join(event) if event else ""
         if not eventstr:
-            raise SendExecutionError("Illegal send value: '%s'" % eventstr) 
+            raise SendExecutionError("Illegal send value: '%s'" % eventstr)
+         
         target = self.parseAttr(sendNode, "target")
         if target == "#_response": type = "x-pyscxml-response"
         sender = None
-        #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ? 
-        defaultSend = partial(self.interpreter.send, sendid=sendid if sendNode.get("id", sendNode.get("idlocation")) else None)
+        #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ?
+        defaultSendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None 
+        defaultSend = partial(self.interpreter.send, sendid=defaultSendid, eventtype="external")
         try:
-            data = self.parseData(sendNode)
+            data = self.parseData(sendNode, forSend=True)
+            
         except ExprEvalError, e:
             self.logger.exception("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "sourceline", 'unknown'))
 #            self.raiseError("error.execution", e, sendid=sendid)
@@ -392,8 +407,7 @@ class Compiler(object):
             sender = partial(defaultSend, event, data)
         elif isinstance(target, scxml.pyscxml.StateMachine):
             #TODO: what happens if this target isFinished when this executes?
-            sendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None
-            sender = partial(target.interpreter.send, event, data, sendid=sendid) 
+            sender = partial(target.interpreter.send, event, data, sendid=defaultSendid) 
         elif type in scxmlSendType:
             if target == "#_parent":
                 try:
@@ -405,12 +419,10 @@ class Compiler(object):
                               self.interpreter.invokeId, 
                               toQueue=toQueue)
             elif target == "#_internal":
-                self.interpreter.raiseFunction(event, data, sendid=sendid)
-                
+                sender = partial(self.interpreter.raiseFunction, event, data, sendid=sendid)
             elif target.startswith("#_scxml_"): #sessionid
                 sessionid = target.split("#_scxml_")[-1]
                 try:
-#                    toQueue = self.dm["_x"]["sessions"][sessionid].interpreter.externalQueue
                     toQueue = self.dm.sessions[sessionid].interpreter.externalQueue
                 except KeyError:
                     raise SendCommunicationError("The session '%s' is inaccessible." % sessionid)
@@ -508,7 +520,10 @@ class Compiler(object):
         if delay:
             self.timer_mapping[sendid] = eventlet.spawn_after(delay, sender)
         else:
-            sender()
+            try:
+                sender()
+            except Exception, e:
+                raise SendExecutionError("An unknown error occurred when parsing send on line %s." % sendNode.sourceline)
         
     
     def getUrlGetter(self):
@@ -550,7 +565,12 @@ class Compiler(object):
         preprocess(tree)
         self.is_response = tree.get("{%s}%s" % (pyscxml_ns, "response")) in ("true", "True")
         self.setupDatamodel(tree.get("datamodel", self.default_datamodel))
-        self.instantiate_datamodel = partial(self.setDatamodel, tree)
+        def init():
+            try:
+                self.setDatamodel(tree)
+            except Exception, e:
+                self.raiseError("error.execution", e)
+        self.instantiate_datamodel = init
         self.init_scripts(tree)
         
         for n, parent, node in iter_elems(tree):
@@ -687,6 +707,10 @@ class Compiler(object):
         def start_invoke(wrapper):
             try:
                 inv = self.parseInvoke(node, parentId, n)
+            except InvokeError, e:
+                self.logger.exception("Line %s: Exception while parsing invoke." % (node.sourceline))
+                self.raiseError("error.execution.invoke.parseerror", e )
+                return
             except Exception, e:
                 self.logger.exception("Line %s: Exception while parsing invoke." % (node.sourceline))
                 self.raiseError("error.execution.invoke." + type(e).__name__.lower(), e)
@@ -751,6 +775,11 @@ class Compiler(object):
                     inv.content = cnt
                 elif type(cnt) is list:
                     #TODO: if len(cnt) > 0, we could throw exception.
+                    if len(cnt) == 0:
+                        raise InvokeError("Line %s: The invoke content is empty." % node.sourceline)
+                    if cnt[0].xpath("local-name()") != "scxml":
+                        raise InvokeError("Line %s: The invoke content is invalid for content: \n%s" % 
+                                          (node.sourceline, etree.tostring(cnt[0])))
                     inv.content = etree.tostring(cnt[0])
                 elif self.datamodel == "ecmascript" and len(contentNode) > 0: # if cnt is a minidom object
                     inv.content = etree.tostring(contentNode[0])
@@ -828,7 +857,6 @@ class Compiler(object):
     def setDataList(self, datalist):
         
         dl_mapping = self.parallelize_download(filter(lambda x: x.get("src"), datalist))
-        
         for node in datalist:
             key = node.get("id")
             value = None
@@ -872,10 +900,19 @@ class Compiler(object):
         return output
             
     def addDefaultNamespace(self, xmlStr):
-        if not etree.fromstring(xmlStr).tag == "{http://www.w3.org/2005/07/scxml}scxml":
-            self.logger.warn("Your document lacks the correct "
+        root = etree.fromstring(xmlStr)
+        warnmsg = ("Your document lacks the correct "
                 "default namespace declaration. It has been added for you, for parsing purposes.")
+        
+        if root.nsmap.get(None) and root.nsmap.get(None) == "":
+            print re.sub("xmlns=[\"'][\"']", "xmlns='http://www.w3.org/2005/07/scxml'", xmlStr)
+            return re.sub("xmlns=[\"'][\"']", "xmlns='http://www.w3.org/2005/07/scxml'", xmlStr)
+        elif not root.nsmap.get(None) or not root.nsmap[None] == "http://www.w3.org/2005/07/scxml":
+            self.logger.warn(warnmsg)
             return xmlStr.replace("<scxml", "<scxml xmlns='http://www.w3.org/2005/07/scxml'", 1)
+        
+#        elif root.get("xmlns"):
+#            return etree.tostring(root)
         return xmlStr
     
     def xml_from_string(self, xmlstr):

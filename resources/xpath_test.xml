@@ -30,6 +30,7 @@ initial="s0" datamodel="xpath" version="1.0">
    <state id="s1">
       <onentry>
 <!-- illegal item, legal array -->
+	<log label="s1" expr="$Var5/*" />
         <foreach item=".." index="Var3" array="$Var5/*">
           <assign location="$Var1" expr="$Var1 + 1"/>
           </foreach>

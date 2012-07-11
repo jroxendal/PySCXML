@@ -245,20 +245,23 @@ class ECMAScriptDataModel(ImperativeDataModel):
         self.evalExpr(expr)
 
 
+
+
 class XPathDatamodel(object):
     def __init__(self):
+        
         self.logger = logging.getLogger("pyscxml.XPathDatamodel")
         
+        from datastructures import xpathparser
+        self.parser = xpathparser
+        
+        self.root = self.parser.makeelement("datamodel")
         # we need a reference to the datamodel in order to implement In()
-        class datamodel(etree.ElementBase): pass
-        
-        self.root = datamodel("")
         self.root._parent = self
-        
-#        self["_x"] = {}
         
         # for when we need to two xpath variables to refer to the same element.
         self.references = {}
+
         
     
     def setReference(self, key, val):
@@ -270,53 +273,37 @@ class XPathDatamodel(object):
         return self.references[key]
         
     def __getitem__(self, key):
+        
         data_dict = dict([(node.get("id"), node) for node in list(self.root)])
         data_dict.update(self.references)
-        
-#        print "data_dict", data_dict
-        return self.root.xpath(key, **data_dict)
-#            if etree.iselement(key):
-#                return self.c[field].xpath(expr or ".", **self.c)
-#            else:
-#                return self.c[field]
-#        except KeyError:
-#            raise DataModelError("No such data field '%s'." % key)
-#        except Exception, e:
-#            raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
+        try:
+            return self.root.xpath(key, **data_dict)
+        except etree.XPathEvalError, e:
+            raise DataModelError("Error when evaluating expression '%s':\n%s" % (key, e))
     
     def __setitem__(self, key, val):
-        #TODO: fix hiding of _event
         if key == "__event": key = "_event"
+        if key in assignOnce and key in self:
+            raise DataModelError("The field '%s' is read only." % key)
+        if type(val).__name__ == "Event":
+            val = val.__dict__
+        
         if type(val) == dict:
-            val = dictToXML(val, root="data", root_attrib={"id" : key})
-        elif type(val).__name__ == "Event":
-            eventxml = dictToXML(val.__dict__, root="data", root_attrib={"id" : key})
-            #TODO: content broken
-            for child in eventxml.find("data"):
-                child.set("id", child.tag)
-                child.tag = "data"
-            val = eventxml 
-        elif type(val) is list:
-            data = etree.fromstring("<data id='%s' />" % key)
-            for elem in val:
-                data.append(elem)
-            val = data
-#        elif etree.iselement(val):
-#            val = 
-#            val = deepcopy(val)
+            data = dictToXML(val, root="data", root_attrib={"id" : key})
+        elif isinstance(val, list):
+            data = etree.fromstring("<data id='%s' xmlns='' />" % key, parser=self.parser)
+            data.append(deepcopy(val))
         else:
-            val = "" if val is None else val
-            val = etree.fromstring("<data id='%s'>%s</data>" % (key, val))
+            val = val if val is not None else ""
+            data = etree.fromstring("<data id='%s' xmlns=''>%s</data>" % (key, val), parser=self.parser)
         try:
-#            self.c[key] = val
             current = self.root.find("data[@id='%s']" % key)
             if current is not None:
                 self.root.remove(current)
-            self.root.append(val)
+            self.root.append(data)
         except KeyError:
             raise DataModelError("You can't assign to the name '%s'." % key)
         except:
-#            print "__setitem__ failed for key: %s and value: %s." % (key, val)
             self.logger.exception("__setitem__ failed for key: %s and value: %s." % (key, val))
     
     def __contains__(self, key):
@@ -331,15 +318,21 @@ class XPathDatamodel(object):
             return False
     
     def assign(self, assignNode):
-#        loc = assignNode.get("location")[1:]
+
         loc = assignNode.get("location")
         assignType = assignNode.get("type", "replacechildren")
         expr = assignNode.get("expr")
         
+#        TODO: we can still assign to children of event. 
+#        plus, we can still create an _event field under <datamodel>
+        if loc[1:] in assignOnce + ["_event"]:
+            raise DataModelError("The field '%s' is read only." % loc)
+#        if (loc in assignOnce and loc in self):
+        
         loc_val = self[loc]
         if expr:
             val = self[expr]
-            if type(val) is not list: val = [val]
+            if not isinstance(val, list): val = [val]
             val = map(deepcopy, val)
         else:
             val = assignNode.xpath("./*")
@@ -369,9 +362,8 @@ class XPathDatamodel(object):
             if assignType == "replacechildren":
                 for child in elem:
                     elem.remove(child)
-#                if etree.iselement(val):
-#                    elem.append(val)
-#                isinstance(val, list):
+                elem.text = ""
+                #TODO: I should be able to replace this with the XPathElement.append
                 for e in val:
                     if etree.iselement(e):
                         elem.append(e)
@@ -410,12 +402,12 @@ class XPathDatamodel(object):
             if contentNode.get("expr"):
                 output = self.evalExpr("(%s)" % contentNode.get("expr"))
             elif len(contentNode) == 0:
-                output = contentNode.xpath("./text()")
+                output = contentNode.xpath("normalize-space(./text())")
             elif len(contentNode) > 0:
                 output = contentNode.xpath("./*")
             else:
                 self.logger.error("Line %s: error when parsing content node." % contentNode.sourceline)
-                return 
+                return
         return output
     
         

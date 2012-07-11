@@ -8,6 +8,55 @@ Created on Jan 4, 2010
 from lxml import etree
 from copy import deepcopy
 
+
+class Nodeset(list):
+    def toXML(self):
+        def f(x, y):
+            return str(x) + "\n" +  str(y)
+        return reduce(f, self)
+        
+            
+        
+class XpathElement(etree.ElementBase):
+        
+    def xpath(self, _path, namespaces=None, extensions=None, smart_strings=True, **_variables):
+        result = etree.ElementBase.xpath(self, _path, namespaces=namespaces, extensions=extensions, smart_strings=smart_strings, **_variables)
+        if type(result) is list:
+            return Nodeset(result)
+        else: return result
+    
+    def append(self, node):
+        if node is None: return
+        if etree.iselement(node): 
+            etree.ElementBase.append(self, node)
+            return
+        nodelist = [node] if not isinstance(node, list) else node
+        
+        for child in nodelist:
+            try:
+                etree.ElementBase.append(self, deepcopy(child))
+            except TypeError:
+                child = "" if child is None else child
+                if len(self):
+                    if self[-1].tail is None: 
+                        self[-1].tail = str(child)
+                    else:
+                        self[-1].tail += "\n%s" % str(child)
+                else:
+                    if self.text is None: 
+                        self.text = str(child)
+                    else:
+                        self.text += "\n%s" % str(child)
+                    
+    def __str__(self):
+        return etree.tostring(self)
+        
+
+
+
+xpathparser = etree.XMLParser()
+xpathparser.set_element_class_lookup(etree.ElementDefaultClassLookup(element=XpathElement))
+
 class OrderedSet(list):
     def delete(self, elem):
         try:
@@ -28,53 +77,53 @@ class OrderedSet(list):
     def clear(self):
         self.__init__()
     
-    
 def dictToXML(dictionary, root="root", root_attrib={}):
     '''takes a python dictionary and returns an xml representation as an lxml Element.'''
-    xml = etree.TreeBuilder()
-    xml.start(root, root_attrib)
-    lastopened = None
-    def parse(d):
-        global lastopened
-        if etree.iselement(d):
-            lastopened.append(deepcopy(d))
-            
+    parser = xpathparser
+    def parse(d, parent):
+        if not type(d) is dict:
+            parent.append(deepcopy(d))
             return
-        elif isinstance(d, etree._ElementStringResult):
-            xml.data(str(d))
-            return
-#        if isinstance(d, list):
-#            xml.data("\n".join(d))
+        
         for k, v in d.items():
-            lastopened = xml.start(k, {})
+            if isinstance(k, basestring):
+                new = parser.makeelement(k)
+            else:
+                new = deepcopy(k)
+            parent.append(new)
+            
             
             if type(v) == list:
                 for item in v:
-                    parse(item)
+                    parse(item, new)
             elif type(v) == dict:
-                parse(v)
+                parse(v, new)
             else:
                 v = v if v is not None else ""
-                xml.data(str(v))
-            xml.end(k)
+                new.text = str(v)
+#                print new, v
     
-    parse(dictionary)
-    xml.end(root)
-    out = xml.close()
-    return out
+    
+    root = parser.makeelement(root, attrib=root_attrib)
+    parse(dictionary, root)
+    return root
 
 if __name__ == '__main__':
     import sys
     
-    print etree.tostring(dictToXML({"lol" : None}))
     
-    
-    sys.exit()
+#    d = {
+#         "apa" : {"bepa" : 123, "cepa" : 34},
+#          "foo" : {"inner" : etree.fromstring("<elem/>")}
+#         }
+    p = etree.Element("parent")
     d = {
-         "apa" : {"bepa" : 123, "cepa" : 34},
-          "foo" : {"inner" : etree.fromstring("<elem/>")}
+         p : "123",
+         "lol" : 3
          }
     from eventprocessor import Event
+    print etree.tostring( dictToXML(Event("hello", data={"d1" : 123}).__dict__, root="data", root_attrib={"id" : "key"}), pretty_print=True)
+    sys.exit()
 #    e = Event("hello", data={"d1" : etree.fromstring("<elem/>")})
     e = Event("hello", data={"d1" : 123})
 #    print e.__dict__

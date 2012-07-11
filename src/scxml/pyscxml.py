@@ -46,7 +46,7 @@ def default_logfunction(label, msg):
         
         return x
     
-    if type(msg) is list:
+    if isinstance(msg, list):
         msg = map(f, msg)
         msg = "\n".join(msg)
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
@@ -286,7 +286,7 @@ class MultiSession(object):
     def set_processors(self, sm):
         sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.sessionid},
                                               "basichttp" : {"location" : "#_scxml_" + sm.sessionid} }
-        
+
     
     def send(self, event, data={}, to_session=None):
         '''send an event to the specified session. if to_session is None or "", 
@@ -384,6 +384,7 @@ test467.scxml
     '''
     
     sm = StateMachine("xpath_test.xml")
-    # sm = StateMachine("assertions_ecmascript/test242.scxml")
+#    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
+    sm = StateMachine("assertions_xpath/test277.scxml")
+    os.environ["PYSCXMLPATH"] += ":" + sm.filedir
     sm.start()
-    

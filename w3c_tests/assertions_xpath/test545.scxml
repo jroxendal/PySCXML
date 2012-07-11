@@ -7,11 +7,10 @@
      <content><foo xmlns=""><bar>3</bar></foo></content>
      </send>
   </onentry>
-   <transition event="*">
+   <transition event="*" cond="$_event/data/foo/bar = 3" target="pass"/>
+   <transition event="*" target="fail">
     <log expr="$_event/data" />
    </transition>
-   <transition event="*" cond="$_event/data/foo/bar = 3" target="pass"/>
-   <transition event="*" target="fail"/>
   </state>
     
 <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
