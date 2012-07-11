@@ -217,13 +217,12 @@ class Compiler(object):
                     except TypeError, e:
                         err = DataModelError(e)
                         raise AttributeEvalError(err, node, "array")
-                    
                     for index, item in itr:
                         try:
                             if self.datamodel != "xpath":
                                 self.dm[node.get("item")] = item
                             else:
-                                self.dm.references[node.get("item")] = item
+                                self.dm.setReference(node.get("item"), item)
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "item")
                         try:
@@ -808,7 +807,7 @@ class Compiler(object):
         # set top-level datamodel element
         if top_level is not None:
             try:
-                self.setDataList(tree.find(prepend_ns("datamodel")))
+                self.setDataList(top_level)
             except Exception, e:
                 self.raiseError("error.execution", e)
 #                raise ParseError("Parsing of data tag caused document startup to fail. \n%s" % e)
@@ -840,8 +839,11 @@ class Compiler(object):
                     self.logger.error("Data src not found : '%s'. \n\t%s" % (node.get("src"), value))
                     value = None
             elif node.get("expr") or len(node) > 0 or node.text:
-                value = self.parseContent(node)
-            
+                try:
+                    value = self.parseContent(node)
+                except Exception, e:
+                    self.logger.error("Failed to parse data element at line %s:\n%s" % (node.sourceline, e))
+                    self.raiseError("error.execution", e)
             
             
             #TODO: should we be overwriting values here? see test 226.

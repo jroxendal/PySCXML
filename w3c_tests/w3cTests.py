@@ -28,7 +28,7 @@ def move(src, dest):
 
 if __name__ == '__main__':
     import futures, os, glob, sys, eventlet
-    os.chdir("assertions_alkolkar/")
+    os.chdir("new_xpath_tests/")
     
     for fn in glob.glob("*.xml"):
         shutil.move(fn, fn.split(".")[0] + ".scxml")

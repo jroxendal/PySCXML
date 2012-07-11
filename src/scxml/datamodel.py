@@ -261,6 +261,13 @@ class XPathDatamodel(object):
         self.references = {}
         
     
+    def setReference(self, key, val):
+        # will crash if key is an invalid xml element name
+        etree.Element(key)
+        self.references[key] = val
+    
+    def getReference(self, key):
+        return self.references[key]
         
     def __getitem__(self, key):
         data_dict = dict([(node.get("id"), node) for node in list(self.root)])
