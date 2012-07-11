@@ -384,5 +384,6 @@ test467.scxml
     '''
     
     sm = StateMachine("xpath_test.xml")
+    # sm = StateMachine("assertions_ecmascript/test242.scxml")
     sm.start()
     
