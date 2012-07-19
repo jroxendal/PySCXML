@@ -384,6 +384,7 @@ test467.scxml
     '''
     
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
-    sm = StateMachine("assertions_xpath/test277.scxml")
+#    sm = StateMachine("assertions_xpath/test172.scxml")
+    sm = StateMachine("xpath_test.xml")
     os.environ["PYSCXMLPATH"] += ":" + sm.filedir
     sm.start()

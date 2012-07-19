@@ -43,7 +43,7 @@ class XpathElement(etree.ElementBase):
                     else:
                         self[-1].tail += "\n%s" % str(child)
                 else:
-                    if self.text is None: 
+                    if not self.text: 
                         self.text = str(child)
                     else:
                         self.text += "\n%s" % str(child)
@@ -81,7 +81,7 @@ def dictToXML(dictionary, root="root", root_attrib={}):
     '''takes a python dictionary and returns an xml representation as an lxml Element.'''
     parser = xpathparser
     def parse(d, parent):
-        if not type(d) is dict:
+        if not isinstance(d, dict):
             parent.append(deepcopy(d))
             return
         
@@ -93,15 +93,14 @@ def dictToXML(dictionary, root="root", root_attrib={}):
             parent.append(new)
             
             
-            if type(v) == list:
+            if isinstance(v, list):
                 for item in v:
                     parse(item, new)
-            elif type(v) == dict:
+            elif isinstance(v, dict):
                 parse(v, new)
             else:
                 v = v if v is not None else ""
                 new.text = str(v)
-#                print new, v
     
     
     root = parser.makeelement(root, attrib=root_attrib)

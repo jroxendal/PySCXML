@@ -3,10 +3,8 @@ Created on Nov 1, 2011
 
 @author: johan
 '''
-from eventprocessor import Event
 import sys
 import traceback
-import eventlet
 import re
 from lxml import etree, objectify
 from copy import deepcopy
@@ -15,7 +13,6 @@ from errors import ExecutableError, IllegalLocationError,\
     AttributeEvalError, ExprEvalError, DataModelError, AtomicError
 import logging
 import xml.dom.minidom as minidom
-import exceptions
 
 
 try:
@@ -93,7 +90,7 @@ class ImperativeDataModel(object):
         
     
 
-class DataModel(dict, ImperativeDataModel):
+class PythonDataModel(dict, ImperativeDataModel):
     '''The default Python Datamodel'''    
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
@@ -337,10 +334,10 @@ class XPathDatamodel(object):
                     assert not any(map(etree.iselement, val))
                     elem.set(attrExpr[1:], " ".join(map(str, val)))
                 except AssertionError:
-                    e = TypeError("Cannot assing to Element to attribute: Illegal type %s" % val)
+                    e = TypeError("Cannot assign an Element to an attribute: Illegal type %s" % val)
                     raise ExecutableError(DataModelError(e), assignNode)
                 except TypeError:
-                    e = TypeError("Cannot assing to attribute: Illegal value %s" % val)
+                    e = TypeError("Cannot assign to attribute: Illegal value %s" % val)
                     raise ExecutableError(DataModelError(e), assignNode)
             return
         
@@ -355,12 +352,7 @@ class XPathDatamodel(object):
                 for child in elem:
                     elem.remove(child)
                 elem.text = ""
-                #TODO: I should be able to replace this with the XPathElement.append
-                for e in val:
-                    if etree.iselement(e):
-                        elem.append(e)
-                    else:
-                        elem.text = str(e)
+                elem.append(val)
             elif assignType == "firstchild":
                 for e in reversed(val):
                     elem.insert(0, e)

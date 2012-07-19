@@ -32,13 +32,14 @@ from xml.parsers.expat import ExpatError
 #from xml.etree import ElementTree as etree
 from lxml import etree
 import textwrap
-    
+
 import time
 from datamodel import *
 from errors import *
 from eventlet import Queue
 import scxml.pyscxml
 from datastructures import xpathparser
+import eventlet
 
 
         
@@ -59,7 +60,7 @@ tagsForTraversal = map(prepend_ns, tagsForTraversal)
 custom_exec_mapping = {}
 preprocess_mapping = {}
 datamodel_mapping = {
-    "python" : DataModel,
+    "python" : PythonDataModel,
     "ecmascript" : ECMAScriptDataModel,
     "xpath" : XPathDatamodel
 }
@@ -114,10 +115,10 @@ class Compiler(object):
             try:
                 expr = elem.get(attr + "expr")
                 if self.datamodel == "xpath":
-                    output = elem.get(attr) or self.getExprValue("string(%s)" % expr, True)
+                    output = elem.get(attr) or self.getExprValue("string(%s)" % expr)
                     output = str(output)
                 else:
-                    output = elem.get(attr) or self.getExprValue(expr, True)
+                    output = elem.get(attr) or self.getExprValue(expr)
                     
             except ExprEvalError, e:
                 raise AttributeEvalError(e, elem, attr + "expr")
@@ -170,7 +171,7 @@ class Compiler(object):
             if node_ns == ns: 
                 if node_name == "log":
                     try:
-                        self.log_function(node.get("label"), self.getExprValue(node.get("expr"), True))
+                        self.log_function(node.get("label"), self.getExprValue(node.get("expr")))
                     except ExprEvalError, e:
                         raise AttributeEvalError(e, node, "expr")
                 elif node_name == "raise":
@@ -215,7 +216,7 @@ class Compiler(object):
                 elif node_name == "foreach":
                     startIndex = 0 if self.datamodel != "xpath" else 1 
                     try:
-                        array = self.getExprValue(node.get("array"), True)
+                        array = self.getExprValue(node.get("array"))
                         itr = enumerate(array, startIndex)
 #                        if self.datamodel == "xpath":
 #                            assert all(map(lambda x: x, array)) 
@@ -229,7 +230,6 @@ class Compiler(object):
                             if self.datamodel != "xpath":
                                 self.dm[node.get("item")] = item
                             else:
-                               # self.dm.setReference(node.get("item"), item)
                                 # if it's not a correct QName: crash.
                                 etree.QName(node.get("item"))
                                 self.dm.references[node.get("item")] = item
@@ -266,7 +266,14 @@ class Compiler(object):
                         else:
                             raise Exception("Error when parsing contentNode, content is %s" % xml)
                     elif node.get("expr"):
-                        xml = self.getExprValue("(%s)" % node.get("expr"))
+                        try:
+                            xml = self.getExprValue("(%s)" % node.get("expr"))
+                        except Exception, e:
+                            e = ExecutableError(node, 
+                                                "An expr error caused the start_session to fail on line %s" 
+                                                % node.sourceline)
+                            self.logger.error(str(e))
+                            self.raiseError("error.execution", e)
                     elif self.parseAttr(node, "src"):
                         xml = urlopen(self.parseAttr(node, "src")).read()
                     try:
@@ -312,7 +319,7 @@ class Compiler(object):
             isElse = ifNode.tag == prepend_ns("else")
             if not isElse:
                 try:    
-                    cond = self.getExprValue(ifNode.get("cond"), True)
+                    cond = self.getExprValue(ifNode.get("cond"))
                 except ExprEvalError, e:
                     raise AttributeEvalError(e, ifNode, "cond")
             try:
@@ -344,17 +351,17 @@ class Compiler(object):
                 output[xpathparser.makeelement("data", attrib={"id" : p.get("name")})] = expr
                 
             else:
-                output[p.get("name")] = self.getExprValue(expr, True)
+                output[p.get("name")] = self.getExprValue(expr)
             
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
                 if self.datamodel == "xpath":
                     if forSend:
-                        output[xpathparser.makeelement("data", attrib={"id" : name})] = self.getExprValue("$" + name, True)
+                        output[xpathparser.makeelement("data", attrib={"id" : name})] = self.getExprValue("$" + name)
                     else:
-                        output[name[1:]] = self.getExprValue(name, True)
+                        output[name[1:]] = self.getExprValue(name)
                 else:
-                    output[name] = self.getExprValue(name, True)
+                    output[name] = self.getExprValue(name)
         
         return output
     
@@ -648,8 +655,15 @@ class Compiler(object):
                 if node.get("event"):
                     t.event = map(lambda x: re.sub(r"(.*)\.\*$", r"\1", x).split("."), node.get("event").split(" "))
                 if node.get("cond"):
-                    #TODO: handle error in self.getExprValue here
-                    t.cond = partial(self.getExprValue, node.get("cond"))
+                    def f(expr):
+                        try:
+                            return self.getExprValue(expr)
+                        except Exception, e:
+                            self.raiseError("error.execution", e)
+                            self.logger.error("Evaluation of cond failed on line %s: %s" % (node.sourceline, expr))
+                        
+                    
+                    t.cond = partial(f, node.get("cond"))
                 t.type = node.get("type", "external") 
                 
                 t.exe = partial(self.try_execute_content, node)
@@ -687,20 +701,12 @@ class Compiler(object):
         self.dm.execExpr(expr)
                 
     
-    def getExprValue(self, expr, throwErrors=False):
-        """These expression are always one-line, so their value is evaluated and returned."""
+    def getExprValue(self, expr):
+        """These expressions are always one-liners, so their value is evaluated and returned."""
         if not expr: 
             return None
-        try:
-            return self.dm.evalExpr(expr)
-        except Exception, e:
-            #TODO: throwerrors should never be false
-            if throwErrors:
-                raise 
-            else:
-                self.logger.exception("Exception while evaluating expression: '%s'" % expr)
-                self.raiseError("error.execution." + type(e).__name__.lower(), e)
-            return None
+        # throws all kinds of exceptions
+        return self.dm.evalExpr(expr)
     
     def make_invoke_wrapper(self, node, parentId, n):
         
