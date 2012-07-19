@@ -1,14 +1,14 @@
 #!/usr/bin/python
 from scxml.pyscxml_server import WebsocketWSGI
 from scxml.pyscxml import register_datamodel
-from scxml.datamodel import DataModel
+from scxml.datamodel import PythonDataModel
 import logging
 import os, json, sys
 from safe_eval import safe_eval
 import eventlet
 from eventlet import wsgi, websocket
 
-class SafePythonDataModel(DataModel):
+class SafePythonDataModel(PythonDataModel):
     def hasLocation(self, location):
         try:
             safe_eval(location, self)
