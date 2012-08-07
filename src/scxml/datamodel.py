@@ -298,6 +298,10 @@ class XPathDatamodel(object):
     def __contains__(self, key):
         return self.root.find("data[@id='%s']" % key) is not None
     
+    def __delitem__(self, key):
+        current = self.root.find("data[@id='%s']" % key)
+        if current is not None:
+            self.root.remove(current)
     
     def hasLocation(self, loc):
         try:

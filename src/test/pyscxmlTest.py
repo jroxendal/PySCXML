@@ -121,7 +121,7 @@ class RegressionTest(unittest.TestCase):
             self.fail("Failed tests:\n" + "\n".join(failed))
             
         
-    def testW3cEcma(self):
+    def block_testW3cEcma(self):
 #        logging.basicConfig(level=logging.NOTSET)
         os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_ecmascript/"
         

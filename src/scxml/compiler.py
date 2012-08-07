@@ -65,7 +65,6 @@ datamodel_mapping = {
     "xpath" : XPathDatamodel
 }
 
-#TODO: this should be namespaced
 fns = etree.FunctionNamespace(None)
 def in_func(context, x):
     return context.context_node._parent.self.interpreter.In(x)
@@ -449,6 +448,7 @@ class Compiler(object):
                 
             elif target.startswith("http://"): # target is a remote scxml processor
                 origin = "unreachable"
+#                TODO: won't work with xpath
                 if self.dm["_ioprocessors"]["scxml"]["location"].startswith("http://"):
                     origin = self.dm["_ioprocessors"]["scxml"]["location"]
                 
@@ -465,7 +465,6 @@ class Compiler(object):
 #            getter = self.getUrlGetter()
             
             if sendNode.get("httpResponse") in ("true", "True"):
-                
                 def success(signal, *args, **kwargs):
                     code = kwargs["code"]
                     self.interpreter.send("HTTP.%s.%s" % (str(code)[0], str(code)[1:]))
@@ -474,16 +473,19 @@ class Compiler(object):
                     code = kwargs["exception"].code
                     self.interpreter.send("HTTP.%s.%s" % (str(code)[0], str(code)[1:]))
                     
-#                def urlerror(signal, *args, **kwargs):
-#                    print "urlerror", args, kwargs
-#                    self.interpreter.send("HTTP")
+                def url_fail(signal, *args, **kwargs):
+                    self.logger.error("UrlError: Could not reach target '%s'. \n%s" % (target, kwargs["exception"]))
             
                 dispatcher.connect(success, UrlGetter.HTTP_RESULT, getter, False)
                 dispatcher.connect(fail, UrlGetter.HTTP_ERROR, getter, False)
-#                dispatcher.connect(fail, UrlGetter.URL_ERROR, getter, False)
+                dispatcher.connect(url_fail, UrlGetter.URL_ERROR, getter, False)
             origin = "unreachable"
-            if self.dm["_ioprocessors"]["scxml"]["location"].startswith("http://"):
+            
+#            TODO: can this be expressed more generally using lxml.objectify?
+            if not self.datamodel == "xpath" and self.dm["_ioprocessors"]["scxml"]["location"].startswith("http://"):
                 origin = self.dm["_ioprocessors"]["scxml"]["location"]
+            elif self.datamodel == "xpath" and self.dm["$_ioprocessors/scxml/location/text()"][0].startswith("http://"):
+                origin = self.dm["$_ioprocessors/scxml/location/text()"][0]
             data.update({"_scxmleventname" : ".".join(event),
                          "_scxmleventstruct" : Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
                          })

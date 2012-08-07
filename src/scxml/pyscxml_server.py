@@ -88,19 +88,15 @@ class PySCXMLServer(MultiSession):
     
     def set_processors(self, sm):
         MultiSession.set_processors(self, sm)
-        d = dict( (io_type, {"location" : "http://%s:%s" % (self.host, self.port) + "/".join([self.session_path, sm.datamodel.sessionid, io_type])} ) 
+        d = dict( (io_type, {"location" : "http://%s:%s/" % (self.host, self.port) + "/".join([sm.datamodel.sessionid, io_type])} ) 
                   for io_type in handler_mapping)
         
-        for k, v in d.items():
-            sm.datamodel[k] = v
-#        if isinstance(sm.datamodel, XPathDatamodel):
-#            from datastructures import dictToXML
-#            sm.datamodel["_ioprocessors"].append(dictToXML({"websocket" : {"location" : loc}})) 
-#        else:
-#            sm.datamodel["_ioprocessors"]["websocket"] = {"location" : loc}
-        
-        
-#        sm.datamodel["_ioprocessors"].update(d)
+        if isinstance(sm.datamodel, XPathDatamodel):
+            del sm.datamodel["_ioprocessors"]
+            sm.datamodel["_ioprocessors"] = d
+        else:
+            for k, v in d.items():
+                sm.datamodel["_ioprocessors"][k] = v
     
     def request_handler(self, environ, start_response):
         status = '200 OK'
@@ -248,7 +244,7 @@ def type_raw_basic(session, data, sm, environ):
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.NOTSET)
-    
+    os.environ["PYSCXMLPATH"] = "../../w3c_tests/:../../unittest_xml:../../resources"
     xml = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml">
         <state>
@@ -260,9 +256,8 @@ if __name__ == "__main__":
         </state>
     </scxml>
     '''
-    import eventlet
     from eventlet import wsgi
     
-    server = PySCXMLServer("localhost", 8081, init_sessions={"xpath" : xml}, default_datamodel="xpath")
+    server = PySCXMLServer("localhost", 8081, init_sessions={"xpath" : "xpath_test.xml"}, default_datamodel="xpath")
     wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
                 
