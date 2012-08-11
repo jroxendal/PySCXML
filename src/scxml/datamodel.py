@@ -411,41 +411,13 @@ class XPathDatamodel(object):
 if __name__ == '__main__':
 #    import PyV8 #@UnresolvedImport
     
-    d = XPathDatamodel()
     
-    d["cart"] = etree.fromstring('''<myCart xmlns="">
-    <books>
-      <book>
-        <title>The Zen Mind</title>
-      </book>
-      <book>
-        <title>Freakonomics</title>
-      </book>
-    </books>
-    <cds>
-      <cd name="Something"/>
-    </cds>
-  </myCart>''')
+    d = ECMAScriptDataModel()
     
-#    d["val"] = 456
-    
-    print d["$cart"]
-    
-#    assign = objectify.fromstring('''<assign location="$cart/myCart/books/book[1]/title"  expr="'My favorite book'"/>''')
-    assign = objectify.fromstring('''<assign type="addattribute" location="$cart//book" expr="'hej'" attr="name">
-  <bookinfo xmlns="">
-    <isdn>12334455</isdn>
-    <author>some author</author>
-  </bookinfo>
-</assign>''')
-    d.assign(assign)
-    d.assign(objectify.fromstring('''<assign location="$cart//book/@num" expr="'lololo'" />'''))
-    
-#    print objectify.tostring(d.c["cart"])
-    
-    sys.exit()
-    
-#    d = ECMAScriptDataModel()
+    d.evalExpr("var a = [1,2,3]")
+    c = JSContext(d.g)
+    c.enter()
+    print d["a"]
 #    d = DataModel()
     
     

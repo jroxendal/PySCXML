@@ -216,7 +216,13 @@ class Compiler(object):
                     startIndex = 0 if self.datamodel != "xpath" else 1 
                     try:
                         array = self.getExprValue(node.get("array"))
+                        if self.datamodel == "ecmascript":
+                            from PyV8 import JSContext
+                            c = JSContext(self.dm.g)
+                            c.enter()
                         itr = enumerate(array, startIndex)
+                        
+                        
 #                        if self.datamodel == "xpath":
 #                            assert all(map(lambda x: x, array)) 
                     except ExprEvalError, e:
@@ -250,6 +256,8 @@ class Compiler(object):
                             self.do_execute_content(node)
                         except Exception, e:
                             raise ExecutableContainerError(e, node)
+                    if self.datamodel == "ecmascript":
+                        c.leave()
             #TODO: delete xpath references? (see above) 
             elif node_ns == pyscxml_ns:
                 if node_name == "start_session":
@@ -347,7 +355,7 @@ class Compiler(object):
         for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("location"))
             if self.datamodel == "xpath" and forSend:
-                output[xpathparser.makeelement("data", attrib={"id" : p.get("name")})] = expr
+                output[xpathparser.makeelement("data", attrib={"id" : p.get("name")})] = self.getExprValue(expr)
                 
             else:
                 output[p.get("name")] = self.getExprValue(expr)

@@ -105,7 +105,12 @@ class Interpreter(object):
             
             externalEvent = self.externalQueue.get() # this call blocks until an event is available
             
-            if externalEvent.name == "cancel.invoke.%s" % self.dm.sessionid:
+#            if externalEvent.name == "cancel.invoke.%s" % self.dm.sessionid:
+#                continue
+
+            # our parent session also might cancel us.  The mechanism for this is platform specific,
+            if isCancelEvent(externalEvent):
+                self.running = False
                 continue
             
             self.logger.info("external event found: %s", externalEvent.name)
@@ -481,5 +486,10 @@ def documentOrder(s):
         p = p.parent
     key.reverse()
     return key
-    
-    
+
+
+class CancelEvent(object):
+    pass    
+def isCancelEvent(evt):
+    return isinstance(evt, CancelEvent)    
+

@@ -24,6 +24,7 @@ from functools import partial
 from scxml.messaging import UrlGetter
 import logging
 import eventlet
+from scxml.interpreter import CancelEvent
 
 class InvokeWrapper(object):
     
@@ -128,8 +129,9 @@ class InvokeSCXML(BaseFetchingInvoke):
     def cancel(self):
         self.cancelled = True
         if not self.sm: return;
-        self.sm.interpreter.running = False
-        self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
+#        self.sm.interpreter.running = False
+#        self.sm._send(["cancel", "invoke", self.invokeid], {}, self.invokeid)
+        self.sm.interpreter.externalQueue.put(CancelEvent())
     
     
 

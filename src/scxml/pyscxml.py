@@ -33,6 +33,7 @@ from scxml.datamodel import XPathDatamodel
 from lxml import etree
 import sys
 import time
+from scxml.interpreter import CancelEvent
 
 def default_logfunction(label, msg):
     label = label or ""
@@ -175,7 +176,7 @@ class StateMachine(object):
         top-level <final /> state in your document instead.  
         '''
         self.interpreter.running = False
-        self.interpreter.externalQueue.put(Event("cancel.invoke.%s" % self.datamodel.get("_sessionid")))
+        self.interpreter.externalQueue.put(CancelEvent())
     
     def send(self, name, data={}):
         '''
@@ -386,5 +387,6 @@ test467.scxml
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
 #    sm = StateMachine("assertions_xpath/test172.scxml")
     sm = StateMachine("xpath_test.xml")
-    os.environ["PYSCXMLPATH"] += ":" + sm.filedir
+#    os.environ["PYSCXMLPATH"] += ":" + sm.filedir
+#    sm = StateMachine("assertions_ecmascript/test154.scxml")
     sm.start()

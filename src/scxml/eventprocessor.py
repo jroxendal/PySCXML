@@ -99,6 +99,7 @@ class Event(object):
         
     def __str__(self):
         return "<eventprocessor.Event>, " + str(self.__dict__)
+    
 
 class ScxmlOriginType(object):
     def __init__(self):

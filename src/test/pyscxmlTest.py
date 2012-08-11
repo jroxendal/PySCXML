@@ -16,7 +16,7 @@ This file is part of pyscxml.
     
     @author: Johan Roxendal
 '''
-import eventlet
+import eventlet 
 import time
 import unittest
 from scxml.pyscxml import StateMachine, MultiSession
@@ -121,7 +121,7 @@ class RegressionTest(unittest.TestCase):
             self.fail("Failed tests:\n" + "\n".join(failed))
             
         
-    def block_testW3cEcma(self):
+    def testW3cEcma(self):
 #        logging.basicConfig(level=logging.NOTSET)
         os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_ecmascript/"
         
@@ -214,3 +214,4 @@ if __name__ == '__main__':
     
     
     
+
