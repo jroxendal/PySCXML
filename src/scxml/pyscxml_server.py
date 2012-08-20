@@ -1,4 +1,4 @@
-'''
+''' 
 This file is part of pyscxml.
 
     pyscxml is free software: you can redistribute it and/or modify
@@ -214,6 +214,7 @@ class ioprocessor(object):
 def type_basichttp(session, data, sm, environ):
 #    if "_scxmleventstruct" in data:
 #        event = Processor.fromxml(data["_scxmleventstruct"], "unknown")
+    
     if "_scxmleventname" in data:
         evtname = data.pop("_scxmleventname")
         event = Event(evtname, data)
@@ -225,6 +226,8 @@ def type_basichttp(session, data, sm, environ):
         event.origintype = "basichttp"
         event.origin = "unreachable"
         
+        
+    event.raw = repr(environ) + "\n\n" + urllib.unquote(environ["wsgi.input"].read())    
     return event
 
 @ioprocessor('scxml')
