@@ -394,8 +394,8 @@ class Compiler(object):
         e = self.parseAttr(sendNode, "event")
         event = e.split(".") if e is not None else None
         eventstr = ".".join(event) if event else ""
-        if not eventstr:
-            raise SendExecutionError("Illegal send value: '%s'" % eventstr)
+        if type == "scxml" and not eventstr:
+            raise SendExecutionError("Illegal send event value: '%s'" % eventstr)
          
         target = self.parseAttr(sendNode, "target")
         if target == "#_response": type = "x-pyscxml-response"
@@ -494,9 +494,11 @@ class Compiler(object):
                 origin = self.dm["_ioprocessors"]["scxml"]["location"]
             elif self.datamodel == "xpath" and self.dm["$_ioprocessors/scxml/location/text()"][0].startswith("http://"):
                 origin = self.dm["$_ioprocessors/scxml/location/text()"][0]
-            data.update({"_scxmleventname" : ".".join(event),
-                         "_scxmleventstruct" : Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
-                         })
+            
+            if hasattr(data, "update"):
+                data.update({"_scxmleventname" : ".".join(event),
+                             "_scxmleventstruct" : Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
+                             })
             sender = partial(getter.get_async, target, data)
             
         elif type == "x-pyscxml-soap":

@@ -370,7 +370,7 @@ if __name__ == "__main__":
 test413.scxml
 test467.scxml
 '''
-        
+    
     xml = '''
     <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
         <datamodel>
@@ -386,7 +386,8 @@ test467.scxml
     
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
 #    sm = StateMachine("assertions_xpath/test172.scxml")
-    sm = StateMachine("xpath_test.xml")
+    sm = StateMachine("assertions_ecmascript/test242.scxml")
+#    sm = StateMachine("xpath_test.xml")
 #    os.environ["PYSCXMLPATH"] += ":" + sm.filedir
 #    sm = StateMachine("assertions_ecmascript/test154.scxml")
     sm.start()
