@@ -327,7 +327,15 @@ class custom_executable(object):
         compiler.custom_exec_mapping[self.namespace] = f
         return f
     
-    
+class custom_sendtype(object):
+    '''A decorator for defining custom send types'''
+    def __init__(self, sendtype):
+        self.sendtype = sendtype
+
+    def __call__(self, fun):
+        compiler.custom_sendtype_mapping[self.sendtype] = fun
+        return fun
+
 #class preprocessor(object):
 #    '''A decorator for defining replacing xml elements of a 
 #    particular namespace with other markup. '''
@@ -353,7 +361,15 @@ def register_datamodel(id, klass):
     compiler.datamodel_mapping[id] = klass
 
     
-__all__ = ["StateMachine", "MultiSession", "custom_executable", "preprocessor", "expr_evaluator", "expr_exec"]
+__all__ = [
+    "StateMachine",
+    "MultiSession",
+    "custom_executable",
+    "preprocessor",
+    "expr_evaluator",
+    "expr_exec",
+    "custom_sendtype"
+]
 
 if __name__ == "__main__":
     os.environ["PYSCXMLPATH"] = "../../w3c_tests/:../../unittest_xml:../../resources"
