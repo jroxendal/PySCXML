@@ -273,7 +273,12 @@ class MultiSession(object):
          '''
         assert source or self.default_scxml_source
         if isinstance(source, basestring):
-            sm = StateMachine(source or self.default_scxml_source, sessionid=sessionid, default_datamodel=self.default_datamodel,setup_session=False)
+            log_func = self.log_function or default_logfunction
+            sm = StateMachine(source or self.default_scxml_source,
+                                sessionid=sessionid,
+                                default_datamodel=self.default_datamodel,
+                                setup_session=False,
+                                log_function=log_func)
         else:
             sm = source # source is assumed to be a StateMachine instance
         self.sm_mapping[sessionid] = sm
