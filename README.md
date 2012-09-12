@@ -446,7 +446,7 @@ Since the websocket server sends events to its clients in the SCXML messaging XM
 
 ##Extending PySCXML##
 
-According to the principle expressed in http://www.w3.org/TR/scxml/#extensibility, of the extensibility of executable content, PySCXML provides two convenient decorators for the purpose of defining executable content.
+According to the principle expressed in http://www.w3.org/TR/scxml/#extensibility, of the extensibility of executable content, PySCXML provides few convenient decorators for the purpose of defining executable content.
 
 The first, `custom_executable`, defines a handler function for all nodes of a particular namespace. All you have to do is decorate a handler function, like so:
 
@@ -458,6 +458,25 @@ The first, `custom_executable`, defines a handler function for all nodes of a pa
 
 
 The decorator takes a parameter, the namespace, and the result is that each executable node in that namespace will be passed through your function, as an  `xml.etree.ElementTree.Element` object. The handler throws away return values. 
+
+
+Extending the '<send />' tag to support more transport/ioprocessor types (i.e. <send type="my_sendtype"/>) is possible via another decorator: `custom_sendtype`. Here is a simplified example:
+
+        from scmxl.pyscxml import custom_sendtype
+        @custom_sendtype('my_sendtype')
+        def my_sender(msg, datamodel):
+            # create some custom transport to the target
+            target = msg.target
+            transport = create_transport(target)
+            msg_serialized = some_serialization(msg)
+            transport.send(msg_serialized)
+
+
+Where 'msg' argument is object instance of type ScxmlMessage (see: scxml.eventprocessor.ScxmlMessage) and 'datamodel' is the sending session *DataModel (e.g. PythonDataModel) instance.
+
+
+
+WARNING: The following part of this section refers to feature that seems to be obsolete from some version on.
 
 To simplify the addition of executable content that result in events being sent, a preprocessor decorator has been added. With the preprocessor, you can replace any node in you scxml document with any other nodes. the syntax is similar to the one above. Here, however, we return an xml string with which to replace the incoming node. A typical use would be to replace `<my_ns:send_to_service targetexpr="my_custom_service" />` with its `<send />` equivalent, which might be `<send type="basichttp" target="my_custom_service" namelist="param1 param2" />`. We'd write:
 
