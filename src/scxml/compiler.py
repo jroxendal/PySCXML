@@ -26,7 +26,7 @@ from messaging import UrlGetter, get_path
 from louie import dispatcher
 from urllib2 import URLError
 from eventlet.green.urllib2 import urlopen #@UnresolvedImport
-from eventprocessor import Event, SCXMLEventProcessor as Processor
+from eventprocessor import Event, SCXMLEventProcessor as Processor, ScxmlMessage
 from invoke import *
 from xml.parsers.expat import ExpatError
 #from xml.etree import ElementTree as etree
@@ -42,7 +42,6 @@ from datastructures import xpathparser
 import eventlet
 
 
-        
 
 def prepend_ns(tag):
     return ("{%s}" % ns) + tag
@@ -64,6 +63,7 @@ datamodel_mapping = {
     "ecmascript" : ECMAScriptDataModel,
     "xpath" : XPathDatamodel
 }
+custom_sendtype_mapping = {}
 
 fns = etree.FunctionNamespace(None)
 def in_func(context, x):
@@ -189,7 +189,7 @@ class Compiler(object):
                         raise
                     except (SendExecutionError, SendCommunicationError), e: 
                         raise SendError(e, node, e.type, sendid=sendid)
-                    except Exception, e: 
+                    except Exception, e:
                         raise SendError(e, node, "execution", sendid=sendid)
                 elif node_name == "cancel":
                     sendid = self.parseAttr(node, "sendid")
@@ -523,10 +523,19 @@ class Compiler(object):
             data = Processor.toxml(eventstr, target, data, self.dm["_ioprocessors"]["scxml"]["location"], sendNode.get("id", ""), language="json")    
             headers["Content-Type"] = "text/xml" 
             sender = partial(self.dm.response.put, (data, headers))
-        
+
         # this is where to add parsing for more send types. 
         else:
-            raise SendExecutionError("The send type %s is invalid or unsupported by the platform" % type)
+            if custom_sendtype_mapping.get(type, None) is None:
+                raise SendExecutionError("The send type '%s' is invalid or unsupported by the platform" % type)
+
+            source = self.dm["_ioprocessors"][type]["location"]
+            sendid = defaultSendid or ''
+            msg = ScxmlMessage(eventstr, source, target, data, sendid, sourcetype='scxml')
+            sender_func = custom_sendtype_mapping[type]
+            
+            sender = partial(sender_func, msg, self.dm)
+        
 
         delay = self.parseAttr(sendNode, "delay", "0s")
         try:
@@ -542,7 +551,7 @@ class Compiler(object):
             try:
                 sender()
             except Exception, e:
-                raise SendExecutionError("An unknown error occurred when parsing send on line %s." % sendNode.sourceline)
+                raise SendExecutionError("%s: %s" % (e.__class__, e))
         
     
     def getUrlGetter(self):

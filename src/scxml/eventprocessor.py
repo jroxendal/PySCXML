@@ -111,5 +111,55 @@ class ScxmlOriginType(object):
     def __str__(self):
         return self.types[0]
 
+
+class ScxmlMessage(object):
+    def __init__(self, name, source='', target='', data={}, sendid='', sourcetype='scxml'):
+        self.name = '.'.join(name) if type(name) is list else name
+        self.source = source
+        self.sourcetype = sourcetype
+        self.target = target
+        self.sendid = sendid
+        self.data = data
+        
+    def __repr__(self):
+        return "<messaging.ScxmlMessage>, " + str(self.__dict__)
+
+    def toxml(self, language="python"):
+        msg_struct = {
+            "xmlns:scxml" : "http://www.w3.org/2005/07/scxml",
+            "version" :"1.0",
+            "source" : self.source,
+            "sourcetype" : self.sourcetype,
+            "target" : self.target,
+            "type" : "scxml",
+            "name" : self.name,
+            "sendid" : self.sendid or '',
+            "language" : language
+        }
+
+        xml_tree = etree.TreeBuilder()
+        xml_tree.start("scxml:message", msg_struct)
+        xml_tree.start("scxml:payload", {})
+
+        for k, v in self.data.items():
+            xml_tree.start("scxml:property", {"name" : k})
+            if k != "content":
+                if language == "python":
+                    xml_tree.data(pickle.dumps(v))
+                elif language == "json":
+                    import json
+                    xml_tree.data(json.dumps(v))
+            else:
+                xml_tree.data(v)
+
+            xml_tree.end("scxml:property")
+
+        xml_tree.end("scxml:payload")
+        xml_tree.end("scxml:message")
+        root = xml_tree.close()
+
+        return etree.tostring(root)
+
+
 if __name__ == "__main__":
     print SCXMLEventProcessor.toxml("evt", "_parent", {}, "", "", language="json")
