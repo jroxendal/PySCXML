@@ -1,3 +1,5 @@
+if(window.console == null) window.console = {"log" : $.noop, "error" : $.noop};
+window.c = window.console;
 var HOST = location.hostname;
 var PORT = 8081;
 var editor;

@@ -219,7 +219,7 @@ class StateMachine(object):
 
 class MultiSession(object):
     
-    def __init__(self, default_scxml_source=None, init_sessions={}, default_datamodel="python"):
+    def __init__(self, default_scxml_source=None, init_sessions={}, default_datamodel="python", log_function=default_logfunction):
         '''
         MultiSession is a local runtime environment for multiple StateMachine sessions. It's 
         the base class for the PySCXMLServer. You probably won't need to instantiate it directly. 
@@ -235,6 +235,7 @@ class MultiSession(object):
         self.sm_mapping = {}
         self.get = self.sm_mapping.get
         self.default_datamodel = default_datamodel
+        self.log_function = log_function
         self.logger = logging.getLogger("pyscxml.multisession")
         for sessionid, xml in init_sessions.items():
             self.make_session(sessionid, xml)
@@ -273,12 +274,11 @@ class MultiSession(object):
          '''
         assert source or self.default_scxml_source
         if isinstance(source, basestring):
-            log_func = self.log_function or default_logfunction
             sm = StateMachine(source or self.default_scxml_source,
                                 sessionid=sessionid,
                                 default_datamodel=self.default_datamodel,
                                 setup_session=False,
-                                log_function=log_func)
+                                log_function=self.log_function)
         else:
             sm = source # source is assumed to be a StateMachine instance
         self.sm_mapping[sessionid] = sm
