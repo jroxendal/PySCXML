@@ -86,7 +86,7 @@ class SCXMLEventProcessor(object):
         return event
     
 class Event(object):
-    def __init__(self, name, data={}, invokeid=None, eventtype="platform", sendid=None):
+    def __init__(self, name, data={}, invokeid=None, eventtype="platform", sendid=None, raw=None):
             
 #        self.name = name.split(".") if hasattr(name, "split") else name
         self.name = ".".join(name) if type(name) is list else name
@@ -96,6 +96,8 @@ class Event(object):
         self.origin = None
         self.origintype = ScxmlOriginType()
         self.sendid = sendid
+        self.raw = raw
+        
         
     def __str__(self):
         return "<eventprocessor.Event>, " + str(self.__dict__)

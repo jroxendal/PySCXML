@@ -1,13 +1,23 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that done.invoke.id event is the last event we receive.  test236sub1.scxml sends childToParent
+<?xml version="1.0" encoding="UTF-8"?><!-- test that done.invoke.id event is the last event we receive.  the invoked process sends childToParent
 in the exit handler of its final state.  We should get it before the done.invoke, and we should get no
-events after the done.invoke.  Hence timeout indicates success   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="python">
+events after the done.invoke.  Hence timeout indicates success   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="python">
 
      
 <state id="s0">
   <onentry>
     <send event="timeout" delay="2s"/>
     </onentry>
-  <invoke type="http://www.w3.org/TR/scxml/" src="file:test236sub1.scxml"/>
+  <invoke type="http://www.w3.org/TR/scxml/">
+    <content>
+      <scxml initial="subFinal" version="1.0" datamodel="python">
+       <final id="subFinal">
+          <onexit>
+           <send target="#_parent" event="childToParent"/>
+            </onexit>
+           </final>
+         </scxml>
+      </content>
+      </invoke>
  
   <transition event="childToParent" target="s1"/>    
   <transition event="done.invoke.foo" target="fail"/>

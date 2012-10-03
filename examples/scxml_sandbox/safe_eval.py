@@ -68,7 +68,7 @@ unallowed_ast_nodes = [
 #   'Function',
 #   'GenExpr', 'GenExprFor', 'GenExprIf', 'GenExprInner',
 #   'Getattr', 'Global', 'If',
-    'Import',
+    #'Import',
 #   'Invert',
 #   'Keyword', 'Lambda', 'LeftShift',
 #   'List', 'ListComp', 'ListCompFor', 'ListCompIf', 'Mod',
@@ -85,7 +85,7 @@ unallowed_ast_nodes = [
 
 # Deny evaluation of code if it tries to access any of the following builtins:
 unallowed_builtins = [
-    '__import__',
+    #'__import__',
 #   'abs', 'apply', 'basestring', 'bool', 'buffer',
 #   'callable', 'chr', 'classmethod', 'cmp', 'coerce',
     'compile',
@@ -96,12 +96,12 @@ unallowed_builtins = [
 #   'divmod', 'enumerate',
     'eval', 'execfile', 'file',
 #   'filter', 'float', 'frozenset',
-    'getattr', 'globals', 'hasattr',
+    'getattr', 'hasattr',
 #    'hash', 'hex', 'id',
     'input',
 #   'int', 'intern', 'isinstance', 'issubclass', 'iter',
 #   'len', 'list',
-    'locals',
+    #'locals', 'globals'
 #   'long', 'map', 'max', 'min', 'object', 'oct',
     'open',
 #   'ord', 'pow', 'property', 'range',
@@ -359,7 +359,7 @@ def safe_eval(code, context = {}, timeout_secs = 5):
         if inspect.isbuiltin(obj):
             ctx_errkeys.append(key)
             ctx_errors.append("key '%s' : unallowed builtin %s" % (key, obj))
-        if inspect.ismodule(obj):
+        if inspect.ismodule(obj) and obj.__name__ != 're':
             ctx_errkeys.append(key)
             ctx_errors.append("key '%s' : unallowed module %s" % (key, obj))
 

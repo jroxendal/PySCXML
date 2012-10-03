@@ -41,6 +41,7 @@ class Interpreter(object):
     '''
     def __init__(self):
         self.running = True
+        self.exited = False
         self.configuration = OrderedSet()
         
         self.internalQueue = Queue()
@@ -147,8 +148,9 @@ class Interpreter(object):
                     self.send(["done", "invoke", self.invokeId], s.donedata(), self.invokeId, self.dm.sessions[self.parentId].interpreter.externalQueue)   
                 self.logger.info("Exiting interpreter")
                 dispatcher.send("signal_exit", self, final=s.id)
+                self.exited = True
                 return
-        
+        self.exited = True
         dispatcher.send("signal_exit", self, final=None)
             
         
@@ -386,7 +388,7 @@ class Interpreter(object):
         return name in map(lambda x: x.id, self.configuration)
     
     
-    def send(self, name, data={}, invokeid = None, toQueue = None, sendid=None, eventtype="platform"):
+    def send(self, name, data={}, invokeid = None, toQueue = None, sendid=None, eventtype="platform", raw=None):
         """Send an event to the statemachine 
         @param name: a dot delimited string, the event name
         @param data: the data associated with the event
@@ -399,6 +401,7 @@ class Interpreter(object):
         evt = Event(name, data, invokeid, sendid=sendid, eventtype=eventtype)
         evt.origin = "#_scxml_" + self.dm.sessionid
         evt.origintype = ScxmlOriginType()
+        evt.raw = raw
         #TODO: and for ecmascript?
         evt.language = "python"
         toQueue.put(evt)

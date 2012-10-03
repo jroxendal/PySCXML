@@ -5,7 +5,7 @@ import os
 #os.chdir("assertions_ecma/failed")
 #os.chdir("stoplist/failed")
 # os.chdir("assertions_xpath/failed")
-os.chdir("new_xpath_tests/failed")
+os.chdir("new_python_tests/failed")
 
 logging.basicConfig(level=logging.NOTSET)
 
@@ -16,4 +16,6 @@ import re
 
 sm = StateMachine(xml)
 sm.start()
+
+
 

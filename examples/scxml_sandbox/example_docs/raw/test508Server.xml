@@ -12,6 +12,7 @@
         <!-- if other end sends us an event, extract raw form of it, get 
             other side's address and send an event back -->
         <transition event="error" />
+        
         <transition event="*">
             <assign location="Var1"
                 expr="re.search('address=(\S+)$', _event.raw).groups()[0]" />

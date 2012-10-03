@@ -50,7 +50,9 @@ $.when(deferred, jsonDeferred, deferred_domReady).then(function(getArray, jsonAr
 	$("#menu ul").menu({
 		select : function(event, ui) {
 			$.log("select menu", ui.item.data("url"));
-			$.get(ui.item.data("url"), null, null, "text").done(function(data) {
+			$.get(ui.item.data("url"), null, null, "text", {
+				cache : false
+			}).done(function(data) {
 				data = data.replace(/^(    )|\t/g, "  ");
 				editor.setValue(data);
 			});

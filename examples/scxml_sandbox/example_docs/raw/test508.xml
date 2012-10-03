@@ -1,25 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that location field the entry 
-    for Basic HTTP Event I/O processor can be used to send a message to the processor -->
+	for Basic HTTP Event I/O processor can be used to send a message to the processor -->
 <scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance"
-    initial="s0" datamodel="python" version="1.0">
+	initial="s0" datamodel="python" version="1.0">
 
-    <state id="s0">
-        <onentry>
-            <log label="hello" />
-            <send event="timeout" delay="30s" />
-            <send event="test"
-                target="http://localhost:8082/508/raw"
-                type="basichttp">
-                <param name="address"
-                    expr="_ioprocessors['basichttp']['location']" />
-            </send>
-        </onentry>
-        <!-- if other end sends us back this event, we succeed -->
-        <transition event="success" target="pass" />
-        <transition event="*" target="fail" />
-    </state>
+	<state id="s0">
+		<onentry>
+			<send event="timeout" delay="30s" />
+			<send event="test" target="http://localhost:8081/508/basichttp" type="basichttp">
+				<param name="address" expr="_ioprocessors['basichttp']['location']" />
+			</send>
+		</onentry>
+		<!-- if other end sends us back this event, we succeed -->
+		<transition event="success" target="pass" />
+		<transition event="*" target="fail" />
+	</state>
 
-    <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
-    <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+	<final id="pass">
+		<onentry>
+			<log label="Outcome" expr="'pass'" />
+		</onentry>
+	</final>
+	<final id="fail">
+		<onentry>
+			<log label="Outcome" expr="'fail'" />
+		</onentry>
+	</final>
 
 </scxml>

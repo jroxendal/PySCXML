@@ -25,6 +25,7 @@
                         <scxml version="1.0" xmlns="http://www.w3.org/2005/07/scxml" datamodel="python">
                             <script>
                                 import logging
+                                
                                 from louie import dispatcher
                                 def log(event, data):
                                     _x["self"].send("log." + event, data=data )
@@ -37,6 +38,10 @@
                                 <data id="doc" /> 
                                 <data id="log_handler" /> 
                             </datamodel>
+                            
+<!--                             <transition event="error"> -->
+<!--                             	<log label="error in started session" expr="_event.data" /> -->
+<!--                             </transition> -->
                             
                             <state id="waiting">
                                 <onentry>

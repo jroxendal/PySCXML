@@ -60,6 +60,7 @@ custom_exec_mapping = {}
 preprocess_mapping = {}
 datamodel_mapping = {
     "python" : PythonDataModel,
+    "null" : PythonDataModel, # probably shouldn't allow script in the null datamodel
     "ecmascript" : ECMAScriptDataModel,
     "xpath" : XPathDatamodel
 }
@@ -112,12 +113,15 @@ class Compiler(object):
             return default
         else:
             try:
+                stringify = {
+                             "xpath" : "string",
+                             "python" : "str",
+                             "ecmascript" : "String"
+                             }
                 expr = elem.get(attr + "expr")
-                if self.datamodel == "xpath":
-                    output = elem.get(attr) or self.getExprValue("string(%s)" % expr)
-                    output = str(output)
-                else:
-                    output = elem.get(attr) or self.getExprValue(expr)
+                
+                output = elem.get(attr) or self.getExprValue("%s(%s)" % (stringify[self.datamodel], expr))
+                output = str(output)
                     
             except ExprEvalError, e:
                 raise AttributeEvalError(e, elem, attr + "expr")
@@ -286,7 +290,7 @@ class Compiler(object):
                     try:
                         multisession = self.dm.sessions
                         sm = multisession.make_session(self.parseAttr(node, "sessionid"), xml)
-                        sm.compiler.initData = data
+                        sm.compiler.initData = dict(data)
                         sm.start_threaded()
                         timeout = self.parseCSSTime(self.parseAttr(node, "timeout", "0s"))
                         if timeout:
@@ -351,24 +355,24 @@ class Compiler(object):
             
         #TODO: how does the param behave in <donedata /> ?
         #TODO: location: can we express nested (deep) location?
-        output = {}
+        output = []
         for p in child.findall(prepend_ns("param")):
             expr = p.get("expr", p.get("location"))
             if self.datamodel == "xpath" and forSend:
-                output[xpathparser.makeelement("data", attrib={"id" : p.get("name")})] = self.getExprValue(expr)
+                output.append( (xpathparser.makeelement("data", attrib={"id" : p.get("name")}), self.getExprValue(expr)) )
                 
             else:
-                output[p.get("name")] = self.getExprValue(expr)
+                output.append( (p.get("name"), self.getExprValue(expr)))
             
         if child.get("namelist"):
             for name in child.get("namelist").split(" "):
                 if self.datamodel == "xpath":
                     if forSend:
-                        output[xpathparser.makeelement("data", attrib={"id" : name})] = self.getExprValue("$" + name)
+                        output.append( (xpathparser.makeelement("data", attrib={"id" : name}), self.getExprValue("$" + name) ))
                     else:
-                        output[name[1:]] = self.getExprValue(name)
+                        output.append( (name[1:], self.getExprValue(name)) )
                 else:
-                    output[name] = self.getExprValue(name)
+                    output.append( (name, self.getExprValue(name)) )
         
         return output
     
@@ -400,17 +404,24 @@ class Compiler(object):
         target = self.parseAttr(sendNode, "target")
         if target == "#_response": type = "x-pyscxml-response"
         sender = None
-        #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ?
-        defaultSendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None 
-        defaultSend = partial(self.interpreter.send, sendid=defaultSendid, eventtype="external")
         try:
-            data = self.parseData(sendNode, forSend=True)
+            raw = self.parseData(sendNode, forSend=True)
+            try:
+                data = dict(raw)
+            except:
+                # data is not key/value pair
+                data = raw
+            
             
         except ExprEvalError, e:
             self.logger.exception("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "sourceline", 'unknown'))
 #            self.raiseError("error.execution", e, sendid=sendid)
             raise e
         
+        #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ?
+        defaultSendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None 
+        defaultSend = partial(self.interpreter.send, event, data, sendid=defaultSendid, eventtype="external", raw=raw)
+
         scxmlSendType = ("http://www.w3.org/TR/scxml/#SCXMLEventProcessor", "scxml")
         httpSendType = ("http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor", "basichttp")
         if (type in scxmlSendType or type in httpSendType) and not target:
@@ -418,30 +429,29 @@ class Compiler(object):
             # the send type if the target is self. This might break conformance.
             # see test 201.
             
-            sender = partial(defaultSend, event, data)
+            sender = defaultSend
+        elif target.startswith("#_scxml_"): #sessionid
+            sessionid = target.split("#_scxml_")[-1]
+            try:
+                toQueue = self.dm.sessions[sessionid].interpreter.externalQueue
+            except KeyError:
+                raise SendCommunicationError("The session '%s' is inaccessible." % sessionid)
+            sender = partial(defaultSend, toQueue=toQueue)
         elif isinstance(target, scxml.pyscxml.StateMachine):
             #TODO: what happens if this target isFinished when this executes?
             sender = partial(target.interpreter.send, event, data, sendid=defaultSendid) 
         elif type in scxmlSendType:
             if target == "#_parent":
+                if self.interpreter.exited: 
+                    # if we were cancelled, don't send to _parent 
+                    return
                 try:
                     toQueue = self.dm.sessions[self.parentId].interpreter.externalQueue
                 except KeyError:
                     raise SendCommunicationError("There is no parent session.")
-                sender = partial(defaultSend, event, 
-                              data, 
-                              self.interpreter.invokeId, 
-                              toQueue=toQueue)
+                sender = partial(defaultSend, self.interpreter.invokeId, toQueue=toQueue) 
             elif target == "#_internal":
                 sender = partial(self.interpreter.raiseFunction, event, data, sendid=sendid)
-            elif target.startswith("#_scxml_"): #sessionid
-                sessionid = target.split("#_scxml_")[-1]
-                try:
-                    toQueue = self.dm.sessions[sessionid].interpreter.externalQueue
-                except KeyError:
-                    raise SendCommunicationError("The session '%s' is inaccessible." % sessionid)
-                sender = partial(defaultSend, event, data, toQueue=toQueue)
-                
             elif target == "#_websocket":
                 self.logger.debug("sending to _websocket")
                 eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
@@ -495,10 +505,10 @@ class Compiler(object):
             elif self.datamodel == "xpath" and self.dm["$_ioprocessors/scxml/location/text()"][0].startswith("http://"):
                 origin = self.dm["$_ioprocessors/scxml/location/text()"][0]
             
-            if hasattr(data, "update"):
-                data.update({"_scxmleventname" : ".".join(event),
-                             "_scxmleventstruct" : Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
-                             })
+#            if hasattr(data, "update"):
+#                data.update({"_scxmleventname" : ".".join(event),
+#                             "_scxmleventstruct" : Processor.toxml(eventstr, target, data, origin, sendNode.get("id", ""))
+#                             })
             sender = partial(getter.get_async, target, data)
             
         elif type == "x-pyscxml-soap":
@@ -647,7 +657,12 @@ class Compiler(object):
                     doneNode = node.find(prepend_ns("donedata"))
                     def donedata(node):
                         try:
-                            return self.parseData(node)
+                            data = self.parseData(node)
+                            try:
+                                return dict(data)
+                            except TypeError:
+                                # not key/value data, probably from <content>
+                                return data
                         except Exception, e:
 #                            TODO: what happens if donedata in the top-level final fails?
 #                             we can't set the _event.data with anything. answer: catch the error in 
@@ -792,9 +807,10 @@ class Compiler(object):
                 raise IOError(2, "File not found when searching the PYTHONPATH: %s" % src)
             src = "file:" + newsrc
         data = self.parseData(node, getContent=False)
+        
         scxmlType = ["http://www.w3.org/TR/scxml", "scxml"]
         if invtype.strip("/") in scxmlType: 
-            inv = InvokeSCXML(data)
+            inv = InvokeSCXML(dict(data))
             contentNode = node.find(prepend_ns("content"))
             if contentNode != None:
                 cnt = self.parseContent(contentNode)
@@ -856,7 +872,10 @@ class Compiler(object):
             return None # leaf nodes have no initial 
     
     def setDatamodel(self, tree):
-        for data in tree.getiterator(prepend_ns("data")):
+        def iterdata():
+            return (x for x in iterMain(tree) if x.tag == prepend_ns("data"))
+         
+        for data in iterdata():
             self.dm[data.get("id")] = None
         
         top_level = tree.find(prepend_ns("datamodel"))
@@ -873,7 +892,7 @@ class Compiler(object):
             try:
                 top_level = top_level if top_level is not None else []
                 # filtering out the top-level data elements
-                self.setDataList([data for data in tree.getiterator(prepend_ns("data")) if data not in top_level])
+                self.setDataList([data for data in iterdata() if data not in top_level])
             except Exception, e:
                 self.logger.exception("Parsing of a data element failed.")
         
@@ -938,22 +957,12 @@ class Compiler(object):
             self.logger.warn(warnmsg)
             return xmlStr.replace("<scxml", "<scxml xmlns='http://www.w3.org/2005/07/scxml'", 1)
         
-#        elif root.get("xmlns"):
-#            return etree.tostring(root)
         return xmlStr
     
     def xml_from_string(self, xmlstr):
-#        f = FileWrapper(StringIO(xmlstr))
-#        root = None
-#        for event, elem in etree.iterparse(StringIO(xmlstr), events=("start", ), remove_comments=True):
-#            if root is None: root = elem
-#            setattr(elem, "sourceline", f.sourceline)
-#            elem.sourceline = f.sourceline
-#            self.sourceline_mapping[elem] = f.sourceline
         parser = etree.XMLParser(strip_cdata=False,remove_comments=True)
         tree = etree.XML(xmlstr, parser)
         return tree
-    
         
 
 def preprocess(tree):
@@ -966,18 +975,12 @@ def preprocess(tree):
                 xmlstr = preprocess_mapping[node_ns](child)
                 i = list(parent).index(child)
                 
-#                newNode = etree.fromstring(xmlstr)
                 newNode = etree.fromstring("<wrapper>%s</wrapper>" % xmlstr)
                 for node in newNode:
                     if "{" not in node.tag:
                         node.set("xmlns", ns)
-#                        parent[i] = newNode 
                 newNode = etree.fromstring(etree.tostring(newNode))
                 toAppend.append((parent, (i, len(newNode)-1), newNode) )
-#                parent[i:len(newNode)-1] = newNode[:]
-#                newNode.sourceline = child.sourceline
-#                for n, desc in enumerate(newNode.getiterator()):
-#                    desc.sourceline = newNode.sourceline + n 
     for parent, (i, j), newNode in toAppend:
         parent[i:j] = newNode[:]
     
@@ -1004,13 +1007,14 @@ def iter_elems(tree):
             if elem.tag in tagsForTraversal:
                 stack.append((child, elem))
                 
-#class FileWrapper(object):
-#    def __init__(self, source):
-#        self.source = source
-#        self.sourceline = 0
-#    def read(self, bytes):
-#        s = self.source.readline()
-#        self.sourceline += 1
-#        return s
-    
-
+def iterMain(tree):
+    '''returns an iterator over this scxml document, 
+    but not over scxml documents specified inline as a child of content'''
+    for child in tree:
+        if child.tag != prepend_ns("content"):
+            if split_ns(child)[0] == ns:
+                yield child
+                for sub in iterMain(child):
+                    if split_ns(child)[0] == ns:
+                        yield sub
+                

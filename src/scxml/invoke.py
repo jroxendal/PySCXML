@@ -126,6 +126,7 @@ class InvokeSCXML(BaseFetchingInvoke):
         self.logger.debug("onHttpResult " + str(named))
         self._start(result)
         
+        
     def cancel(self):
         self.cancelled = True
         if not self.sm: return;

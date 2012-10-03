@@ -49,7 +49,10 @@ def default_logfunction(label, msg):
     
     if isinstance(msg, list):
         msg = map(f, msg)
-        msg = "\n".join(msg)
+        try:
+            msg = "\n".join(msg)
+        except:
+            msg = str(msg)
     print "%s%s%s" % (label, ": " if label and msg is not None else "", msg)
 
 
@@ -112,13 +115,6 @@ class StateMachine(object):
         if setup_session:
             MultiSession().make_session(self.sessionid, self)
         
-        
-#        self.setIOProcessors(self.datamodel)
-    
-#    def setIOProcessors(self, dm):
-#        dm["_ioprocessors"] = {"scxml" : {"location" : dm["_x"]["self"]},
-#                                    "basichttp" : {"location" : dm["_x"]["self"]} }    
-    
     
     def _open_document(self, uri):
         if hasattr(uri, "read"):
@@ -290,8 +286,15 @@ class MultiSession(object):
         return sm
     
     def set_processors(self, sm):
-        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.sessionid},
-                                              "basichttp" : {"location" : "#_scxml_" + sm.sessionid} }
+        #TODO: should we raise an error for trying to access basichttp if not server enabled?
+        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.sessionid}
+                                          
+                                              #"basichttp" : {"location" : "#_scxml_" + sm.sessionid},
+                                              #"http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor" : {"location" : "#_scxml_" + sm.sessionid} 
+                                        }
+        if not isinstance(sm.datamodel, XPathDatamodel):
+            sm.datamodel["_ioprocessors"]["http://www.w3.org/TR/scxml/#SCXMLEventProcessor"] = {"location" : "#_scxml_" + sm.sessionid} 
+        
 
     
     def send(self, event, data={}, to_session=None):
@@ -307,7 +310,7 @@ class MultiSession(object):
         for sm in self:
             sm.cancel()
     
-    def on_sm_exit(self, sender):
+    def on_sm_exit(self, sender, final):
         if sender.sessionid in self:
             self.logger.debug("The session '%s' finished" % sender.sessionid)
             del self[sender.sessionid]
@@ -407,8 +410,10 @@ test467.scxml
     
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
 #    sm = StateMachine("assertions_xpath/test172.scxml")
-    sm = StateMachine("assertions_ecmascript/test242.scxml")
-#    sm = StateMachine("xpath_test.xml")
+#    sm = StateMachine("assertions_ecmascript/test242.scxml")
+#    sm = StateMachine("new_python_tests/failed/test559.scxml")
+    sm = StateMachine("invoke.xml")
+#    sm = StateMachine("inline_data.xml")
 #    os.environ["PYSCXMLPATH"] += ":" + sm.filedir
 #    sm = StateMachine("assertions_ecmascript/test154.scxml")
     sm.start()

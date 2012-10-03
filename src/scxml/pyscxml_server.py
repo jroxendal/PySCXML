@@ -75,8 +75,6 @@ class PySCXMLServer(MultiSession):
         self.port = port
         MultiSession.__init__(self, default_scxml_source, init_sessions, default_datamodel)
             
-        #the connected websocket clients
-        
         self.start()
         
     
@@ -134,7 +132,7 @@ class PySCXMLServer(MultiSession):
             sm = self.get(session) or self.init_session(session)
             try:
                 #picks out the input handler and executes it.
-                event = handler_mapping[type](session, data, sm, environ)
+                event = handler_mapping[type](session, data, sm, environ, raw=input)
                 
             except:
                 self.logger.error("Error when looking up handler for type %s." % type)
@@ -211,9 +209,7 @@ class ioprocessor(object):
         return f
 
 @ioprocessor('basichttp')
-def type_basichttp(session, data, sm, environ):
-#    if "_scxmleventstruct" in data:
-#        event = Processor.fromxml(data["_scxmleventstruct"], "unknown")
+def type_basichttp(session, data, sm, environ, raw=None):
     
     if "_scxmleventname" in data:
         evtname = data.pop("_scxmleventname")
@@ -227,51 +223,49 @@ def type_basichttp(session, data, sm, environ):
         event.origin = "unreachable"
         
         
-    event.raw = repr(environ) + "\n\n" + urllib.unquote(environ["wsgi.input"].read()) + "\n"
+    event.raw = repr(environ) + "\n\n" + urllib.unquote(raw) + "\n"
     return event
 
 @ioprocessor('scxml')
-def type_scxml(session, data, sm, environ):
+def type_scxml(session, data, sm, environ, raw=None):
     event = Processor.fromxml(data)
     event.type = "HTTP"
+    
     return event
 
-@ioprocessor("raw")
-def type_raw_basic(session, data, sm, environ):
-    return type_basichttp(session, data, sm, environ)
+#@ioprocessor("raw")
+#def type_raw_basic(session, data, sm, environ):
+#    return type_basichttp(session, data, sm, environ)
 
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.NOTSET)
     os.environ["PYSCXMLPATH"] = "../../w3c_tests/:../../unittest_xml:../../resources"
-    xml = '''<?xml version="1.0" encoding="UTF-8"?>
-    <!-- test that that <content> gets sent as the body of the message.-->
- 
-<scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript" version="1.0">
- 
-  
-<state id="s0">
-  <onentry>
-    <send event="timeout" delay="30s"/>
-    <send targetexpr="_ioprocessors['basichttp']['location']" type="http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor">
-    <content>this is some content</content>
-      </send> 
-     </onentry>
-    
-     <!-- if other end sends us back this event, we succeed -->
-  <transition event="HTTP.POST" cond="_event.raw.search(/this is some content/) != -1" target="pass"/>
-  <transition event="*" target="fail">
-    <log expr="_event.raw" />
-    <log label="l" expr="_event.raw.split('\n').slice(-1)[0]" />
-  </transition>
-</state>
- 
-   <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
-   <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
-</scxml>
-    '''
     from eventlet import wsgi
     
-    server = PySCXMLServer("localhost", 8081, init_sessions={"xpath" : xml}, default_datamodel="ecmascript")
+    class TestServer(PySCXMLServer):
+        def __init__(self, *args, **kwargs):
+            PySCXMLServer.__init__(self, *args, **kwargs)
+            self.n_sessions = len(kwargs["init_sessions"])
+            self.failed = []
+            self.passed = []
+        
+        def on_sm_exit(self, sender, final):
+            PySCXMLServer.on_sm_exit(self, sender, final)
+#            if sender not in self: return
+            if final == "pass":
+                self.passed.append(sender.sessionid)
+            else:
+                self.failed.append(sender.sessionid)
+            
+            print self.passed, self.failed, self.n_sessions    
+            if len(self.passed + self.failed) == self.n_sessions:
+                
+                print "all done!", os.path.join(sender.filedir, sender.filename)
+            
+            
+            
+    
+    server = TestServer("localhost", 8081, init_sessions={"test" : "new_python_tests/failed/test531.scxml"})
     wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
                 
