@@ -40,7 +40,6 @@ def main(address):
                                            "echo" : "example_docs/echo.scxml",
                                            "508" : "example_docs/raw/test508Server.xml", 
                                            "509" : "example_docs/raw/test509Server.xml", 
-                                           "511" : "example_docs/raw/test511Server.xml" 
                                            },
                             default_datamodel="ecmascript"
                             )
