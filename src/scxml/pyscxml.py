@@ -28,14 +28,14 @@ import errno
 import re
 from eventprocessor import Event
 from messaging import get_path
-from scxml import datamodel
-from scxml.datamodel import XPathDatamodel
+from datamodel import XPathDatamodel
 from lxml import etree
 import sys
 import time
 from scxml.interpreter import CancelEvent
 
 def default_logfunction(label, msg):
+#    print "log", label, etree.tostring(msg[0])
     label = label or ""
 #    msg = msg or ""
     
@@ -136,6 +136,7 @@ class StateMachine(object):
     
     def _start(self):
         self.compiler.instantiate_datamodel()
+
         self.interpreter.interpret(self.doc)
     
     def _start_invoke(self, invokeid=None):
@@ -286,15 +287,12 @@ class MultiSession(object):
         return sm
     
     def set_processors(self, sm):
-        #TODO: should we raise an error for trying to access basichttp if not server enabled?
-        sm.datamodel["_ioprocessors"] = {"scxml" : {"location" : "#_scxml_" + sm.sessionid}
-                                          
-                                              #"basichttp" : {"location" : "#_scxml_" + sm.sessionid},
-                                              #"http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor" : {"location" : "#_scxml_" + sm.sessionid} 
-                                        }
-        if not isinstance(sm.datamodel, XPathDatamodel):
-            sm.datamodel["_ioprocessors"]["http://www.w3.org/TR/scxml/#SCXMLEventProcessor"] = {"location" : "#_scxml_" + sm.sessionid} 
+        processors = {"scxml" : {"location" : "#_scxml_" + sm.sessionid}}
         
+        if not isinstance(sm.datamodel, XPathDatamodel):
+            processors["http://www.w3.org/TR/scxml/#SCXMLEventProcessor"] = {"location" : "#_scxml_" + sm.sessionid}
+        
+        sm.datamodel["_ioprocessors"] = processors
 
     
     def send(self, event, data={}, to_session=None):
@@ -334,7 +332,7 @@ class custom_executable(object):
     def __call__(self, f):
         compiler.custom_exec_mapping[self.namespace] = f
         return f
-    
+
 class custom_sendtype(object):
     '''A decorator for defining custom send types'''
     def __init__(self, sendtype):
@@ -343,7 +341,7 @@ class custom_sendtype(object):
     def __call__(self, fun):
         compiler.custom_sendtype_mapping[self.sendtype] = fun
         return fun
-
+    
 #class preprocessor(object):
 #    '''A decorator for defining replacing xml elements of a 
 #    particular namespace with other markup. '''
@@ -396,24 +394,49 @@ test467.scxml
 '''
     
     xml = '''
-    <scxml xmlns="http://www.w3.org/2005/07/scxml" datamodel="xpath">
-        <datamodel>
-          <data id="apa" />
-        </datamodel>
-        <state>
+    <scxml xmlns="http://www.w3.org/2005/07/scxml">
+    
+    <parallel>
+        
+        <state id="A">
             <onentry>
-               <log expr="($apa/text())" />
+                <send event="switch" delay="2s"/>
             </onentry>
         </state>
-    </scxml>
+                
+        <state id="B">
+            <onentry>
+                <log expr="'Entered B.'"/>
+            </onentry>
+            <onexit>
+                <log expr="'Exited B.'"/>
+            </onexit>
+            <state id="B1">
+                <onentry>
+                    <log expr="'Entered B1.'"/>
+                </onentry>
+                <transition event="switch" target="B2"/>
+            </state>
+            <state id="B2">
+                <onentry>
+                    <log expr="'Enterd B2.'"/>
+                </onentry>
+                <transition event="switch" target="B1"/>
+            </state>
+        </state>
+
+    </parallel>
+  
+</scxml>
     '''
     
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
-#    sm = StateMachine("assertions_xpath/test172.scxml")
-#    sm = StateMachine("assertions_ecmascript/test242.scxml")
+    sm = StateMachine("assertions_xpath/test568.scxml")
 #    sm = StateMachine("new_python_tests/failed/test559.scxml")
-    sm = StateMachine("invoke.xml")
+#    sm = StateMachine(xml)
 #    sm = StateMachine("inline_data.xml")
 #    os.environ["PYSCXMLPATH"] += ":" + sm.filedir
 #    sm = StateMachine("assertions_ecmascript/test154.scxml")
     sm.start()
+
+

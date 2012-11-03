@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?><!--  test that <data> creates a new ecmascript object. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!--  test that <data> creates a new ecmascript variable. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" version="1.0">
   <datamodel>
     <data id="var1" expr="1"/>
     </datamodel>
      
 <state id="s0">
-<!-- if we can access var1 in a conditional expression, the object has been created -->
-  <transition cond="var1==1" target="pass"/>
+<!-- test that var1 can be used as an ecmascript variable -->
+  <transition cond="++var1==2" target="pass"/>
   <transition target="fail"/>
 </state>
 

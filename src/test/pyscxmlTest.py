@@ -105,7 +105,7 @@ class RegressionTest(unittest.TestCase):
 
     def testW3cPython(self):
 #        logging.basicConfig(level=logging.NOTSET)
-        os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_passed"
+        os.environ["PYSCXMLPATH"] = "../../w3c_tests/assertions_python"
         
 
         filelist = [f for f in glob.glob(os.environ["PYSCXMLPATH"] + "/*xml") if "sub" not in f] 

@@ -109,6 +109,7 @@ def dictToXML(dictionary, root="root", root_attrib={}):
 
 if __name__ == '__main__':
     import sys
+    from eventprocessor import Event
     
     
 #    d = {
@@ -120,8 +121,15 @@ if __name__ == '__main__':
          p : "123",
          "lol" : 3
          }
-    from eventprocessor import Event
-    print etree.tostring( dictToXML(Event("hello", data={"d1" : 123}).__dict__, root="data", root_attrib={"id" : "key"}), pretty_print=True)
+    
+    xpathData = etree.fromstring('''
+    <books xmlns="">
+          <book title="title1"/>
+          <book title="title2"/>
+        </books>
+        ''', parser=xpathparser).xpath(".")
+    print xpathData, Event("hello", data=xpathData).__dict__
+    print etree.tostring( dictToXML(Event("hello", data=xpathData).__dict__, root="data", root_attrib={"id" : "key"}), pretty_print=True)
     sys.exit()
 #    e = Event("hello", data={"d1" : etree.fromstring("<elem/>")})
     e = Event("hello", data={"d1" : 123})

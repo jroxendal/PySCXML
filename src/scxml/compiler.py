@@ -40,6 +40,7 @@ from eventlet import Queue
 import scxml.pyscxml
 from datastructures import xpathparser
 import eventlet
+from scxml.datastructures import Nodeset
 
 
 
@@ -442,7 +443,7 @@ class Compiler(object):
             sender = partial(target.interpreter.send, event, data, sendid=defaultSendid) 
         elif type in scxmlSendType:
             if target == "#_parent":
-                if self.interpreter.exited: 
+                if self.interpreter.exited or self.interpreter.cancelled: 
                     # if we were cancelled, don't send to _parent 
                     return
                 try:
@@ -658,9 +659,11 @@ class Compiler(object):
                     def donedata(node):
                         try:
                             data = self.parseData(node)
+                            if self.datamodel == "xpath":
+                                return data
                             try:
-                                return dict(data)
-                            except TypeError:
+                                return dict(data) 
+                            except (TypeError, ValueError):
                                 # not key/value data, probably from <content>
                                 return data
                         except Exception, e:
@@ -908,11 +911,14 @@ class Compiler(object):
             value = None
             
             if node.get("src"):
-                value = dl_mapping[node]
+                try:
+                    node.append(etree.fromstring(dl_mapping[node]))
+                except:
+                    node.text = dl_mapping[node]
+                    
                 if isinstance(value, Exception):
                     self.logger.error("Data src not found : '%s'. \n\t%s" % (node.get("src"), value))
-                    value = None
-            elif node.get("expr") or len(node) > 0 or node.text:
+            if node.get("expr") or len(node) > 0 or node.text:
                 try:
                     value = self.parseContent(node)
                 except Exception, e:

@@ -1,5 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?><!--  test that we can use any ecmascript expression as a value expression. In this case, we just test that we can assign
-a function to a variable and then call it.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!--  test that we can use any ecmascript expression as a value expression. 
+In this case, we just test that we can assign
+a function to a variable and then call it.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" version="1.0">
  <datamodel>
    <data id="var1" expr="function(invar) {return invar + 1;}"/>
    </datamodel>

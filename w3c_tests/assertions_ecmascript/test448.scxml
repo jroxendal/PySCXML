@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!--  test that all ecmascript objects are placed in a single global scope --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!--  test that all ecmascript objects are placed in a single global scope --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" version="1.0">
  
      
 <state id="s0">

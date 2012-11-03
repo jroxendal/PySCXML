@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!--  test that we can assign to any location in the datamodel. In this case, we just test that we can assign
-to a substructure (not the top level variable).  This may not be the most idiomatic way to write the test --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
+to a substructure (not the top level variable).  This may not be the most idiomatic way to write the test --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" version="1.0">
  <datamodel>
    <data id="foo" expr="0"/>
    </datamodel>

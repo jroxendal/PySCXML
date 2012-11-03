@@ -98,6 +98,7 @@ if __name__ == '__main__':
     run_on_server = [
 #        "test508.scxml", 
 #        "test509.scxml", 
+#        "test510.scxml", 
 #        "test511.scxml", 
 #        "test513.scxml", 
 #        "test518.scxml", 
@@ -121,9 +122,9 @@ if __name__ == '__main__':
         print "failed:", url
 #        move(url, "failed/")
     
-    pyscxmlTest.parallelize(filelist, onSuccess, onFail)
+#    pyscxmlTest.parallelize(filelist, onSuccess, onFail)
 
-#    server = TestServer("localhost", 8081, init_sessions=dict(zip(run_on_server, run_on_server)), onFail=onFail, onSuccess=onSuccess)
-#    wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
+    server = TestServer("localhost", 8081, init_sessions=dict(zip(run_on_server, run_on_server)), onFail=onFail, onSuccess=onSuccess)
+    wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
     print "Done"
     

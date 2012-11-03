@@ -42,6 +42,7 @@ class Interpreter(object):
     def __init__(self):
         self.running = True
         self.exited = False
+        self.cancelled = False
         self.configuration = OrderedSet()
         
         self.internalQueue = Queue()

@@ -15,7 +15,6 @@
    <foreach array="$var1/nodes/node" item="item" index="pos">
       <assign location="$item" type="addattribute" attr="position" expr="$pos"/>
      </foreach>
-     <log expr="$var1" />
   </onentry>
   
    <transition cond="$var1/nodes/node[1]/@position = 1 and  $var1/nodes/node[2]/@position = 2 and $var1/nodes/node[3]/@position = 3" target="pass"/>

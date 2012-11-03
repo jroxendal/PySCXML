@@ -27,7 +27,7 @@
   </bookinfo>
 </assign>
   </onentry>
-   <transition cond="$cart/myCart/books/book[1]/bookinfo/isdn/text() = '12334455'" target="pass"/>
+   <transition cond="$cart/myCart/books/book[1]/bookinfo/isdn/text() = '12334455'     and not($cart/myCart/books/book[1]/title)" target="pass"/>
    <transition target="fail"/>
   </state>
     
