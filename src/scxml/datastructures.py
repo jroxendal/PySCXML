@@ -13,7 +13,7 @@ class Nodeset(list):
     def toXML(self):
         def f(x, y):
             return str(x) + "\n" +  str(y)
-        return reduce(f, self)
+        return reduce(f, self, "")
         
             
         

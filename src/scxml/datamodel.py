@@ -284,6 +284,7 @@ class XPathDatamodel(object):
             data.append(deepcopy(val))
         else:
             val = val if val is not None else ""
+            key = key.lstrip("$")
             data = etree.fromstring("<data id='%s' xmlns=''>%s</data>" % (key, val), parser=self.parser)
         try:
             current = self.root.find("data[@id='%s']" % key)

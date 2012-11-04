@@ -7,7 +7,7 @@
     
    <state id="s0">
  
-       <transition cond="$Var1/*" target="pass"/>
+       <transition cond="$Var1/* or $Var1/text()" target="pass"/>
        <transition target="fail"/>
    </state>
 

@@ -9,10 +9,8 @@
    <onentry>
    <!-- this will raise an error and also store the sendid in var1 -->
      <send target="baz" event="foo" idlocation="$Var1"/>
-     
    </onentry>
    <transition event="error" target="s1">
-    <log expr="$Var1" />
    <!-- get the sendid out of the error event -->
        <assign location="$Var2" expr="$_event/sendid/text()"/>
        </transition>
@@ -21,7 +19,7 @@
    
 <state id="s1">
 <!-- make sure that the sendid in the error event matches the one generated when send executed -->
-  <transition cond="$Var1=$Var2" target="pass"/>
+  <transition cond="$Var1/text()=$Var2/text()" target="pass"/>
   <transition target="fail"/>
   </state>
       

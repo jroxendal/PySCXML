@@ -10,9 +10,7 @@
     </onentry>
     
    <transition event="error.execution" cond="$Var1 and not($Var1/text()) and not($Var1/*)" target="s1"/>
-   <transition event="*" target="fail">
-    <log expr="$Var1" />
-   </transition>
+   <transition event="*" target="fail"/>
    </state>
    
  <state id="s1">

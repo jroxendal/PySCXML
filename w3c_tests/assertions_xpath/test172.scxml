@@ -6,7 +6,7 @@
 <state id="s0">
   <onentry>
    <assign location="$Var1" expr="'event2'"/>
-   <send eventexpr="$Var1/text()"/>
+   <send eventexpr="$Var1"/>
     </onentry>
     
   <transition event="event2" target="pass"/>

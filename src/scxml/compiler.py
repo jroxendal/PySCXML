@@ -225,7 +225,7 @@ class Compiler(object):
                             from PyV8 import JSContext
                             c = JSContext(self.dm.g)
                             c.enter()
-                        itr = enumerate(array, startIndex)
+                        
                         
                         
 #                        if self.datamodel == "xpath":
@@ -235,13 +235,13 @@ class Compiler(object):
                     except TypeError, e:
                         err = DataModelError(e)
                         raise AttributeEvalError(err, node, "array")
-                    for index, item in itr:
+                    for index, item in enumerate(array, startIndex):
                         try:
+                            # if it's not a correct QName: crash.
+                            etree.QName(node.get("item"))
                             if self.datamodel != "xpath":
                                 self.dm[node.get("item")] = item
                             else:
-                                # if it's not a correct QName: crash.
-                                etree.QName(node.get("item"))
                                 self.dm.references[node.get("item")] = item
                                 
                         except DataModelError, e:
@@ -250,11 +250,15 @@ class Compiler(object):
                             raise AttributeEvalError(DataModelError(e), node, "item")
                             
                         try:
+                            # if it's not a correct QName: crash.
+                            etree.QName(node.get("item"))
                             if node.get("index"):
-                                if self.datamodel != "xpath":
-                                    self.dm[node.get("index")] = index
-                                else:
-                                    self.dm.references["pos"] = index
+                                # if self.datamodel != "xpath":
+                                self.dm[node.get("index")] = index
+                                # else:
+                            
+
+
                         except DataModelError, e:
                             raise AttributeEvalError(e, node, "index")
                         try:
@@ -264,6 +268,8 @@ class Compiler(object):
                     if self.datamodel == "ecmascript":
                         c.leave()
             #TODO: delete xpath references? (see above) 
+                # for key, val in self.dm.references.items():
+                #     self.dm[key] = val
             elif node_ns == pyscxml_ns:
                 if node_name == "start_session":
                     xml = None
@@ -658,8 +664,9 @@ class Compiler(object):
                     doneNode = node.find(prepend_ns("donedata"))
                     def donedata(node):
                         try:
-                            data = self.parseData(node)
-                            if self.datamodel == "xpath":
+                            data = self.parseData(node, forSend=True)
+                            
+                            if self.datamodel == "xpath" and not all(map(lambda x: type(x) is tuple, data)):
                                 return data
                             try:
                                 return dict(data) 
@@ -819,7 +826,7 @@ class Compiler(object):
                 cnt = self.parseContent(contentNode)
                 if isinstance(cnt, basestring):
                     inv.content = cnt
-                elif type(cnt) is list:
+                elif isinstance(cnt, list):
                     #TODO: if len(cnt) > 0, we could throw exception.
                     if len(cnt) == 0:
                         raise InvokeError("Line %s: The invoke content is empty." % node.sourceline)
@@ -847,12 +854,16 @@ class Compiler(object):
         finalizeNode = node.find(prepend_ns("finalize")) 
         if finalizeNode != None and not len(finalizeNode):
             paramList = node.findall(prepend_ns("param"))
-            namelist = filter(bool, map(lambda x: (x, x), node.get("namelist", "").split(" ")))
+#            namelist = filter(bool, map(lambda x: (x, x), node.get("namelist", "").split(" ")))
+            namelist =  [(x, x) for x in node.get('namelist', "").split(" ") if x]
             paramMapping = [(param.get("name"), param.get("location")) for param in (p for p in paramList if p.get("location"))]
             def f():
                 for name, location in namelist + paramMapping:
-                    if name in self.dm["_event"].data:
+                    if self.datamodel != "xpath" and name in self.dm["_event"].data:
                         self.dm[location] = self.dm["_event"].data[name]
+                    elif len(self.dm["$_event/data/data[@id='%s']" % name]):
+                        self.dm[location.lstrip("$")] = self.dm["$_event/data/data[@id='%s']/text()|$_event/data/data[@id='%s']/*" % (name, name)]
+                        
             inv.finalize = f
         elif finalizeNode != None:
             inv.finalize = partial(self.try_execute_content, finalizeNode)

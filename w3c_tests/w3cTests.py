@@ -61,7 +61,7 @@ def move(src, dest):
 
 if __name__ == '__main__':
     import futures, os, glob, sys, eventlet
-    os.chdir("new_python_tests/")
+    os.chdir("newer_xpath_tests/")
     
     for fn in glob.glob("*.xml"):
         shutil.move(fn, fn.split(".")[0] + ".scxml")
@@ -96,14 +96,17 @@ if __name__ == '__main__':
     ]
     
     run_on_server = [
-#        "test508.scxml", 
-#        "test509.scxml", 
-#        "test510.scxml", 
-#        "test511.scxml", 
-#        "test513.scxml", 
-#        "test518.scxml", 
+        "test508.scxml", 
+        "test509.scxml", 
+        "test510.scxml", 
+        "test511.scxml", 
+        "test513.scxml", 
+        "test518.scxml", 
+        "test519.scxml", 
+        "test520.scxml", 
         "test522.scxml", 
         "test531.scxml", 
+        "test532.scxml", 
         "test534.scxml", 
         "test567.scxml", 
     ]
@@ -112,19 +115,19 @@ if __name__ == '__main__':
                 "sub" not in fn and 
                 not os.path.isdir(fn) and 
                 fn.endswith("xml") and 
-                fn not in stoplist + supposed_to_fail]
+                fn not in stoplist + supposed_to_fail + run_on_server]
     
     def onSuccess(url):
         print "passed:", url
-#        move(url, "passed/")
+        move(url, "passed/")
         
     def onFail(url):
         print "failed:", url
-#        move(url, "failed/")
+        move(url, "failed/")
     
-#    pyscxmlTest.parallelize(filelist, onSuccess, onFail)
+    pyscxmlTest.parallelize(filelist, onSuccess, onFail)
 
-    server = TestServer("localhost", 8081, init_sessions=dict(zip(run_on_server, run_on_server)), onFail=onFail, onSuccess=onSuccess)
-    wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
-    print "Done"
+#    server = TestServer("localhost", 8081, init_sessions=dict(zip(run_on_server, run_on_server)), onFail=onFail, onSuccess=onSuccess)
+#    wsgi.server(eventlet.listen(("localhost", 8081)), server.request_handler)
+#    print "Done"
     

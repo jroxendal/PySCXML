@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- we test that <send> respects the delay specification.  If it does, event1 arrives before event2
- and we pass.  Otherwise we fail  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath">
+ and we pass.  Otherwise we fail  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="xpath">
 
   
 <state id="s0">

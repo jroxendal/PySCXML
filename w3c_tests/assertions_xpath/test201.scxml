@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- we test that the processor supports the basic http event i/o processor.  This is an optional
-test since platforms are not required to support basic http event i/o --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath">
+test since platforms are not required to support basic http event i/o --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="xpath">
 
 <state id="s0">
   <onentry>

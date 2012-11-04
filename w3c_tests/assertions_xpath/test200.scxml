@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- we test that the processor supports the scxml event i/o processor --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath">
+<?xml version="1.0" encoding="UTF-8"?><!-- we test that the processor supports the scxml event i/o processor --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath" version="1.0">
 
 <state id="s0">
   <onentry>

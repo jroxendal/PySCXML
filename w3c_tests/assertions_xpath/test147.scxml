@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that the first clause that evaluates to true - and only that clause - is executed.
-Only one event should be raised, and it should be bar --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="xpath">
+Only one event should be raised, and it should be bar --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="xpath">
 <datamodel>
   <data id="Var1" expr="0"/>
   </datamodel>

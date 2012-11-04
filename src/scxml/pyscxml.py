@@ -35,7 +35,6 @@ import time
 from scxml.interpreter import CancelEvent
 
 def default_logfunction(label, msg):
-#    print "log", label, etree.tostring(msg[0])
     label = label or ""
 #    msg = msg or ""
     
@@ -429,7 +428,7 @@ test467.scxml
   
 </scxml>
     '''
-    
+    dispatcher.connect(default_logfunction, "invoke_log")
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
     sm = StateMachine("assertions_xpath/test568.scxml")
 #    sm = StateMachine("new_python_tests/failed/test559.scxml")

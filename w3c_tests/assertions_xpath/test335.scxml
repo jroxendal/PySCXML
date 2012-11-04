@@ -5,7 +5,7 @@
      <raise event="foo"/>
    </onentry>
    <transition event="foo" cond="not(string($_event/origin))" target="pass"/>
-  <transition event="*" target="fail"/> 
+      <transition event="*" target="fail"/> 
    </state>
    
 
