@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that the state machine is put into the configuration specified by the initial element, without regard
 to any other defaults.  we should start off in s2p111 and s2p122.  the atomic
-states we should not enter all have immediate transitions to failure in them --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s2p112 s2p122" datamodel="ecmascript">
+states we should not enter all have immediate transitions to failure in them --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s2p112 s2p122" version="1.0" datamodel="ecmascript">
 
  <state id="s1">
    <transition target="fail"/>

@@ -167,7 +167,11 @@ class ECMAScriptDataModel(ImperativeDataModel):
 #                val = val
                 key = "_event"
 #                val = val.__dict__
-            setattr(self.g, key, val)
+            
+            if key not in self and val is None:
+                self.execExpr("var %s;" % key)
+            else:
+                setattr(self.g, key, val)
         
     def __getitem__(self, key):
 #        if key in hidden:
@@ -194,18 +198,16 @@ class ECMAScriptDataModel(ImperativeDataModel):
         return bool(re.match("[a-zA-Z_$][0-9a-zA-Z_$]*", name))
     
     def assign(self, assignNode):
+        key = assignNode.get("location")
         if not self.hasLocation(assignNode.get("location")):
-            msg = "The location expression '%s' was not instantiated in the datamodel." % assignNode.get("location")
+            msg = "The location expression '%s' was not instantiated in the datamodel." % key
             raise ExecutableError(IllegalLocationError(msg), assignNode)
-        
-
+        if (key in assignOnce and key in self) or key in hidden or not self.isLegalName(key):
+            raise DataModelError("You can't assign to the name '%s'." % key)
         if assignNode.get("expr"):
-            self.evalExpr(assignNode.get("location") + "= %s" % assignNode.get("expr"))
+            self.evalExpr(key + "= %s" % assignNode.get("expr"))
         else:
-            self[assignNode.get("location")] = self.parseContent(assignNode)
-#        print "assign", val
-#        self[assignNode.get("location")] = self.parseContent(assignNode)
-#        print self[assignNode.get("location")] 
+            self[key] = self.parseContent(assignNode)
     
     
     def parseContent(self, contentNode):
@@ -236,6 +238,7 @@ class ECMAScriptDataModel(ImperativeDataModel):
                 ret = c.eval(expr)
             except Exception, e:
                 raise ExprEvalError(e, [])
+#            TODO: this causes variabels typeof == 'undefined' to become null instead. 
             for key in c.locals.keys(): setattr(self.g, key, c.locals[key])
             return ret
     def execExpr(self, expr):
@@ -410,16 +413,20 @@ class XPathDatamodel(object):
 #        raise DataModelError("multiline expressions can't be executed on the xpath datamodel.")
     
 if __name__ == '__main__':
-#    import PyV8 #@UnresolvedImport
+    import PyV8 #@UnresolvedImport
     
+#    d = ECMAScriptDataModel()
     
-    d = ECMAScriptDataModel()
-    
-    d.evalExpr("var a = [1,2,3]")
-    c = JSContext(d.g)
-    c.enter()
-    print d["a"]
+#    d.evalExpr()
+#    d.evalExpr("var a;")
+#    print d.evalExpr("typeof a")
+#    c = JSContext(d.g)
+#    c.enter()
+#    print d["a"]
 #    d = DataModel()
-    
+    ctxt = PyV8.JSContext()          # create a context with an implicit global object
+    ctxt.enter()                     # enter the context (also support with statement)
+    ctxt.eval("var a;")
+    print ctxt.eval("typeof a")        
     
     

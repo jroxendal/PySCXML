@@ -61,7 +61,7 @@ def move(src, dest):
 
 if __name__ == '__main__':
     import futures, os, glob, sys, eventlet
-    os.chdir("newer_xpath_tests/")
+    os.chdir("ecma_schema/")
     
     for fn in glob.glob("*.xml"):
         shutil.move(fn, fn.split(".")[0] + ".scxml")

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- we test that <send> stores the value of the sendid in idlocation.  If it does,
-var1 has a value and we pass.  Otherwise we fail  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+var1 has a value and we pass.  Otherwise we fail  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript" version="1.0">
 <datamodel>
   <data id="Var1"/>
 

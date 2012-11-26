@@ -428,10 +428,11 @@ test467.scxml
   
 </scxml>
     '''
-    dispatcher.connect(default_logfunction, "invoke_log")
+#    dispatcher.connect(default_logfunction, "invoke_log")
 #    sm = StateMachine("new_xpath_tests/failed/test152.scxml")
-    sm = StateMachine("assertions_xpath/test568.scxml")
-#    sm = StateMachine("new_python_tests/failed/test559.scxml")
+#    sm = StateMachine("xpath_test.xml")
+    sm = StateMachine("assertions_ecmascript/test242.scxml")
+#    sm = StateMachine("exit_issue.xml")
 #    sm = StateMachine(xml)
 #    sm = StateMachine("inline_data.xml")
 #    os.environ["PYSCXMLPATH"] += ":" + sm.filedir

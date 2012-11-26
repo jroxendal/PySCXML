@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that neither if clause executes, so that bat is the only event raised. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that neither if clause executes, so that bat is the only event raised. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="0"/>
   </datamodel>
   
 <state id="s0">
   <onentry>
-  <if cond="0&gt;1">
+  <if cond="false">
     <raise event="foo"/>
     <assign location="Var1" expr="Var1 + 1"/>
-  <elseif cond="0&gt;1"/>
+  <elseif cond="false"/>
     <raise event="bar"/>
     <assign location="Var1" expr="Var1 + 1"/>
  </if>

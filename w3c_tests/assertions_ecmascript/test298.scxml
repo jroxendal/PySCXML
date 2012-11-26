@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- refence a non-existent data model location in param in donedata and see that the right error is raised --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" initialstate="s0">
+<?xml version="1.0" encoding="UTF-8"?><!-- refence a non-existent data model location in param in donedata and see that the right error is raised --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" datamodel="ecmascript" initial="s0">
  <datamodel>
        <data id="Var1" expr="0"/>
     </datamodel>   

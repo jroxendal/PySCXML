@@ -41,6 +41,7 @@ import scxml.pyscxml
 from datastructures import xpathparser
 import eventlet
 from scxml.datastructures import Nodeset
+import xml.dom.minidom as minidom
 
 
 
@@ -403,7 +404,7 @@ class Compiler(object):
         
         type = self.parseAttr(sendNode, "type", "scxml")
         e = self.parseAttr(sendNode, "event")
-        event = e.split(".") if e is not None else None
+        event = e and e.split(".")
         eventstr = ".".join(event) if event else ""
         if type == "scxml" and not eventstr:
             raise SendExecutionError("Illegal send event value: '%s'" % eventstr)
@@ -419,7 +420,7 @@ class Compiler(object):
                 # data is not key/value pair
                 data = raw
             
-            
+        
         except ExprEvalError, e:
             self.logger.exception("Line %s: send not executed: parsing of data failed" % getattr(sendNode, "sourceline", 'unknown'))
 #            self.raiseError("error.execution", e, sendid=sendid)
@@ -427,7 +428,7 @@ class Compiler(object):
         
         #TODO: what about event.origin and the others? and what about if <send idlocation="_event" ?
         defaultSendid = sendid if sendNode.get("id", sendNode.get("idlocation")) else None 
-        defaultSend = partial(self.interpreter.send, event, data, sendid=defaultSendid, eventtype="external", raw=raw)
+        defaultSend = partial(self.interpreter.send, event, data, sendid=defaultSendid, eventtype="external", raw=raw, language=self.datamodel)
 
         scxmlSendType = ("http://www.w3.org/TR/scxml/#SCXMLEventProcessor", "scxml")
         httpSendType = ("http://www.w3.org/TR/scxml/#BasicHTTPEventProcessor", "basichttp")
@@ -461,7 +462,7 @@ class Compiler(object):
                 sender = partial(self.interpreter.raiseFunction, event, data, sendid=sendid)
             elif target == "#_websocket":
                 self.logger.debug("sending to _websocket")
-                eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language="json")
+                eventXML = Processor.toxml(eventstr, target, data, "", sendNode.get("id", ""), language=self.datamodel)
                 sender = partial(self.dm.websocket.put, eventXML)
             elif target.startswith("#_") and not target == "#_response": # invokeid
                 try:
@@ -679,8 +680,8 @@ class Compiler(object):
 #                            the interpreter, insert error in outgoing done event.
                             self.logger.exception("Line %s: Donedata crashed." % node.sourceline)
                             self.raiseError("error.execution", exception=e)
-                        return {}
-#                            raise 
+                            # TODO: this may not be consistent with how _event.data is populated from <send>
+                        return None
                             
                     s.donedata = partial(donedata, doneNode)
 
@@ -834,8 +835,8 @@ class Compiler(object):
                         raise InvokeError("Line %s: The invoke content is invalid for content: \n%s" % 
                                           (node.sourceline, etree.tostring(cnt[0])))
                     inv.content = etree.tostring(cnt[0])
-                elif self.datamodel == "ecmascript" and len(contentNode) > 0: # if cnt is a minidom object
-                    inv.content = etree.tostring(contentNode[0])
+                elif self.datamodel == "ecmascript" and isinstance(cnt, minidom.Element): # if cnt is a minidom object
+                    inv.content = cnt.toxml()
                 else:
                     raise Exception("Error when parsing contentNode, content is %s" % cnt)
             

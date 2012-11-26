@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that each onexithandler is a separate block.  The <send> of event1 will cause an error but
- the increment to var1 should happen anyways --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
+ the increment to var1 should happen anyways --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="1"/>
  </datamodel>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- we test that idlocation is supported.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!-- we test that idlocation is supported.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript">
  <datamodel>
    <data id="Var1"/>
    </datamodel>
@@ -7,7 +7,14 @@
   <onentry>
     <send event="timeout" delay="1s"/>
     </onentry>
-  <invoke type="http://www.w3.org/TR/scxml/" idlocation="Var1" src="file:test223sub1.scxml"/>
+     <invoke type="http://www.w3.org/TR/scxml/" idlocation="Var1">
+     <content>
+     <!-- when invoked, terminate returning done.invoke. This proves that the invocation succeeded.   -->
+       <scxml initial="subFinal" version="1.0" datamodel="ecmascript">
+       <final id="subFinal"/>
+        </scxml>
+       </content>
+    </invoke>
   <transition event="*" target="s1"/>
 </state>
 

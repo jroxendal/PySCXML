@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that assignment with an illegal expr raises an error --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that assignment with an illegal expr raises an error --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" initial="s0">
 
 <datamodel>
   <data id="Var1" expr="1"/>
@@ -6,7 +6,7 @@
 
 <state id="s0">
   <onentry>
-   <assign location="Var1" expr="1 = 1"/>
+   <assign location="Var1" expr="return"/>
    <raise event="foo"/>
    </onentry>
    <transition event="error.execution" target="pass"/> 

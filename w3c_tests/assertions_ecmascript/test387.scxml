@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that the default history state works correctly.  From s1 we take a transition to s0's default
-deep history state.  We should end up in s022, generating "enteringS022".  Otherwise failure.--><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="ecmascript">
+deep history state.  We should end up in s022, generating "enteringS022".  Otherwise failure.--><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" version="1.0" datamodel="ecmascript">
 
        
 <state id="s0" intial="s01">

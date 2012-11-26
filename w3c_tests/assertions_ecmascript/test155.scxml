@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that foreach executes the executable content once for each item in the list. The executable
-content increments var1 and there are 3 items in the list, so it should be 3 at the end --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+content increments var1 and there are 3 items in the list, so it should be 3 at the end --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript">
 
 <datamodel>
   <data id="Var1" expr="0"/>
   <data id="Var2"/>
+  <data id="Var3" expr="[1,2,3]"/>
   </datamodel>
   
    <state id="s0">
       <onentry>
-        <foreach item="Var2" array="[1, 2, 3]">
+        <foreach item="Var2" array="Var3">
           <assign location="Var1" expr="Var1 + 1"/>
           </foreach>
         </onentry>

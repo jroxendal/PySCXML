@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- a simple test that onexit handlers work. var1 should be incremented when we leave s0 --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!-- a simple test that onexit handlers work. var1 should be incremented when we leave s0 --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript">
 <datamodel>
  <data id="Var1" expr="0"/>
  </datamodel>

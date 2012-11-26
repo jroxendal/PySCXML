@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that entering a final state generates done.state.parentid after executing the onentry elements.  
-Var1 should be set to 2 by the time the event is raised --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript">
+Var1 should be set to 2 by the time the event is raised --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" version="1.0">
 
 <datamodel>
   <data id="Var1" expr="1"/>

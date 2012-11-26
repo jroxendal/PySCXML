@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- to test that scripts are run as part of executable content, we check that it changes the value of a var at the
-right point --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0">
+right point. This test is valid only for datamodels that support scripting --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" initial="s0" datamodel="ecmascript">
 <datamodel>
 <data id="Var1" expr="0"/>
 </datamodel>
@@ -7,7 +7,7 @@ right point --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http:/
  <state id="s0">
    <onentry>
    <assign location="Var1" expr="2"/>
-   <script>Var1 = 1</script>
+   <script>var Var1 = 1</script>
    </onentry>
    <transition cond="Var1==1" target="pass"/>
    <transition target="fail"/>

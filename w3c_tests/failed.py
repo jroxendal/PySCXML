@@ -6,7 +6,7 @@ import os
 #os.chdir("assertions_ecma/failed")
 #os.chdir("stoplist/failed")
 # os.chdir("assertions_xpath/failed")
-os.chdir("newer_xpath_tests/failed")
+os.chdir("ecma_schema/failed")
 
 logging.basicConfig(level=logging.NOTSET)
 

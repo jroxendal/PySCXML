@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that internal events take priority over external ones --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that internal events take priority over external ones --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" initial="s1" datamodel="ecmascript">
 
  <state id="s1" initial="s11">
    <onentry>

@@ -32,6 +32,7 @@ from louie import dispatcher
 from scxml.eventprocessor import ScxmlOriginType
 import eventlet
 from eventlet import Queue
+from scxml.datamodel import ECMAScriptDataModel
 
 
 class Interpreter(object):
@@ -389,7 +390,7 @@ class Interpreter(object):
         return name in map(lambda x: x.id, self.configuration)
     
     
-    def send(self, name, data={}, invokeid = None, toQueue = None, sendid=None, eventtype="platform", raw=None):
+    def send(self, name, data=None, invokeid = None, toQueue = None, sendid=None, eventtype="platform", raw=None, language=None):
         """Send an event to the statemachine 
         @param name: a dot delimited string, the event name
         @param data: the data associated with the event
@@ -401,10 +402,10 @@ class Interpreter(object):
         if not toQueue: toQueue = self.externalQueue
         evt = Event(name, data, invokeid, sendid=sendid, eventtype=eventtype)
         evt.origin = "#_scxml_" + self.dm.sessionid
-        evt.origintype = ScxmlOriginType()
+        evt.origintype = ScxmlOriginType() if not isinstance(self.dm, ECMAScriptDataModel) else "http://www.w3.org/TR/scxml/#SCXMLEventProcessor"
         evt.raw = raw
         #TODO: and for ecmascript?
-        evt.language = "python"
+        evt.language =  language
         toQueue.put(evt)
         
             

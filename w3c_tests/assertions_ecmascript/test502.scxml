@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that the finalize executes for each event received from the child process and only on events
-received from the child process.  test502sub1 returns two events, childToParent and done.invoke.  The first
-invoke in s1 has a finalize, the second doesn't.  The finalize handler in the first invoke should be executed
-twice --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="ecmascript" name="machineName">
+received from the child process.  the invoked children are identical and each return two events, 
+childToParent and done.invoke.  The first invoke in s1 has a finalize, the second doesn't.  
+The finalize handler in the first invoke should be executed twice --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" version="1.0" datamodel="ecmascript" name="machineName">
 <datamodel>
   <data id="Var1" expr="0"/>
   </datamodel>
@@ -11,19 +11,42 @@ twice --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s
     <send event="timeout" delay="1s"/>
     </onentry>
     
-  <invoke type="http://www.w3.org/TR/scxml/" src="file:test502sub1.scxml">
+  <invoke type="http://www.w3.org/TR/scxml/">
     <finalize>
-       <assign xmlns="http://www.w3.org/2005/07/scxml" location="Var1" expr="Var1 + 1"/>
+       <assign location="Var1" expr="Var1 + 1"/>
        </finalize>
+       <content>
+       <scxml initial="sub01" version="1.0" datamodel="ecmascript"> 
+         <state id="sub01">
+           <onentry>
+          <send target="#_parent" event="childToParent"/>
+           </onentry>
+           <transition target="subFinal1"/>
+          </state>
+           <final id="subFinal1"/>
+         </scxml>
+       </content>
    </invoke>
    
- <invoke type="http://www.w3.org/TR/scxml/" src="file:test502sub1.scxml"/>
+ <invoke type="http://www.w3.org/TR/scxml/">
+       <content>
+       <scxml initial="sub02" version="1.0" datamodel="ecmascript"> 
+         <state id="sub02">
+           <onentry>
+          <send target="#_parent" event="childToParent"/>
+           </onentry>
+           <transition target="subFinal2"/>
+          </state>
+           <final id="subFinal2"/>
+         </scxml>
+       </content>
+    </invoke>
    
    <transition event="timeout" cond="Var1==2" target="pass"/>
    <transition event="timeout" target="fail"/>
       </state>
 
-<final xmlns="http://www.w3.org/2005/07/scxml" id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
-<final xmlns="http://www.w3.org/2005/07/scxml" id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
      
 </scxml>

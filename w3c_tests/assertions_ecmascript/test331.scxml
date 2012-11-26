@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" name="machineName">
+<?xml version="1.0" encoding="UTF-8"?><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" datamodel="ecmascript" initial="s0" name="machineName">
 
 <!-- test that _event.type is set correctly for internal, platform, and external events -->
 <datamodel>
@@ -17,7 +17,7 @@
    </state>
 
 <state id="s1">
-  <transition conf:varQuoteVal="1=internal" target="s2"/>
+  <transition cond="Var1=='internal'" target="s2"/>
   <transition target="fail"/>
   </state>
    
@@ -33,7 +33,7 @@
    </state>
    
 <state id="s3">
-  <transition conf:varQuoteVal="1=platform" target="s4"/>
+  <transition cond="Var1=='platform'" target="s4"/>
   <transition target="fail"/>
   </state>
    
@@ -49,12 +49,12 @@
    </state>
    
 <state id="s5">
-  <transition conf:varQuoteVal="1=external" target="pass"/>
+  <transition cond="Var1=='external'" target="pass"/>
   <transition target="fail"/>
   </state>
    
     
-   <final xmlns="http://www.w3.org/2005/07/scxml" id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
-   <final xmlns="http://www.w3.org/2005/07/scxml" id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+   <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+   <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
      
 </scxml>

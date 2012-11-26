@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- simple test of the in() predicate --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="p">
+<?xml version="1.0" encoding="UTF-8"?><!-- simple test of the in() predicate --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" initial="p">
 
      
  <parallel id="p">

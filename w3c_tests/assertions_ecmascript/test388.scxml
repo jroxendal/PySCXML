@@ -2,12 +2,12 @@
 we have entered s0.  The initial state is s012.  We then transition to s1, which transitions
 to s0's deep history state.  entering.s012 should be raised, otherwise failure.  Then we transition
 to s02, which transitions to s0's shallow history state.  That should have value s01, and its initial
-state is s011, so we should get entering.s011, otherwise failure.--><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s012" datamodel="ecmascript">
+state is s011, so we should get entering.s011, otherwise failure.--><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" initial="s012" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="0"/>
   </datamodel>
        
-<state id="s0" intial="s01">
+<state id="s0" initial="s01">
   <onentry>
     <assign location="Var1" expr="Var1 + 1"/>
     </onentry>

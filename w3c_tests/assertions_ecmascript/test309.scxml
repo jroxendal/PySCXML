@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that an expression that cannot be interpreted as a boolean is treated as false --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that an expression that cannot be interpreted as a boolean is treated as false --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" initial="s0">
 
 <state id="s0"> 
-  <transition cond="1 = 1" target="fail"/>
+  <transition cond="return" target="fail"/>
   <transition target="pass"/>
   </state>
     

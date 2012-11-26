@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that an empty finalize element causes any datamodel locations that were passed in to 
-be updated.  test256sub1 will return Var1 and Var2 set to 2.   --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+be updated.  child  process will return Var1 and Var2 set to 2. This test
+will fail schema validation due to multiple declarations of Var1 and Var2  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1" expr="1"/>
   <data id="Var2" expr="1"/>
@@ -16,10 +17,24 @@ be updated.  test256sub1 will return Var1 and Var2 set to 2.   --><scxml xmlns="
     <!-- var1 has not been updated, so fail -->
     <transition event="done.invoke" target="fail"/>
     
-    <invoke type="scxml" src="file:test256sub1.scxml" namelist="Var1">
+    <invoke type="scxml" namelist="Var1">
       <param name="Var2" location="Var2"/>
+      <content>
+      <scxml initial="subFinal" version="1.0" datamodel="ecmascript">
+          <datamodel>
+            <data id="Var1"/>
+             <data id="Var2"/>
+          </datamodel>     
+     <final id="subFinal">
+         <donedata>
+            <param name="Var1" expr="2"/>
+            <param name="Var2" expr="2"/>
+          </donedata>
+       </final>
+        </scxml>
+        </content>
       <finalize/>
-      </invoke>
+        </invoke>
 </state>
 
 <!-- if we get here, Var1 has the right value, so test Var2 -->    

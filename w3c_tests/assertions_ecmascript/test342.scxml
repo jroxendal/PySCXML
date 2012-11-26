@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that eventexpr works and sets the name field of the resulting event --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript" name="machineName">  
+<?xml version="1.0" encoding="UTF-8"?><!-- test that eventexpr works and sets the name field of the resulting event --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript" name="machineName">  
  <datamodel>
    <data id="Var1" expr="'foo'"/>
    <data id="Var2"/>
@@ -15,11 +15,11 @@
    </state>
    
 <state id="s1">
-  <transition cond="Var1==Var2" target="pass"/>
+  <transition cond="Var1===Var2" target="pass"/>
    <transition target="fail"/>
    </state>
       
-   <final xmlns="http://www.w3.org/2005/07/scxml" id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
-   <final xmlns="http://www.w3.org/2005/07/scxml" id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+   <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+   <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
      
 </scxml>

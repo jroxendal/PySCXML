@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that invokeid is set correctly in events received from an invoked process.  timeout event catches the 
-case where the invoke doesn't work correctly --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initialstate="s0" datamodel="ecmascript">
+case where the invoke doesn't work correctly --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript">
 <datamodel>
   <data id="Var1"/>
   <data id="Var2"/>
@@ -9,8 +9,17 @@ case where the invoke doesn't work correctly --><scxml xmlns="http://www.w3.org/
       <onentry>
         <send event="timeout" delay="2s"/>
         </onentry>
-     <invoke idlocation="Var1" type="http://www.w3.org/TR/scxml/" src="file:test338sub1.scxml">
-        </invoke>
+     <invoke idlocation="Var1" type="http://www.w3.org/TR/scxml/">
+     <content>
+       <scxml initial="sub0" version="1.0" datamodel="ecmascript" name="machineName">     
+       <final id="sub0">
+         <onentry>
+            <send target="#_parent" event="event1"/>
+        </onentry>
+        </final>
+       </scxml>
+      </content>
+    </invoke>
        <transition event="event1" target="s1">
          <assign location="Var2" expr="_event.invokeid"/>
          </transition>
@@ -18,7 +27,7 @@ case where the invoke doesn't work correctly --><scxml xmlns="http://www.w3.org/
    </state>
 
 <state id="s1">
-  <transition cond="Var1==Var2" target="pass"/>
+  <transition cond="Var1===Var2" target="pass"/>
   <transition target="fail"/>
   </state>
   

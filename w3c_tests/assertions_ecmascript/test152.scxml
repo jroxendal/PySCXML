@@ -1,15 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that fan illegal array or item value causes error.execution and results in executable content
-not being executed. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+<?xml version="1.0" encoding="UTF-8"?><!-- test that an illegal array or item value causes error.execution and results in executable content
+not being executed. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript" version="1.0">
 <datamodel>
   <data id="Var1" expr="0"/>
   <data id="Var2"/>
   <data id="Var3"/>
+  <data id="Var4" expr="7"/>
+  <data id="Var5">
+    <conf:array123/>
+    </data>
   </datamodel>
   
    <state id="s0">
       <onentry>
-<!-- invalid array -->
-        <foreach item="Var2" index="Var3" array="7">
+<!-- invalid array, legal item -->
+        <foreach item="Var2" index="Var3" array="Var4">
           <assign location="Var1" expr="Var1 + 1"/>
           </foreach>
         <raise event="foo"/>
@@ -20,14 +24,14 @@ not being executed. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf
    
    <state id="s1">
       <onentry>
-<!-- illegal item -->
-        <foreach item="'lambda'" index="Var3" array="[1, 2, 3]">
+<!-- illegal item, legal array -->
+        <foreach item="'continue'" index="Var3" array="Var5">
           <assign location="Var1" expr="Var1 + 1"/>
           </foreach>
-        <raise event="foo"/>
+        <raise event="bar"/>
         </onentry>
    <transition event="error.execution" target="s2"/>
-   <transition event="*" target="fail"/> 
+   <transition event="bar" target="fail"/> 
    </state>
 
 <state id="s2">

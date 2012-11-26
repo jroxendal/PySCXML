@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- a simple test that a legal value may be assigned to a valid data model location --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" initial="s0">
+<?xml version="1.0" encoding="UTF-8"?><!-- a simple test that a legal value may be assigned to a valid data model location --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" datamodel="ecmascript" version="1.0" initial="s0">
    
 <datamodel>
     <data id="Var1" expr="0"/>

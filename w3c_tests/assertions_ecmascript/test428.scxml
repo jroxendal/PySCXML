@@ -1,69 +1,59 @@
-<?xml version="1.0" encoding="UTF-8"?><!-- test that the processor automatically 
-    generates send and invoke ids each time the element is executed. -->
-<scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance"
-    initial="s1" datamodel="ecmascript" name="machineName">
-    <datamodel>
-        <data id="Var1" expr="0" /> <!-- how many times we've entered s1 -->
-        <data id="Var2" />  <!-- idlocation for send in s1 -->
-        <data id="Var3" />  <!-- stores first value of sendid s1 -->
-        <data id="Var4" expr="0" />  <!-- how many times we've entered s3 -->
-        <data id="Var5" />  <!-- idlocation for invoke in s3 -->
-        <data id="Var6" /> <!-- stores first value of invokeid in s3 -->
-    </datamodel>
+<?xml version="1.0" encoding="UTF-8"?><!-- test that the processor automatically generates send and invoke ids each time the element is executed. --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" version="1.0" datamodel="ecmascript" name="machineName">
+<datamodel>
+  <data id="Var1" expr="0"/> <!-- how  many times we've entered s1 -->
+  <data id="Var2"/>  <!-- idlocation for send in s1 -->
+  <data id="Var3"/>  <!-- stores first value of sendid s1 -->
+  <data id="Var4" expr="0"/>  <!-- how many times we've entered s3 -->
+  <data id="Var5"/>  <!-- idlocation for invoke in s3 -->
+  <data id="Var6"/> <!-- stores first value of invokeid in s3 -->
+  </datamodel>
+    
+ <state id="s1">
+    <onentry>
+      <assign location="Var1" expr="Var1 + 1"/>
+      <send idlocation="Var2" event="event"/>
+     </onentry>
+     
+    <transition cond="Var1==1" event="event" target="s1">
+        <assign location="Var3" expr="Var2"/>
+       </transition>
+       
+    <transition event="event" target="s2"/>
+   </state>
 
-    <state id="s1">
-        <onentry>
-            <assign xmlns="http://www.w3.org/2005/07/scxml"
-                location="Var1" expr="Var1 + 1" />
-            <send idlocation="Var2" event="event" />
-        </onentry>
+ <state id="s2">
+ <!-- if these two vars are equal, the system didn't generate a new id each time -->
+  <transition cond="Var2===Var3" target="fail"/>
+   <transition target="s3"/>
+      </state>
 
-        <transition cond="Var1==1" event="event" target="s1">
-            <assign location="Var3" expr="Var2" />
-        </transition>
+   
+  <state id="s3">
+    <onentry>
+      <assign location="Var4" expr="Var4 + 1"/>
+     </onentry>
+       <invoke idlocation="Var5" type="http://www.w3.org/TR/scxml/">
+       <content>
+<!-- terminate immediately, returning done.invoke  -->
+<scxml initial="final" datamodel="ecmascript" version="1.0"> 
+ <final id="final"/>
+</scxml>
+     </content>
+     </invoke>    
+    <transition cond="Var4==1" event="done.invoke" target="s3">
+        <assign location="Var6" expr="Var5"/>
+       </transition>
+   
+    <transition event="done.invoke" target="s4"/>
+   </state>
+   
+  <state id="s4">
+ <!-- if these two vars are equal, the system didn't generate a new id each time -->
+   <transition cond="Var5===Var6" target="fail"/>
+   <transition target="pass"/>
+      </state>
 
-        <transition event="event" target="s2" />
-    </state>
-
-    <state id="s2">
-        <!-- if these two vars are equal, the system didn't generate a new 
-            id each time -->
-        <transition cond="Var2==Var3" target="fail" />
-        <transition target="s3" />
-    </state>
-
-
-    <state id="s3">
-        <onentry>
-            <assign xmlns="http://www.w3.org/2005/07/scxml"
-                location="Var4" expr="Var4 + 1" />
-        </onentry>
-        <invoke idlocation="Var5" type="http://www.w3.org/TR/scxml/"
-            src="file:test428sub1.scxml" />
-        <transition cond="Var4==1" event="done.invoke"
-            target="s3">
-            <assign location="Var6" expr="Var5" />
-        </transition>
-
-        <transition event="done.invoke" target="s4" />
-    </state>
-
-    <state id="s4">
-        <!-- if these two vars are equal, the system didn't generate a new 
-            id each time -->
-        <transition cond="Var5==Var6" target="fail" />
-        <transition target="pass" />
-    </state>
-
-    <final xmlns="http://www.w3.org/2005/07/scxml" id="pass">
-        <onentry>
-            <log label="Outcome" expr="'pass'" />
-        </onentry>
-    </final>
-    <final xmlns="http://www.w3.org/2005/07/scxml" id="fail">
-        <onentry>
-            <log label="Outcome" expr="'fail'" />
-        </onentry>
-    </final>
-
+   <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+   <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+     
 </scxml>

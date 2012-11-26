@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- this is a manual test because the processor is allowed to reject this document.  But if it executes it,
-it should not raise an error until it gets to s03 and evaluates the illegal expr --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0">
+it should not raise an error until it gets to s03 and evaluates the illegal expr --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" version="1.0" initial="s0">
 <datamodel>
   <data id="Var1" expr="1"/>
  </datamodel>
@@ -18,7 +18,7 @@ it should not raise an error until it gets to s03 and evaluates the illegal expr
 
   <state id="s03">
     <onentry>
-     <assign location="Var1" expr="1 = 1"/>
+     <assign location="Var1" expr="return"/>
       <raise event="foo"/>
    </onentry>
      <transition event="error.execution" target="pass"/> 

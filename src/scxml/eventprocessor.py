@@ -164,4 +164,5 @@ class ScxmlMessage(object):
 
 
 if __name__ == "__main__":
-    print SCXMLEventProcessor.toxml("evt", "_parent", {}, "", "", language="json")
+#    print SCXMLEventProcessor.toxml("evt", "_parent", {}, "", "", language="json")
+    print "http://www.w3.org/TR/scxml/#SCXMLEventProcessor" == ScxmlOriginType() 

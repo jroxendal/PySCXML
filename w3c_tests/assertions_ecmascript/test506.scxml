@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- test that an internal transition whose targets are not proper descendants of its source state
-behaves like an external transition --><scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" datamodel="ecmascript" name="machineName">
+behaves like an external transition --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s1" version="1.0" datamodel="ecmascript">
 <datamodel>
-  <data id="Var1" expr="0"/>  <!-- how often we have exited p -->
-  <data id="Var2" expr="0"/>  <!-- how often we have exited ps1 -->
-  <data id="Var3" expr="0"/>  <!-- how often we have exited ps2 -->
-  <data id="Var4" expr="0"/>  <!-- how often the transition for foo has been taken -->
+  <data id="Var1" expr="0"/>  <!-- how often we have exited s2 -->
+  <data id="Var2" expr="0"/>  <!-- how often we have exited s21 -->
+  <data id="Var3" expr="0"/>  <!-- how often the transition for foo has been taken -->
   </datamodel>
     
  <state id="s1">
@@ -12,52 +11,43 @@ behaves like an external transition --><scxml xmlns:conf="http://www.w3.org/2005
     <raise event="foo"/>
     <raise event="bar"/>
     </onentry>
-   <transition target="p"/>
+   <transition target="s2"/>
    </state>
 
-<parallel id="p">
+<state id="s2" initial="s21">
   <onexit>
-    <assign xmlns="http://www.w3.org/2005/07/scxml" location="Var1" expr="Var1 + 1"/>
+    <assign location="Var1" expr="Var1 + 1"/>
     </onexit>
-  <transition event="foo" type="internal" target="p">
-     <assign xmlns="http://www.w3.org/2005/07/scxml" location="Var4" expr="Var4 + 1"/>
+  <transition event="foo" type="internal" target="s2">
+     <assign location="Var3" expr="Var3 + 1"/>
      </transition>
      
    <!-- make sure the transition on foo was actually taken --> 
-  <transition event="bar" cond="Var4==1" target="s2"/>
+  <transition event="bar" cond="Var3==1" target="s3"/>
   <transition event="bar" target="fail"/>
   
- <state id="ps1">
+ <state id="s21">
    <onexit>
-   <assign xmlns="http://www.w3.org/2005/07/scxml" location="Var2" expr="Var2 + 1"/>
+   <assign location="Var2" expr="Var2 + 1"/>
    </onexit>
   </state>
-  <state id="ps2">
-   <onexit>
-   <assign xmlns="http://www.w3.org/2005/07/scxml" location="Var3" expr="Var3 + 1"/>
-   </onexit>
-  </state>
-</parallel>
+
+</state>
   
-<state id="s2">
-  <!-- make sure that p was exited twice -->
-    <transition cond="Var1==2" target="s3"/>
+<state id="s3">
+  <!-- make sure that s2 was exited twice -->
+    <transition cond="Var1==2" target="s4"/>
     <transition target="fail"/>
  </state> 
  
-<state id="s3">
-  <!-- make sure that ps1 was exited twice -->
-    <transition cond="Var2==2" target="s4"/>
+<state id="s4">
+  <!-- make sure that s21 was exited twice -->
+    <transition cond="Var2==2" target="pass"/>
     <transition target="fail"/>
  </state> 
   
-<state id="s4">
-  <!-- make sure that ps2 was exited twice -->
-    <transition cond="Var3==2" target="pass"/>
-    <transition target="fail"/>
- </state>
   
-<final xmlns="http://www.w3.org/2005/07/scxml" id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
-<final xmlns="http://www.w3.org/2005/07/scxml" id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
+<final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+<final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
      
 </scxml>

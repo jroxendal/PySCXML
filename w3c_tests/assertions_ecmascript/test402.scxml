@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!-- the assertion that errors are 'like any other event' is pretty broad, but we can check that they
-are pulled off the internal queue in order, and that prefix matching works on them.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" datamodel="ecmascript">
+are pulled off the internal queue in order, and that prefix matching works on them.  --><scxml xmlns="http://www.w3.org/2005/07/scxml" xmlns:conf="http://www.w3.org/2005/scxml-conformance" initial="s0" version="1.0" datamodel="ecmascript">
 
        
 <state id="s0" initial="s01">
@@ -11,6 +11,7 @@ are pulled off the internal queue in order, and that prefix matching works on th
 
  <state id="s01">
    <onentry>
+   <!-- the first internal event.  The error will be the second, and event2 will be the third -->
       <raise event="event1"/>
      <!-- assigning to a non-existent location should raise an error -->
     <assign location="Var1" expr="2"/> 
