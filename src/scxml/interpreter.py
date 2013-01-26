@@ -200,14 +200,14 @@ class Interpreter(object):
         
         return False
     
-    def getCommonParallel(self, states):
-        ancestors = set(getProperAncestors(states[0], None))
-        
-        for s in states[1:]:
-            ancestors = ancestors.intersection(getProperAncestors(s, None))
-        
-        if ancestors:
-            return sorted(ancestors, key=exitOrder)[0]
+    def findLCPA(self, states):
+        '''
+        Gets the least common parallel ancestor of states. 
+        Just like findLCA but only for parallel states.
+        '''
+        for anc in filter(isParallelState, getProperAncestors(states[0], None)):
+            if all(map(lambda(s): isDescendant(s,anc), states[1:])):
+                return anc
     
     
     def isType1(self, t):
@@ -215,8 +215,8 @@ class Interpreter(object):
     
     def isType2(self, t):
         source = t.source if t.type == "internal" else t.source.parent
-        p = self.getCommonParallel([source] + self.getTargetStates(t.target))
-        return not isScxmlState(p)
+        p = self.findLCPA([source] + self.getTargetStates(t.target))
+        return p is not None
             
     
     def isType3(self, t):
@@ -357,7 +357,6 @@ class Interpreter(object):
     
     def findLCA(self, stateList):
         for anc in filter(isCompoundState, getProperAncestors(stateList[0], None)):
-#        for anc in getProperAncestors(stateList[0], None):
             if all(map(lambda(s): isDescendant(s,anc), stateList[1:])):
                 return anc
     
