@@ -7,7 +7,7 @@
     P3. The transitions through s1 - s3 test that each transition was taken once. 
     (using multiple states each with a single test makes the xslt simpler. -->
 <scxml xmlns:conf="http://www.w3.org/2005/scxml-conformance"
-    initialstate="p">
+    initial="p">
     <datamodel>
         <data id="Var1" expr="0" />  <!-- how many times p1 transition has been taken -->
         <data id="Var2" expr="0" />  <!-- how many times p2 transition has been taken -->
@@ -61,15 +61,7 @@
     </state>
 
 
-    <final xmlns="http://www.w3.org/2005/07/scxml" id="pass">
-        <onentry>
-            <log label="Outcome" expr="'pass'" />
-        </onentry>
-    </final>
-    <final xmlns="http://www.w3.org/2005/07/scxml" id="fail">
-        <onentry>
-            <log label="Outcome" expr="'fail'" />
-        </onentry>
-    </final>
+    <final id="pass"><onentry><log label="Outcome" expr="'pass'"/></onentry></final>
+    <final id="fail"><onentry><log label="Outcome" expr="'fail'"/></onentry></final>
 
 </scxml>
